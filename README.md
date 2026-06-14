@@ -14,6 +14,21 @@ flutter config --no-enable-linux-desktop
 
 This setting is user-level (`~/.config/flutter/settings`) — there is no project-level equivalent. The dev container handles it automatically via `postCreateCommand`.
 
+### Native Windows Setup (Optional)
+While the dev container is recommended, you can set up a local Windows environment directly:
+1. **Android Studio**: Download and install [Android Studio](https://developer.android.com/studio).
+2. **Android SDK**: Open Android Studio's SDK Manager and install:
+   - Android SDK Platform 36
+   - Android SDK Build-Tools 36.0.0
+   - Android SDK Command-line Tools (latest)
+3. **Flutter SDK**: Download Flutter SDK version `3.41.6` from [flutter.dev](https://docs.flutter.dev/release/archive) or clone it via git. Extract it (e.g., to `C:\flutter`) and add `C:\flutter\bin` to your system `PATH`.
+4. **Java JDK**: Java 21 is required. If Android Studio's bundled JDK is not Java 21, you may need to install OpenJDK 21 manually.
+5. **Protoc Plugin**: Install the Dart protocol buffers plugin globally:
+   ```powershell
+   dart pub global activate protoc_plugin 21.1.2
+   ```
+   Add your pub-cache bin to your system `PATH` if it isn't already (e.g. `C:\Users\<user>\AppData\Local\Pub\Cache\bin`).
+
 ## Running on Android (wireless debugging)
 
 The dev container has no USB passthrough, so use ADB over Wi-Fi.

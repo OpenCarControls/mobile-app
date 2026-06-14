@@ -68,12 +68,14 @@ class ProtoBuilder implements Builder {
   }
 
   Future<bool> _protocAvailable() async {
-    final result = await Process.run('which', ['protoc']);
+    final cmd = Platform.isWindows ? 'where' : 'which';
+    final result = await Process.run(cmd, ['protoc']);
     return result.exitCode == 0;
   }
 
   Future<bool> _dartPluginAvailable(Map<String, String> env) async {
-    final result = await Process.run('which', [
+    final cmd = Platform.isWindows ? 'where' : 'which';
+    final result = await Process.run(cmd, [
       'protoc-gen-dart',
     ], environment: env);
     return result.exitCode == 0;
@@ -87,14 +89,19 @@ class ProtoBuilder implements Builder {
     final pubCacheBin = _pubCacheBinDir();
     final current = Platform.environment;
     final existingPath = current['PATH'] ?? '';
-    return {...current, 'PATH': '$pubCacheBin:$existingPath'};
+    final separator = Platform.isWindows ? ';' : ':';
+    return {...current, 'PATH': '$pubCacheBin$separator$existingPath'};
   }
 
   String _pubCacheBinDir() {
     // Respect PUB_CACHE env var if set, otherwise fall back to the default.
-    final pubCache =
-        Platform.environment['PUB_CACHE'] ??
-        '${Platform.environment['HOME']}/.pub-cache';
-    return '$pubCache/bin';
+    if (Platform.environment.containsKey('PUB_CACHE')) {
+      return '${Platform.environment['PUB_CACHE']}/bin';
+    }
+    if (Platform.isWindows) {
+      final localAppData = Platform.environment['LOCALAPPDATA'];
+      return '$localAppData/Pub/Cache/bin';
+    }
+    return '${Platform.environment['HOME']}/.pub-cache/bin';
   }
 }
