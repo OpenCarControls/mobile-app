@@ -579,10 +579,10 @@ packages:
     dependency: "direct dev"
     description:
       name: protoc_plugin
-      sha256: fb0554851c9eca30bd18405fbbfe81e39166d4a2f0e5b770606fd69da3da0b2f
+      sha256: e82bef9ff62f31708a376a06f8589ef38a86308614e61212cb394ff0ecb4043d
       url: "https://pub.dev"
     source: hosted
-    version: "21.1.2"
+    version: "22.0.0"
   pub_semver:
     dependency: transitive
     description:
