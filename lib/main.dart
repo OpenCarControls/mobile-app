@@ -1,5 +1,6 @@
 import 'dart:developer' as dev;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/config/device_identity.dart';
@@ -18,7 +19,14 @@ void main() async {
     name: 'AppBootstrap',
   );
 
-  final pairedConfig = await PairedVehicleConfig.load();
+  // TEMPORARY: force a paired config for UI testing on Web
+  final pairedConfig = kIsWeb
+      ? const PairedVehicleConfig(
+          vehicleId: 'opencar.cars.egmp.v1',
+          bleRemoteId: '',
+          transportPreference: TransportPreference.http,
+        )
+      : await PairedVehicleConfig.load();
   dev.log(
     pairedConfig != null
         ? 'Paired vehicle loaded: ${pairedConfig.vehicleId}'
@@ -45,7 +53,10 @@ class OpenCarApp extends StatelessWidget {
     return MaterialApp(
       title: 'Open Car',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
       ),
       home: const AppEntryRouter(),

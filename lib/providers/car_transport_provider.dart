@@ -35,6 +35,11 @@ final carTransportProvider = Provider<CarTransport>((ref) {
   if (vehicle == null) return const _NullCarTransport();
   final config = ref.watch(pairedVehicleProvider);
 
+  if (kIsWeb) {
+    dev.log('Using Stub transport on Web', name: 'TransportProvider');
+    return vehicle.createStubTransport() ?? const _NullCarTransport();
+  }
+
   // Debug-only: HTTP transport is used when the vehicle was paired via the
   // HTTP debug path. Host and port come from the persisted pairing config.
   if (kDebugMode &&

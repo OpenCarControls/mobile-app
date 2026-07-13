@@ -1,12 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:open_car_app/cars/virtual_car/virtual_car_definition.dart';
+import 'package:open_car_app/cars/egmp/egmp_definition.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 
 /// All vehicles supported by this build.
 final availableVehiclesProvider = Provider<List<VehicleDefinition>>(
-  (_) => const [VirtualCarDefinition()],
+  (_) => const [
+    VirtualCarDefinition(),
+    EgmpDefinition(),
+  ],
 );
 
 /// The currently paired vehicle, derived from [pairedVehicleProvider].
