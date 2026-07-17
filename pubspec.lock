@@ -436,10 +436,10 @@ packages:
     dependency: "direct main"
     description:
       name: mqtt5_client
-      sha256: "643ceb3154d93fd1fb990dbc870064543d1750b23cf69d71329c5e1d13d02e4b"
+      sha256: "3784de7c1e6e030cf0fcf62f21314e8663c4a7f4b83963d46498d97894c3c250"
       url: "https://pub.dev"
     source: hosted
-    version: "4.17.0"
+    version: "5.0.0"
   open_car_builders:
     dependency: "direct dev"
     description:

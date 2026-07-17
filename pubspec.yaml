@@ -37,7 +37,7 @@ dependencies:
   fixnum: ^1.1.1
   protobuf: ^3.1.0
   flutter_riverpod: ^2.6.1
-  mqtt5_client: ^4.17.0
+  mqtt5_client: ^5.0.0
   flutter_reactive_ble: ^5.4.1
   typed_data: ^1.4.0
   permission_handler: ^11.4.0
