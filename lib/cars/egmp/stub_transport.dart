@@ -51,14 +51,34 @@ class StubCarTransport implements CarTransport {
   @override
   Stream<DeviceToApp> get messages => _controller.stream;
 
+  bool _isLocked = false;
+  bool _isChargePortOpen = false;
+  bool _allDoorsOpen = false;
+  bool _allWindowsOpen = false;
+  bool _frunkTrunkOpen = false;
+
   @override
   Future<void> send(AppToDevice message) async {
     if (!message.hasBasicCommandBytes()) return;
 
     final cmd = BasicCommand.fromBuffer(message.basicCommandBytes);
-    if (cmd.whichAction() != BasicCommand_Action.doorLockCommand) return;
 
-    final locked = cmd.doorLockCommand.lock;
+    if (cmd.whichAction() == BasicCommand_Action.doorLockCommand) {
+      _isLocked = cmd.doorLockCommand.lock;
+      _allDoorsOpen = !_isLocked; // Unlock opens doors for testing
+    } else if (cmd.whichAction() == BasicCommand_Action.chargePortCommand) {
+      _isChargePortOpen = cmd.chargePortCommand.open;
+    } else if (cmd.whichAction() == BasicCommand_Action.climateControlCommand) {
+      // Hack: Use climate button to test windows
+      _allWindowsOpen = cmd.climateControlCommand.climateOn;
+    } else if (cmd.whichAction() == BasicCommand_Action.flashLightsCommand) {
+      // Hack: Use lights button to test frunk/trunk
+      // Since it's a stateless flash command, we'll just toggle them open for 3 seconds
+      _frunkTrunkOpen = true;
+      Future.delayed(const Duration(seconds: 3), () {
+        _emitTestState(doors: _allDoorsOpen, windows: _allWindowsOpen, frunkTrunk: false, chargePort: _isChargePortOpen, locked: _isLocked);
+      });
+    }
 
     // Acknowledge the command.
     _emit(
@@ -72,11 +92,28 @@ class StubCarTransport implements CarTransport {
     );
 
     // Emit the resulting state update.
+    _emitTestState(doors: _allDoorsOpen, windows: _allWindowsOpen, frunkTrunk: _frunkTrunkOpen, chargePort: _isChargePortOpen, locked: _isLocked);
+  }
+
+  void _emitTestState({required bool doors, required bool windows, required bool frunkTrunk, required bool chargePort, required bool locked}) {
     _emit(
       DeviceToApp(
         stateUpdate: StateUpdate(
           vehicleState: VehicleState(
-            basicStateBytes: BasicState(areDoorsLocked: locked).writeToBuffer(),
+            basicStateBytes: BasicState(
+              areDoorsLocked: locked,
+              isDriverDoorOpen: doors,
+              isPassengerDoorOpen: doors,
+              isRearLeftDoorOpen: doors,
+              isRearRightDoorOpen: doors,
+              isDriverWindowOpen: windows,
+              isPassengerWindowOpen: windows,
+              isRearLeftWindowOpen: windows,
+              isRearRightWindowOpen: windows,
+              isFrunkOpen: frunkTrunk,
+              isTrunkOpen: frunkTrunk,
+              chargePortState: chargePort ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED,
+            ).writeToBuffer(),
           ),
         ),
       ),

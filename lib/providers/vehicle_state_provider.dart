@@ -14,6 +14,7 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 
 class VehicleSnapshot {
   /// Decoded vehicle-specific basic state. Cast to the vehicle's BasicState
@@ -284,6 +285,42 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   }
 
   VehicleDefinition get vehicle => ref.read(selectedVehicleProvider)!;
+
+  /// Injects a test state directly into the provider to test UI/3D animations
+  void injectTestState({
+    bool? isDriverDoorOpen,
+    bool? isPassengerDoorOpen,
+    bool? isRearLeftDoorOpen,
+    bool? isRearRightDoorOpen,
+    bool? isDriverWindowOpen,
+    bool? isPassengerWindowOpen,
+    bool? isRearLeftWindowOpen,
+    bool? isRearRightWindowOpen,
+    bool? isFrunkOpen,
+    bool? isTrunkOpen,
+    BasicState_ChargePortState? chargePortState,
+    bool? areLightsOn,
+    bool? areHazardLightsOn,
+  }) {
+    final currentBasic = state.basicState as BasicState;
+    
+    final newBasic = currentBasic.deepCopy();
+    if (isDriverDoorOpen != null) newBasic.isDriverDoorOpen = isDriverDoorOpen;
+    if (isPassengerDoorOpen != null) newBasic.isPassengerDoorOpen = isPassengerDoorOpen;
+    if (isRearLeftDoorOpen != null) newBasic.isRearLeftDoorOpen = isRearLeftDoorOpen;
+    if (isRearRightDoorOpen != null) newBasic.isRearRightDoorOpen = isRearRightDoorOpen;
+    if (isDriverWindowOpen != null) newBasic.isDriverWindowOpen = isDriverWindowOpen;
+    if (isPassengerWindowOpen != null) newBasic.isPassengerWindowOpen = isPassengerWindowOpen;
+    if (isRearLeftWindowOpen != null) newBasic.isRearLeftWindowOpen = isRearLeftWindowOpen;
+    if (isRearRightWindowOpen != null) newBasic.isRearRightWindowOpen = isRearRightWindowOpen;
+    if (isFrunkOpen != null) newBasic.isFrunkOpen = isFrunkOpen;
+    if (isTrunkOpen != null) newBasic.isTrunkOpen = isTrunkOpen;
+    if (chargePortState != null) newBasic.chargePortState = chargePortState;
+    if (areLightsOn != null) newBasic.areLightsOn = areLightsOn;
+    if (areHazardLightsOn != null) newBasic.areHazardLightsOn = areHazardLightsOn;
+
+    state = state.copyWith(basicState: newBasic);
+  }
 }
 
 final vehicleStateProvider =

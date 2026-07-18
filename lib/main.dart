@@ -1,6 +1,5 @@
 import 'dart:developer' as dev;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/config/device_identity.dart';
@@ -19,18 +18,14 @@ void main() async {
     name: 'AppBootstrap',
   );
 
-  // TEMPORARY: force a paired config for UI testing on Web
-  final pairedConfig = kIsWeb
-      ? const PairedVehicleConfig(
-          vehicleId: 'opencar.cars.egmp.v1',
-          bleRemoteId: '',
-          transportPreference: TransportPreference.http,
-        )
-      : await PairedVehicleConfig.load();
+  // TEMPORARY: force a paired config for UI testing
+  final pairedConfig = const PairedVehicleConfig(
+    vehicleId: 'opencar.cars.egmp.v1',
+    bleRemoteId: '',
+    transportPreference: TransportPreference.http,
+  );
   dev.log(
-    pairedConfig != null
-        ? 'Paired vehicle loaded: ${pairedConfig.vehicleId}'
-        : 'No paired vehicle — wizard will be shown',
+    'Paired vehicle loaded: ${pairedConfig.vehicleId}',
     name: 'AppBootstrap',
   );
 

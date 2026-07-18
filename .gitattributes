@@ -1,0 +1,2 @@
+# Track Blender source files using Git LFS
+*.blend filter=lfs diff=lfs merge=lfs -text
