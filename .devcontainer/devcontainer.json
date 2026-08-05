@@ -3,14 +3,12 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
-    "postCreateCommand": "flutter config --no-enable-linux-desktop && flutter pub get",
-    "mounts": [
-        {
-            "source": "/workspaces/contracts",
-            "target": "/workspaces/contracts",
-            "type": "bind"
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
         }
-    ],
+    },
+    "postCreateCommand": "flutter config --no-enable-linux-desktop && flutter pub get && cd web_3d && npm install && npm run build",
     "customizations": {
         "vscode": {
             "extensions": [

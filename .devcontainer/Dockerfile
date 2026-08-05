@@ -6,8 +6,6 @@ ARG ANDROID_BUILD_TOOLS="36.0.0"
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y curl git git-lfs unzip xz-utils zip libglu1-mesa openjdk-21-jdk protobuf-compiler && \
-    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
-    apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 USER vscode

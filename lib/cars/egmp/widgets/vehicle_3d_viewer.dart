@@ -15,7 +15,7 @@ class Vehicle3DViewer extends ConsumerStatefulWidget {
 }
 
 class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> {
-  final InAppLocalhostServer _localhostServer = InAppLocalhostServer();
+  final InAppLocalhostServer _localhostServer = InAppLocalhostServer(documentRoot: 'assets');
   InAppWebViewController? _webViewController;
   bool _isServerRunning = false;
   bool _isModelLoaded = false;
@@ -166,7 +166,7 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> {
 
     return InAppWebView(
       initialUrlRequest: URLRequest(
-        url: WebUri('http://localhost:8080/assets/web/index.html'),
+        url: WebUri('http://localhost:8080/web/index.html'),
       ),
       initialSettings: InAppWebViewSettings(
         transparentBackground: true,

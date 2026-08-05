@@ -14,13 +14,17 @@ let animationFrameId = null;
 let currentConfig = null;
 
 // Notify Flutter that the renderer logic is loaded
+window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+    window.flutter_inappwebview.callHandler('onRendererReady');
+});
+
+// Fallback for debugging outside webview
 window.addEventListener('load', () => {
-    if (window.flutter_inappwebview) {
-        window.flutter_inappwebview.callHandler('onRendererReady');
-    } else {
-        // Fallback for debugging outside webview
+    if (!window.flutter_inappwebview) {
         setTimeout(() => {
-            if (window.flutter_inappwebview) window.flutter_inappwebview.callHandler('onRendererReady');
+            if (window.flutter_inappwebview) {
+                window.flutter_inappwebview.callHandler('onRendererReady');
+            }
         }, 500);
     }
 });
