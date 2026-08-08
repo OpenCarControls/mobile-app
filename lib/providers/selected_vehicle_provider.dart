@@ -8,8 +8,8 @@ import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 /// All vehicles supported by this build.
 final availableVehiclesProvider = Provider<List<VehicleDefinition>>(
   (_) => const [
-    VirtualCarDefinition(),
     EgmpDefinition(),
+    VirtualCarDefinition(),
   ],
 );
 

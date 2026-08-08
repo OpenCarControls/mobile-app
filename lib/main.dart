@@ -18,14 +18,11 @@ void main() async {
     name: 'AppBootstrap',
   );
 
-  // TEMPORARY: force a paired config for UI testing
-  final pairedConfig = const PairedVehicleConfig(
-    vehicleId: 'opencar.cars.egmp.v1',
-    bleRemoteId: '',
-    transportPreference: TransportPreference.http,
-  );
+  final pairedConfig = await PairedVehicleConfig.load();
   dev.log(
-    'Paired vehicle loaded: ${pairedConfig.vehicleId}',
+    pairedConfig != null
+        ? 'Paired vehicle loaded: ${pairedConfig.vehicleId}'
+        : 'No paired vehicle — wizard will be shown',
     name: 'AppBootstrap',
   );
 
@@ -47,7 +44,15 @@ class OpenCarApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Open Car',
+      themeMode: ThemeMode.system,
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
           brightness: Brightness.dark,

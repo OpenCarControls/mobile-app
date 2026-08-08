@@ -16,8 +16,8 @@ class DebugControlsDrawer extends ConsumerWidget {
         padding: const EdgeInsets.all(4.0),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isOn ? Colors.blue : Colors.grey.shade800,
-            foregroundColor: Colors.white,
+            backgroundColor: isOn ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+            foregroundColor: isOn ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           onPressed: onTap,
           child: Text(label),
@@ -26,26 +26,24 @@ class DebugControlsDrawer extends ConsumerWidget {
     }
 
     return Drawer(
-      backgroundColor: Colors.black87,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Text(
                     'Debug Controls',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:flutter/foundation.dart';
+import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
@@ -35,12 +36,45 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           child: const Text('E-GMP Platform'),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz),
-            tooltip: 'Switch Vehicle',
-            onPressed: () {
-              // Placeholder for switching vehicle
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'unpair') {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Unpair vehicle?'),
+                    content: const Text(
+                      'This will remove the pairing and return you to the '
+                      'setup wizard. The vehicle will also forget this phone '
+                      '(factory reset required to re-pair).',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Unpair'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  await ref.read(pairedVehicleProvider.notifier).unpair();
+                }
+              }
             },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'unpair',
+                child: ListTile(
+                  leading: Icon(Icons.link_off),
+                  title: Text('Unpair vehicle'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -126,7 +160,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     }
 
     return Container(
-      color: Colors.grey.shade900,
+      color: Theme.of(context).colorScheme.surface,
       child: Stack(
         children: [
           Positioned.fill(child: const Vehicle3DViewer()),
@@ -143,9 +177,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   children: [
                     Text(
                       '$batteryRange km - $batterySoc% 🔋$powerFlowStr',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -154,9 +186,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
                           chargeStatusStr,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -164,9 +195,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         statusLabel,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -174,9 +204,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 ),
                 Text(
                   '$odometer km',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -191,27 +219,21 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               child: Center(
                 child: Text(
                   '$speed km/h',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontWeight: FontWeight.w300,
                   ),
                 ),
               ),
             ),
           if (_currentSubMenu == 'climate')
-            const Positioned(
+            Positioned(
               top: 80,
               left: 0,
               right: 0,
               child: Text(
                 'Vehicle Representation\n(Top-down interior view placeholder)',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
           if (_currentSubMenu == null)
@@ -298,10 +320,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isActive ? Colors.blue.shade700 : Colors.grey.shade800,
+          color: isActive ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: Colors.white, size: 32),
+        child: Icon(
+          icon,
+          color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+          size: 32,
+        ),
       ),
     );
   }
@@ -320,7 +346,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final state = ref.watch(vehicleStateProvider);
     final basicState = state.basicState as BasicState;
     return Container(
-      color: Colors.black87,
+      color: Theme.of(context).colorScheme.surfaceContainer,
       child: ListView(
         shrinkWrap: shrinkWrap,
         physics: physics,
@@ -358,7 +384,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final indoorTemp = basicState.indoorTemperature;
 
     return Container(
-      color: Colors.black87,
+      color: Theme.of(context).colorScheme.surfaceContainer,
       child: ListView(
         shrinkWrap: shrinkWrap,
         physics: physics,
@@ -367,14 +393,12 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () => setState(() => _currentSubMenu = null),
             ),
-            title: const Text(
+            title: Text(
               'Climate & Windows',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -386,11 +410,15 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               children: [
                 Text(
                   'Outdoor: ${outdoorTemp.toStringAsFixed(1)}°C',
-                  style: const TextStyle(color: Colors.white70),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   'Indoor: ${indoorTemp.toStringAsFixed(1)}°C',
-                  style: const TextStyle(color: Colors.white70),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -420,7 +448,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     iconSize: 28,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.remove, color: Colors.white70),
+                    icon: Icon(Icons.remove, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     onPressed: () {
                       final cmd = BasicCommand(
                         climateControlCommand: ClimateControlCommand(
@@ -435,9 +463,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   ),
                   Text(
                     '${targetTemp.toStringAsFixed(1)}°',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -445,7 +471,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     iconSize: 28,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.add, color: Colors.white70),
+                    icon: Icon(Icons.add, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     onPressed: () {
                       final cmd = BasicCommand(
                         climateControlCommand: ClimateControlCommand(
@@ -466,7 +492,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 onTap: () {
                   showModalBottomSheet(
                     context: context,
-                    backgroundColor: Colors.grey.shade900,
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(16),
@@ -476,13 +502,13 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
-                          leading: const Icon(
+                          leading: Icon(
                             Icons.arrow_downward,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
-                          title: const Text(
+                          title: Text(
                             'Vent Windows',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           ),
                           onTap: () {
                             final cmd = BasicCommand(
@@ -498,13 +524,13 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           },
                         ),
                         ListTile(
-                          leading: const Icon(
+                          leading: Icon(
                             Icons.arrow_upward,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
-                          title: const Text(
+                          title: Text(
                             'Close Windows',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           ),
                           onTap: () {
                             final cmd = BasicCommand(
@@ -601,10 +627,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: isActive ? Colors.blue.shade700 : Colors.grey.shade800,
+          color: isActive ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(icon, color: Colors.white, size: iconSize),
+        child: Icon(
+          icon,
+          color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+          size: iconSize,
+        ),
       ),
     );
   }
@@ -623,7 +653,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -631,7 +663,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
 
   Widget _buildSettingsMenu({bool shrinkWrap = false, ScrollPhysics? physics}) {
     return Container(
-      color: Colors.black87,
+      color: Theme.of(context).colorScheme.surfaceContainer,
       child: ListView(
         shrinkWrap: shrinkWrap,
         physics: physics,
@@ -640,22 +672,22 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () => setState(() => _currentSubMenu = null),
             ),
-            title: const Text(
+            title: Text(
               'Settings',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const ListTile(
+          ListTile(
             title: Text(
               'Settings coming soon...',
-              style: TextStyle(color: Colors.white54),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -670,23 +702,25 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     required VoidCallback onTap,
   }) {
     return Card(
-      color: Colors.grey.shade800,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       margin: const EdgeInsets.only(bottom: 12.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 0,
       child: ListTile(
-        leading: Icon(icon, color: Colors.white70),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         subtitle: subtitle != null
-            ? Text(subtitle, style: const TextStyle(color: Colors.white54))
+            ? Text(
+                subtitle,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
             : null,
-        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+        trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
         onTap: onTap,
       ),
     );
