@@ -65,7 +65,6 @@ class StubCarTransport implements CarTransport {
 
     if (cmd.whichAction() == BasicCommand_Action.doorLockCommand) {
       _isLocked = cmd.doorLockCommand.lock;
-      _allDoorsOpen = !_isLocked; // Unlock opens doors for testing
     } else if (cmd.whichAction() == BasicCommand_Action.chargePortCommand) {
       _isChargePortOpen = cmd.chargePortCommand.open;
     } else if (cmd.whichAction() == BasicCommand_Action.climateControlCommand) {

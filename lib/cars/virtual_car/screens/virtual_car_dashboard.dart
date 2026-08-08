@@ -98,6 +98,7 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
               _StateHeaderSuffix(
                 lastUpdated: snapshot.lastUpdated,
                 awaitingAdvanced: awaitingAdvanced,
+                isStateLive: snapshot.isStateLive,
               ),
             ],
           ),
@@ -233,68 +234,22 @@ String _formatTimestamp(DateTime dt) {
 }
 
 /// Displays a spinner and/or "Updated …" timestamp to the right of a section
-/// header. The timestamp is hidden while it is less than [_kStaleThreshold]
-/// old — there is no value in showing it for very recent data. A one-shot
-/// [Timer] fires exactly when the threshold is crossed so the text appears
-/// without requiring a new state update to trigger a rebuild.
-class _StateHeaderSuffix extends StatefulWidget {
+/// header. The timestamp is hidden while the state is live.
+class _StateHeaderSuffix extends StatelessWidget {
   final DateTime? lastUpdated;
   final bool awaitingAdvanced;
+  final bool isStateLive;
 
   const _StateHeaderSuffix({
     required this.lastUpdated,
     required this.awaitingAdvanced,
+    required this.isStateLive,
   });
 
   @override
-  State<_StateHeaderSuffix> createState() => _StateHeaderSuffixState();
-}
-
-class _StateHeaderSuffixState extends State<_StateHeaderSuffix> {
-  static const _kStaleThreshold = Duration(seconds: 30);
-  Timer? _revealTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleRevealIfNeeded();
-  }
-
-  @override
-  void didUpdateWidget(_StateHeaderSuffix old) {
-    super.didUpdateWidget(old);
-    if (widget.lastUpdated != old.lastUpdated) {
-      _revealTimer?.cancel();
-      _scheduleRevealIfNeeded();
-    }
-  }
-
-  @override
-  void dispose() {
-    _revealTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleRevealIfNeeded() {
-    final ts = widget.lastUpdated;
-    if (ts == null) return;
-    final age = DateTime.now().difference(ts);
-    if (age >= _kStaleThreshold) return; // already stale — show immediately
-    _revealTimer = Timer(_kStaleThreshold - age, () {
-      if (mounted) setState(() {});
-    });
-  }
-
-  bool get _showTimestamp {
-    final ts = widget.lastUpdated;
-    if (ts == null) return false;
-    return DateTime.now().difference(ts) >= _kStaleThreshold;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final showTimestamp = _showTimestamp;
-    if (!widget.awaitingAdvanced && !showTimestamp) {
+    final showTimestamp = !isStateLive;
+    if (!awaitingAdvanced && !showTimestamp) {
       return const SizedBox.shrink();
     }
 
@@ -302,16 +257,16 @@ class _StateHeaderSuffixState extends State<_StateHeaderSuffix> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (widget.awaitingAdvanced)
+        if (awaitingAdvanced)
           const SizedBox(
             width: 12,
             height: 12,
             child: CircularProgressIndicator(strokeWidth: 1.5),
           ),
-        if (showTimestamp) ...[
-          if (widget.awaitingAdvanced) const SizedBox(width: 6),
+        if (showTimestamp && lastUpdated != null) ...[
+          if (awaitingAdvanced) const SizedBox(width: 6),
           Text(
-            'Updated ${_formatTimestamp(widget.lastUpdated!)}',
+            'Updated ${_formatTimestamp(lastUpdated!)}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

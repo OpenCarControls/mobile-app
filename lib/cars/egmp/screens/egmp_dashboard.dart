@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
-
 class EgmpDashboardScreen extends ConsumerStatefulWidget {
   const EgmpDashboardScreen({super.key});
 
@@ -13,6 +14,7 @@ class EgmpDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String? _currentSubMenu;
 
   @override
@@ -21,8 +23,17 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final isWideScreen = screenWidth > 800;
 
     return Scaffold(
+      key: _scaffoldKey,
+      endDrawer: kDebugMode ? const DebugControlsDrawer() : null,
       appBar: AppBar(
-        title: const Text('E-GMP Platform'),
+        title: GestureDetector(
+          onLongPress: () {
+            if (kDebugMode) {
+              _scaffoldKey.currentState?.openEndDrawer();
+            }
+          },
+          child: const Text('E-GMP Platform'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz),
@@ -42,7 +53,6 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       child: Column(
         children: [
           SizedBox(height: 400, child: _buildVehicleRepresentation()),
-          _buildDebugControls(),
           _buildRightPanel(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -59,65 +69,11 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           child: Column(
             children: [
               Expanded(child: _buildVehicleRepresentation()),
-              _buildDebugControls(),
             ],
           ),
         ),
         SizedBox(width: 350, child: _buildRightPanel()),
       ],
-    );
-  }
-
-  Widget _buildDebugControls() {
-    final stateNotifier = ref.read(vehicleStateProvider.notifier);
-    final basicState = ref.watch(vehicleStateProvider).basicState as BasicState;
-    
-    Widget btn(String label, bool isOn, VoidCallback onTap) {
-      return Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isOn ? Colors.blue : Colors.grey.shade800,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: onTap,
-          child: Text(label),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Colors.black26,
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        children: [
-          btn('Door FL', basicState.isDriverDoorOpen, () => stateNotifier.injectTestState(isDriverDoorOpen: !basicState.isDriverDoorOpen)),
-          btn('Door FR', basicState.isPassengerDoorOpen, () => stateNotifier.injectTestState(isPassengerDoorOpen: !basicState.isPassengerDoorOpen)),
-          btn('Door RL', basicState.isRearLeftDoorOpen, () => stateNotifier.injectTestState(isRearLeftDoorOpen: !basicState.isRearLeftDoorOpen)),
-          btn('Door RR', basicState.isRearRightDoorOpen, () => stateNotifier.injectTestState(isRearRightDoorOpen: !basicState.isRearRightDoorOpen)),
-          btn('Win FL', basicState.isDriverWindowOpen, () => stateNotifier.injectTestState(isDriverWindowOpen: !basicState.isDriverWindowOpen)),
-          btn('Win FR', basicState.isPassengerWindowOpen, () => stateNotifier.injectTestState(isPassengerWindowOpen: !basicState.isPassengerWindowOpen)),
-          btn('Win RL', basicState.isRearLeftWindowOpen, () => stateNotifier.injectTestState(isRearLeftWindowOpen: !basicState.isRearLeftWindowOpen)),
-          btn('Win RR', basicState.isRearRightWindowOpen, () => stateNotifier.injectTestState(isRearRightWindowOpen: !basicState.isRearRightWindowOpen)),
-          btn('Frunk', basicState.isFrunkOpen, () => stateNotifier.injectTestState(isFrunkOpen: !basicState.isFrunkOpen)),
-          btn('Trunk', basicState.isTrunkOpen, () => stateNotifier.injectTestState(isTrunkOpen: !basicState.isTrunkOpen)),
-          btn('Port', basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED && basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED, () {
-            final isOpen = basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED && basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED;
-            stateNotifier.injectTestState(chargePortState: isOpen ? BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED : BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN);
-          }),
-          btn('Cable AC', basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING, () {
-            final isConnected = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-            stateNotifier.injectTestState(chargePortState: isConnected ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED);
-          }),
-          btn('Cable DC', basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING, () {
-            final isConnected = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING;
-            stateNotifier.injectTestState(chargePortState: isConnected ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED);
-          }),
-          btn('Lights', basicState.areLightsOn, () => stateNotifier.injectTestState(areLightsOn: !basicState.areLightsOn)),
-          btn('Hazards', basicState.areHazardLightsOn, () => stateNotifier.injectTestState(areHazardLightsOn: !basicState.areHazardLightsOn)),
-        ],
-      ),
     );
   }
 
@@ -151,12 +107,23 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         BasicState_ChargePortState.CHARGE_PORT_STATE_V2L_ACTIVE;
 
     final String powerFlowStr = (powerFlow != 0 && (isCharging || isV2L))
-        ? ' ${(powerFlow > 0 ? '+' : '')}${(powerFlow / 1000).toStringAsFixed(1)} kW'
+        ? ' ${(powerFlow / 1000).toStringAsFixed(1)} kW'
         : '';
 
     final String chargeStatusStr = isCharging
         ? 'Charging • $timeRemaining mins to full'
         : (isV2L ? 'V2L Active' : '');
+
+    String statusLabel = 'Waiting for vehicle...';
+    if (state.isStateLive) {
+      statusLabel = 'Updated just now';
+    } else if (state.lastUpdated != null) {
+      final diff = DateTime.now().difference(state.lastUpdated!);
+      if (diff.inDays > 0) statusLabel = 'Last updated ${diff.inDays}d ago';
+      else if (diff.inHours > 0) statusLabel = 'Last updated ${diff.inHours}h ago';
+      else if (diff.inMinutes > 0) statusLabel = 'Last updated ${diff.inMinutes}m ago';
+      else statusLabel = 'Last updated ${diff.inSeconds}s ago';
+    }
 
     return Container(
       color: Colors.grey.shade900,
@@ -193,6 +160,16 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           ),
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        statusLabel,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 Text(

@@ -8,6 +8,7 @@ let currentTheta = 45 * Math.PI / 180;
 let actions = {};
 let cachedMaterials = {};
 let needsRender = true;
+let activeMaterialScrolls = {};
 
 let isInitialized = false;
 let animationFrameId = null;
@@ -125,7 +126,13 @@ function init() {
         // Cache materials
         carModel.traverse((child) => {
             if (child.isMesh && child.material) {
-                cachedMaterials[child.material.name] = child.material;
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.forEach(mat => {
+                    if (!cachedMaterials[mat.name]) cachedMaterials[mat.name] = [];
+                    if (!cachedMaterials[mat.name].includes(mat)) {
+                        cachedMaterials[mat.name].push(mat);
+                    }
+                });
             }
         });
 
@@ -138,47 +145,7 @@ function init() {
             actions[clip.name] = action;
         });
 
-        // Setup Custom Shader for fading outside 4m radius
-        carModel.traverse((child) => {
-            if (child.isMesh && child.material) {
-                // Ensure material is transparent to allow fading
-                child.material.transparent = true;
-
-                child.material.onBeforeCompile = (shader) => {
-                    shader.vertexShader = shader.vertexShader.replace(
-                        'void main() {',
-                        `
-                        varying vec3 vMyWorldPos;
-                        void main() {
-                        `
-                    );
-                    shader.vertexShader = shader.vertexShader.replace(
-                        '#include <worldpos_vertex>',
-                        `
-                        #include <worldpos_vertex>
-                        vMyWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
-                        `
-                    );
-
-                    shader.fragmentShader = shader.fragmentShader.replace(
-                        'void main() {',
-                        `
-                        varying vec3 vMyWorldPos;
-                        void main() {
-                        `
-                    );
-                    shader.fragmentShader = shader.fragmentShader.replace(
-                        '#include <dithering_fragment>',
-                        `
-                        #include <dithering_fragment>
-                        float dist = length(vMyWorldPos);
-                        float fadeAlpha = smoothstep(${fadeEnd.toFixed(2)}, ${fadeStart.toFixed(2)}, dist);
-                        gl_FragColor.a *= fadeAlpha;
-                        `
-                    );
-                };
-            }
-        });
+        // Removed the custom distance fade shader as requested.
 
         // Notify Flutter that model is loaded
         if (window.flutter_inappwebview) {
@@ -210,20 +177,53 @@ function animate() {
     needsRender = false;
 
     // Tween camera theta
+    let isCameraMoving = false;
     if (Math.abs(targetTheta - currentTheta) > 0.001) {
         currentTheta += (targetTheta - currentTheta) * 0.05;
         camera.position.setFromSphericalCoords(10, 60 * Math.PI / 180, currentTheta);
         camera.lookAt(0, 0, 0);
         shouldRender = true;
+        isCameraMoving = true;
     }
 
+    let isAnimating = false;
     if (mixer) {
         mixer.update(delta);
         for (const name in actions) {
             if (actions[name].isRunning()) {
                 shouldRender = true;
+                isAnimating = true;
                 break;
             }
+        }
+    }
+
+    let isMoving = isCameraMoving || isAnimating;
+    
+    if (window._statePending && !isMoving) {
+        window._statePending = false;
+        if (window.flutter_inappwebview) {
+            window.flutter_inappwebview.callHandler('onStateSettled');
+        }
+    } else if (isMoving) {
+        window._statePending = true;
+    }
+
+    for (const name in activeMaterialScrolls) {
+        const speed = activeMaterialScrolls[name];
+        if (speed && cachedMaterials[name]) {
+            const mats = cachedMaterials[name];
+            mats.forEach(mat => {
+                if (mat.map) {
+                    mat.map.offset.x += delta * (speed.x || 0);
+                    mat.map.offset.y += delta * (speed.y || 0);
+                }
+                if (mat.emissiveMap) {
+                    mat.emissiveMap.offset.x += delta * (speed.x || 0);
+                    mat.emissiveMap.offset.y += delta * (speed.y || 0);
+                }
+            });
+            shouldRender = true;
         }
     }
 
@@ -233,39 +233,156 @@ function animate() {
 }
 
 function setMaterialEmissive(name, hexColor, intensity) {
-    const mat = cachedMaterials[name];
-    if (mat) {
-        mat.emissive.setHex(hexColor);
-        mat.emissiveIntensity = intensity;
+    const mats = cachedMaterials[name];
+    if (mats) {
+        mats.forEach(mat => {
+            mat.emissive.setHex(hexColor);
+            mat.emissiveIntensity = intensity;
+        });
     }
 }
 
 function setMaterialColor(name, hexColor) {
-    const mat = cachedMaterials[name];
-    if (mat) {
-        mat.color.setHex(hexColor);
+    const mats = cachedMaterials[name];
+    if (mats) {
+        mats.forEach(mat => {
+            mat.color.setHex(hexColor);
+        });
     }
 }
 
+// Material APIs for Flutter
+window.setMaterialVisibility = function(name, isVisible) {
+    const mats = cachedMaterials[name];
+    if (mats) {
+        mats.forEach(mat => {
+            mat.visible = isVisible;
+        });
+        needsRender = true;
+    }
+};
+
+window.setMaterialScroll = function(name, speedX, speedY = 0, resetOffset = false) {
+    if (speedX === 0 && speedY === 0) {
+        delete activeMaterialScrolls[name];
+    } else {
+        activeMaterialScrolls[name] = { x: speedX, y: speedY };
+    }
+    
+    if (resetOffset) {
+        const mats = cachedMaterials[name];
+        if (mats) {
+            mats.forEach(mat => {
+                if (mat.map) mat.map.offset.set(0, 0);
+                if (mat.emissiveMap) mat.emissiveMap.offset.set(0, 0);
+            });
+        }
+    }
+    
+    needsRender = true;
+};
+
+window.setMaterialColorAPI = function(name, hexColor) {
+    setMaterialColor(name, hexColor);
+    needsRender = true;
+};
+
+window.setMaterialEmissiveAPI = function(name, hexColor, intensity) {
+    setMaterialEmissive(name, hexColor, intensity);
+    needsRender = true;
+};
+
+window.setMeshOpacity = function(meshName, opacity) {
+    if (!carModel) return;
+    const group = carModel.getObjectByName(meshName);
+    if (group) {
+        group.traverse((child) => {
+            if (child.isMesh && child.material) {
+                if (!child.userData.hasClonedMaterial) {
+                    if (Array.isArray(child.material)) {
+                        child.material = child.material.map(m => {
+                            const clone = m.clone();
+                            if (cachedMaterials[m.name]) cachedMaterials[m.name].push(clone);
+                            return clone;
+                        });
+                    } else {
+                        const m = child.material;
+                        const clone = m.clone();
+                        if (cachedMaterials[m.name]) cachedMaterials[m.name].push(clone);
+                        child.material = clone;
+                    }
+                    child.userData.hasClonedMaterial = true;
+                }
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.forEach(mat => {
+                    let needsUpdate = false;
+                    if (!mat.transparent) {
+                        mat.transparent = true;
+                        needsUpdate = true;
+                    }
+                    const newDepthWrite = true; // Force depth write to fix inner cable clipping
+                    if (mat.depthWrite !== newDepthWrite) {
+                        mat.depthWrite = newDepthWrite;
+                        needsUpdate = true;
+                    }
+                    mat.opacity = opacity;
+                    if (needsUpdate) mat.needsUpdate = true;
+                });
+            }
+        });
+        group.visible = opacity > 0;
+    }
+    needsRender = true;
+};
+
 // Exposed function for Flutter to call
+window.getSnapshot = function() {
+    if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/png');
+    }
+    return null;
+};
+
+window._isFirstStatePush = true;
+
 window.setVehicleState = function (stateJson) {
     if (!carModel) return;
 
     needsRender = true;
+    window._statePending = true;
     const payload = JSON.parse(stateJson);
+    const isInstant = window._isFirstStatePush;
+    window._isFirstStatePush = false;
 
     // 1. Camera
     if (payload.camera && payload.camera.targetTheta !== undefined) {
         targetTheta = payload.camera.targetTheta;
+        if (isInstant) {
+            currentTheta = targetTheta;
+            camera.position.setFromSphericalCoords(10, 60 * Math.PI / 180, currentTheta);
+            camera.lookAt(0, 0, 0);
+        }
     }
 
-    // 2. Mesh Visibility
+    // 2. Mesh Visibility and Opacity
     if (payload.meshVisibility) {
-        carModel.traverse((child) => {
-            if (payload.meshVisibility.hasOwnProperty(child.name)) {
-                child.visible = payload.meshVisibility[child.name];
+        for (const [meshName, visible] of Object.entries(payload.meshVisibility)) {
+            // If the payload specifies a boolean, use standard visibility
+            if (typeof visible === 'boolean') {
+                carModel.traverse((child) => {
+                    if (child.name === meshName) {
+                        child.visible = visible;
+                    }
+                });
             }
-        });
+        }
+    }
+    
+    if (payload.meshOpacity) {
+        for (const [meshName, opacity] of Object.entries(payload.meshOpacity)) {
+            window.setMeshOpacity(meshName, opacity);
+        }
     }
 
     // 3. Materials
@@ -276,6 +393,12 @@ window.setVehicleState = function (stateJson) {
             }
             if (matDef.color !== undefined) {
                 setMaterialColor(matDef.name, matDef.color);
+            }
+            if (matDef.visible !== undefined) {
+                window.setMaterialVisibility(matDef.name, matDef.visible);
+            }
+            if (matDef.scrollX !== undefined || matDef.scrollY !== undefined) {
+                window.setMaterialScroll(matDef.name, matDef.scrollX || 0, matDef.scrollY || 0, matDef.resetScroll === true);
             }
         });
     }
@@ -303,9 +426,15 @@ window.setVehicleState = function (stateJson) {
 
             if (isOpen) {
                 action.play();
+                if (isInstant) {
+                    action.time = action.getClip().duration;
+                }
             } else {
                 if (action.time === 0) action.time = action.getClip().duration;
                 action.play();
+                if (isInstant) {
+                    action.time = 0;
+                }
             }
         }
     }

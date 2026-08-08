@@ -42,12 +42,17 @@ class VehicleSnapshot {
   /// firmware has sent a fresh update.
   final bool isAdvancedStateLive;
 
+  /// True once ANY state has been received over the current live
+  /// transport session. Reset to false on every transport switch.
+  final bool isStateLive;
+
   const VehicleSnapshot({
     required this.basicState,
     required this.advancedState,
     this.system,
     this.lastUpdated,
     this.isAdvancedStateLive = false,
+    this.isStateLive = false,
   });
 
   VehicleSnapshot copyWith({
@@ -56,6 +61,7 @@ class VehicleSnapshot {
     SystemState? system,
     DateTime? lastUpdated,
     bool? isAdvancedStateLive,
+    bool? isStateLive,
   }) {
     return VehicleSnapshot(
       basicState: basicState ?? this.basicState,
@@ -63,12 +69,14 @@ class VehicleSnapshot {
       system: system ?? this.system,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isAdvancedStateLive: isAdvancedStateLive ?? this.isAdvancedStateLive,
+      isStateLive: isStateLive ?? this.isStateLive,
     );
   }
 }
 
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
+  Timer? _livenessTimer;
   int _nextMessageId = 0;
   // Cached across rebuilds so teardown races (vehicle → null before
   // this notifier is disposed) don't crash build().
@@ -94,7 +102,10 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     final transport = ref.watch(carTransportProvider);
 
     _subscription = transport.messages.listen(_onMessage);
-    ref.onDispose(() => _subscription?.cancel());
+    ref.onDispose(() {
+      _subscription?.cancel();
+      _livenessTimer?.cancel();
+    });
 
     // On cold start (no in-memory cache yet) kick off an async restore
     // from SharedPreferences. A generation counter ensures a late-arriving
@@ -115,11 +126,18 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
           basicState: vehicle.decodeBasicState(const []),
           advancedState: vehicle.decodeAdvancedState(const []),
         );
-    return base.copyWith(isAdvancedStateLive: false);
+    return base.copyWith(isAdvancedStateLive: false, isStateLive: false);
   }
 
   void _onMessage(DeviceToApp msg) {
     if (!msg.hasStateUpdate()) return;
+
+    _livenessTimer?.cancel();
+    _livenessTimer = Timer(const Duration(seconds: 30), () {
+      if (state.isStateLive || state.isAdvancedStateLive) {
+        state = state.copyWith(isStateLive: false, isAdvancedStateLive: false);
+      }
+    });
 
     if (kDebugMode) {
       final u = msg.stateUpdate;
@@ -169,7 +187,10 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       current = current.copyWith(system: merged);
     }
 
-    current = current.copyWith(lastUpdated: DateTime.now());
+    current = current.copyWith(
+      lastUpdated: DateTime.now(),
+      isStateLive: true,
+    );
     // Persist isAdvancedStateLive=false so a restored cache never starts live.
     _lastSnapshot = current;
     state = current;
@@ -301,6 +322,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     BasicState_ChargePortState? chargePortState,
     bool? areLightsOn,
     bool? areHazardLightsOn,
+    int? powerFlowWatt,
   }) {
     final currentBasic = state.basicState as BasicState;
     
@@ -318,8 +340,10 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     if (chargePortState != null) newBasic.chargePortState = chargePortState;
     if (areLightsOn != null) newBasic.areLightsOn = areLightsOn;
     if (areHazardLightsOn != null) newBasic.areHazardLightsOn = areHazardLightsOn;
+    if (powerFlowWatt != null) newBasic.powerFlowWatt = powerFlowWatt;
 
     state = state.copyWith(basicState: newBasic);
+    _saveCachedState(state, vehicle);
   }
 }
 
