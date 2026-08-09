@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
@@ -21,6 +22,23 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String? _currentSubMenu;
   String? _pendingAction;
+  Timer? _timeUpdateTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeUpdateTimer?.cancel();
+    super.dispose();
+  }
 
   void _executeCommand(String actionId, Future<void> Function() command) async {
     setState(() {
@@ -202,10 +220,24 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       statusLabel = 'Updated just now';
     } else if (state.lastUpdated != null) {
       final diff = DateTime.now().difference(state.lastUpdated!);
-      if (diff.inDays > 0) statusLabel = 'Last updated ${diff.inDays}d ago';
-      else if (diff.inHours > 0) statusLabel = 'Last updated ${diff.inHours}h ago';
-      else if (diff.inMinutes > 0) statusLabel = 'Last updated ${diff.inMinutes}m ago';
-      else statusLabel = 'Last updated ${diff.inSeconds}s ago';
+      final localTime = state.lastUpdated!.toLocal();
+      if (diff.inHours >= 12 || DateTime.now().day != localTime.day) {
+        final hours = localTime.hour.toString().padLeft(2, '0');
+        final minutes = localTime.minute.toString().padLeft(2, '0');
+        final month = localTime.month.toString().padLeft(2, '0');
+        final day = localTime.day.toString().padLeft(2, '0');
+        if (DateTime.now().day == localTime.day) {
+          statusLabel = 'Last synced: Today at $hours:$minutes';
+        } else {
+          statusLabel = 'Last synced: ${localTime.year}-$month-$day $hours:$minutes';
+        }
+      } else if (diff.inHours > 0) {
+        statusLabel = 'Last updated ${diff.inHours}h ago';
+      } else if (diff.inMinutes > 0) {
+        statusLabel = 'Last updated ${diff.inMinutes}m ago';
+      } else {
+        statusLabel = 'Last updated ${diff.inSeconds}s ago';
+      }
     }
 
     return Container(

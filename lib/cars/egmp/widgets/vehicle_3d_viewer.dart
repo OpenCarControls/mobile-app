@@ -279,15 +279,23 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
         _hazardFlashState = false;
       }
 
-      // If we just received the first live state update this session, fade out the snapshot overlay
-      if (previous != null && !previous.isStateLive && next.isStateLive && _isModelLoaded) {
-        Future.delayed(const Duration(milliseconds: 150), () {
+      // Fade out the snapshot overlay when live, fade it back in when stale
+      if (previous != null && previous.isStateLive != next.isStateLive && _isModelLoaded) {
+        if (next.isStateLive) {
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (mounted) {
+              setState(() {
+                _showOverlay = false;
+              });
+            }
+          });
+        } else {
           if (mounted) {
             setState(() {
-              _showOverlay = false;
+              _showOverlay = true;
             });
           }
-        });
+        }
       }
 
       _pushStateToWebView();
