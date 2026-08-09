@@ -78,6 +78,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
   Timer? _livenessTimer;
   int _nextMessageId = 0;
+  final _pendingCommands = <Int64, Completer<CommandResponse>>{};
   // Cached across rebuilds so teardown races (vehicle → null before
   // this notifier is disposed) don't crash build().
   VehicleDefinition? _vehicle;
@@ -105,6 +106,12 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     ref.onDispose(() {
       _subscription?.cancel();
       _livenessTimer?.cancel();
+      for (final completer in _pendingCommands.values) {
+        if (!completer.isCompleted) {
+          completer.completeError('Provider disposed');
+        }
+      }
+      _pendingCommands.clear();
     });
 
     // On cold start (no in-memory cache yet) kick off an async restore
@@ -130,6 +137,18 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   }
 
   void _onMessage(DeviceToApp msg) {
+    if (msg.hasCommandResponse()) {
+      final response = msg.commandResponse;
+      final completer = _pendingCommands.remove(response.messageId);
+      if (completer != null && !completer.isCompleted) {
+        if (!response.success) {
+          completer.completeError(response.errorMessage.isNotEmpty ? response.errorMessage : 'Command failed');
+        } else {
+          completer.complete(response);
+        }
+      }
+    }
+
     if (!msg.hasStateUpdate()) return;
 
     _livenessTimer?.cancel();
@@ -267,25 +286,59 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   /// Send a serialised basic command for the active vehicle.
   /// The caller (vehicle-specific screen) is responsible for serialising the
   /// vehicle's own proto command type: `myCommand.writeToBuffer()`.
-  Future<void> sendBasicCommand(List<int> commandBytes) {
-    return _send(
-      AppToDevice(
-        messageId: Int64(_nextMessageId++),
-        platformId: vehicle.platformId,
-        basicCommandBytes: commandBytes,
-      ),
+  Future<CommandResponse> sendBasicCommand(List<int> commandBytes) async {
+    final messageId = Int64(_nextMessageId++);
+    final completer = Completer<CommandResponse>();
+    _pendingCommands[messageId] = completer;
+
+    try {
+      await _send(
+        AppToDevice(
+          messageId: messageId,
+          platformId: vehicle.platformId,
+          basicCommandBytes: commandBytes,
+        ),
+      );
+    } catch (e) {
+      _pendingCommands.remove(messageId);
+      rethrow;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _pendingCommands.remove(messageId);
+        throw TimeoutException('Command timed out');
+      },
     );
   }
 
   /// Send a serialised advanced command for the active vehicle.
   /// Only meaningful over BLE; the BLE transport sends all envelope types.
-  Future<void> sendAdvancedCommand(List<int> commandBytes) {
-    return _send(
-      AppToDevice(
-        messageId: Int64(_nextMessageId++),
-        platformId: vehicle.platformId,
-        advancedCommandBytes: commandBytes,
-      ),
+  Future<CommandResponse> sendAdvancedCommand(List<int> commandBytes) async {
+    final messageId = Int64(_nextMessageId++);
+    final completer = Completer<CommandResponse>();
+    _pendingCommands[messageId] = completer;
+
+    try {
+      await _send(
+        AppToDevice(
+          messageId: messageId,
+          platformId: vehicle.platformId,
+          advancedCommandBytes: commandBytes,
+        ),
+      );
+    } catch (e) {
+      _pendingCommands.remove(messageId);
+      rethrow;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _pendingCommands.remove(messageId);
+        throw TimeoutException('Command timed out');
+      },
     );
   }
 

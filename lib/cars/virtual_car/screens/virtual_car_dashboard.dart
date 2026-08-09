@@ -8,6 +8,7 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/transport/http_transport.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -45,7 +46,20 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'unpair') {
+              if (value == 'simulate') {
+                final transport = ref.read(carTransportProvider);
+                if (transport is HttpCarTransport) {
+                  try {
+                    await transport.simulate();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Simulation error: $e')),
+                      );
+                    }
+                  }
+                }
+              } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -73,8 +87,17 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                 }
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            itemBuilder: (_) => [
+              if (transportType == TransportType.http)
+                const PopupMenuItem(
+                  value: 'simulate',
+                  child: ListTile(
+                    leading: Icon(Icons.bug_report),
+                    title: Text('Toggle Simulation'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(
                   leading: Icon(Icons.link_off),

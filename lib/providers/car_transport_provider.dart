@@ -35,7 +35,7 @@ final carTransportProvider = Provider<CarTransport>((ref) {
   if (vehicle == null) return const _NullCarTransport();
   final config = ref.watch(pairedVehicleProvider);
 
-  if (kIsWeb || kDebugMode) {
+  if (kIsWeb) {
     dev.log('Using Stub transport for testing', name: 'TransportProvider');
     return vehicle.createStubTransport() ?? const _NullCarTransport();
   }

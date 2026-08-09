@@ -311,14 +311,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       return;
     }
     try {
-      final t = HttpCarTransport(
-        host: host,
-        port: port,
-        pollingIntervalMs: kDebugServerPollingIntervalMs,
-      );
-      // One poll to verify the server is reachable.
-      await Future.delayed(const Duration(milliseconds: 600));
-      t.dispose();
+      await HttpCarTransport.testConnection(host, port);
       setState(() {
         _httpTesting = false;
         _httpTestResult = 'Connected ✓';
