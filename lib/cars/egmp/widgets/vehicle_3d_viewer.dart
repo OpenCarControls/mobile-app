@@ -24,7 +24,8 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
   bool _showOverlay = true;
   bool _isImageLoaded = false;
   
-  Uint8List? _lastFrameBytes;
+  Uint8List? _lastFrameLightBytes;
+  Uint8List? _lastFrameDarkBytes;
   Timer? _screenshotTimer;
   
   Timer? _hazardTimer;
@@ -53,10 +54,24 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
   Future<void> _loadLastFrame() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final base64String = prefs.getString('vehicle_3d_last_frame');
-      if (base64String != null && mounted) {
+      final lightStr = prefs.getString('vehicle_3d_last_frame_light');
+      final darkStr = prefs.getString('vehicle_3d_last_frame_dark');
+      final legacyStr = prefs.getString('vehicle_3d_last_frame');
+      
+      if (mounted) {
         setState(() {
-          _lastFrameBytes = base64Decode(base64String);
+          if (lightStr != null) {
+            _lastFrameLightBytes = base64Decode(lightStr);
+          } else if (legacyStr != null) {
+            _lastFrameLightBytes = base64Decode(legacyStr);
+          }
+          
+          if (darkStr != null) {
+            _lastFrameDarkBytes = base64Decode(darkStr);
+          } else if (legacyStr != null) {
+            _lastFrameDarkBytes = base64Decode(legacyStr);
+          }
+          
           _isImageLoaded = false;
         });
         
@@ -84,7 +99,19 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
         // If it's too small, it's likely just an empty transparent PNG
         if (base64String.length > 1000) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('vehicle_3d_last_frame', base64String);
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final key = isDark ? 'vehicle_3d_last_frame_dark' : 'vehicle_3d_last_frame_light';
+          await prefs.setString(key, base64String);
+          
+          if (mounted) {
+            setState(() {
+              if (isDark) {
+                _lastFrameDarkBytes = base64Decode(base64String);
+              } else {
+                _lastFrameLightBytes = base64Decode(base64String);
+              }
+            });
+          }
         } else {
           debugPrint('Frame was too small (empty transparent image).');
         }
@@ -257,6 +284,16 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
       _powerFlowAnimController.reverse();
     }
 
+    bool isRecent(VehicleSnapshot s) {
+      if (s.isStateLive) return true;
+      if (s.lastUpdated == null) return false;
+      return DateTime.now().difference(s.lastUpdated!) < const Duration(seconds: 30);
+    }
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentLastFrameBytes = isDark ? _lastFrameDarkBytes : _lastFrameLightBytes;
+    final applyGrayFilter = !isRecent(state);
+
     // Listen to vehicle state and push changes to the WebView
     ref.listen(vehicleStateProvider, (previous, next) {
       final wasHazardsOn = (previous?.basicState as BasicState?)?.areHazardLightsOn ?? false;
@@ -280,8 +317,11 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
       }
 
       // Fade out the snapshot overlay when live, fade it back in when stale
-      if (previous != null && previous.isStateLive != next.isStateLive && _isModelLoaded) {
-        if (next.isStateLive) {
+      final wasRecentState = previous != null ? isRecent(previous) : false;
+      final isRecentState = isRecent(next);
+
+      if (previous != null && wasRecentState != isRecentState && _isModelLoaded) {
+        if (isRecentState) {
           Future.delayed(const Duration(milliseconds: 150), () {
             if (mounted) {
               setState(() {
@@ -304,7 +344,7 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
     Widget webView = _isServerRunning ? IgnorePointer(
       child: InAppWebView(
         initialUrlRequest: URLRequest(
-          url: WebUri('http://localhost:8080/web/index.html'),
+          url: WebUri('http://localhost:8080/web/index.html?v=${DateTime.now().millisecondsSinceEpoch}'),
         ),
         initialSettings: InAppWebViewSettings(
           transparentBackground: true,
@@ -347,8 +387,9 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
               _isModelLoaded = true;
               _pushStateToWebView(); // First push instantly snaps to the cached state from VehicleStateProvider
 
-              final isLive = ref.read(vehicleStateProvider).isStateLive;
-              if (isLive) {
+              final state = ref.read(vehicleStateProvider);
+              final isRecentState = state.isStateLive || (state.lastUpdated != null && DateTime.now().difference(state.lastUpdated!) < const Duration(seconds: 30));
+              if (isRecentState) {
                 Future.delayed(const Duration(milliseconds: 150), () {
                   if (mounted) {
                     setState(() {
@@ -380,15 +421,15 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
     return Stack(
       children: [
         webView,
-        if (!_isServerRunning && _lastFrameBytes == null)
+        if (!_isServerRunning && currentLastFrameBytes == null)
           const Center(child: CircularProgressIndicator()),
-        if (_lastFrameBytes != null)
+        if (currentLastFrameBytes != null)
           Positioned.fill(
             child: IgnorePointer(
               child: AnimatedOpacity(
                 opacity: (_showOverlay && _isImageLoaded) ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
-                child: ColorFiltered(
+                child: applyGrayFilter ? ColorFiltered(
                   colorFilter: const ColorFilter.matrix([
                     0.33, 0.59, 0.11, 0, 0,
                     0.33, 0.59, 0.11, 0, 0,
@@ -396,9 +437,12 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
                     0,    0,    0,    1, 0,
                   ]),
                   child: Image.memory(
-                    _lastFrameBytes!,
-                    fit: BoxFit.cover,
+                    currentLastFrameBytes,
+                    fit: BoxFit.fitHeight,
                   ),
+                ) : Image.memory(
+                  currentLastFrameBytes,
+                  fit: BoxFit.fitHeight,
                 ),
               ),
             ),

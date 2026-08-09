@@ -167,6 +167,8 @@ function onWindowResize() {
     camera.bottom = -frustumSize / 2;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    needsRender = true;
+    window._forceRenderFrames = 5;
 }
 
 function animate() {
@@ -200,12 +202,17 @@ function animate() {
 
     let isMoving = isCameraMoving || isAnimating;
     
-    if (window._statePending && !isMoving) {
+    if (window._forceRenderFrames > 0) {
+        shouldRender = true;
+        window._forceRenderFrames--;
+    }
+
+    if (window._statePending && !isMoving && window._forceRenderFrames === 0) {
         window._statePending = false;
         if (window.flutter_inappwebview) {
             window.flutter_inappwebview.callHandler('onStateSettled');
         }
-    } else if (isMoving) {
+    } else if (isMoving || window._forceRenderFrames > 0) {
         window._statePending = true;
     }
 
@@ -351,6 +358,7 @@ window.setVehicleState = function (stateJson) {
 
     needsRender = true;
     window._statePending = true;
+    window._forceRenderFrames = 10;
     const payload = JSON.parse(stateJson);
     const isInstant = window._isFirstStatePush;
     window._isFirstStatePush = false;

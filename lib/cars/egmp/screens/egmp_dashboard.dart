@@ -20,6 +20,7 @@ class EgmpDashboardScreen extends ConsumerStatefulWidget {
 
 class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey _vehicle3dViewerKey = GlobalKey();
   String? _currentSubMenu;
   String? _pendingAction;
   Timer? _timeUpdateTimer;
@@ -244,7 +245,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       color: Theme.of(context).colorScheme.surface,
       child: Stack(
         children: [
-          Positioned.fill(child: const Vehicle3DViewer()),
+          Positioned.fill(child: Vehicle3DViewer(key: _vehicle3dViewerKey)),
           Positioned(
             top: 24,
             left: 24,
