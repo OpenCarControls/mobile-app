@@ -317,8 +317,8 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
                   'position': { 'radius': 10.0, 'phi': 60.0 * pi / 180.0, 'theta': 45.0 * pi / 180.0 }
                 },
                 'lighting': {
-                  'ambientLight': { 'color': 0xffffff, 'intensity': 1.2 },
-                  'directionalLight': { 'color': 0xffffff, 'intensity': 3.0, 'position': { 'x': 10.0, 'y': 20.0, 'z': 10.0 } }
+                  'ambientLight': { 'color': 0xffffff, 'intensity': Theme.of(context).brightness == Brightness.dark ? 1.2 : 3.5 },
+                  'directionalLight': { 'color': 0xffffff, 'intensity': Theme.of(context).brightness == Brightness.dark ? 3.0 : 6.0, 'position': { 'x': 10.0, 'y': 20.0, 'z': 10.0 } }
                 },
                 'model': {
                   'path': '../cars/egmp/2022_kia_ev6.glb'

@@ -11,6 +11,7 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/transport/car_transport.dart';
@@ -148,6 +149,18 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
         }
       }
     }
+    
+    final vehicle = ref.read(selectedVehicleProvider)!;
+    if (msg.platformId != 0 && msg.platformId != vehicle.platformId) {
+      dev.log(
+        'FATAL: Platform ID mismatch. Expected ${vehicle.platformId}, got ${msg.platformId}. Unpairing.',
+        name: 'VehicleState',
+      );
+      Future.microtask(() {
+        ref.read(pairedVehicleProvider.notifier).unpair();
+      });
+      return;
+    }
 
     if (!msg.hasStateUpdate()) return;
 
@@ -173,7 +186,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       );
     }
 
-    final vehicle = ref.read(selectedVehicleProvider)!;
+
     final update = msg.stateUpdate;
     var current = state;
 
@@ -213,6 +226,14 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     // Persist isAdvancedStateLive=false so a restored cache never starts live.
     _lastSnapshot = current;
     state = current;
+    
+    if (kDebugMode) {
+      dev.log(
+        'Updated State JSON:\nbasicState=${jsonEncode(current.basicState.toProto3Json())}\nadvancedState=${jsonEncode(current.advancedState.toProto3Json())}',
+        name: 'VehicleState',
+      );
+    }
+
     _saveCachedState(current, ref.read(selectedVehicleProvider)!);
   }
 

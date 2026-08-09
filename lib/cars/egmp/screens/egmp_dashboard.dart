@@ -251,29 +251,17 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  '$odometer km',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                if (isDriving)
+                  Text(
+                    '$speed km/h',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
-          if (isDriving)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  '$speed km/h',
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ),
-            ),
           if (_currentSubMenu == 'climate')
             Positioned(
               top: 80,
@@ -425,7 +413,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ),
           _buildMenuTile(
             icon: Icons.settings,
-            title: 'Settings',
+            title: 'About & Settings',
             onTap: () => setState(() => _currentSubMenu = 'settings'),
           ),
         ],
@@ -753,6 +741,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   }
 
   Widget _buildSettingsMenu({bool shrinkWrap = false, ScrollPhysics? physics}) {
+    final state = ref.watch(vehicleStateProvider);
+    final basicState = state.basicState as BasicState;
+
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainer,
       child: ListView(
@@ -767,12 +758,21 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               onPressed: () => setState(() => _currentSubMenu = null),
             ),
             title: Text(
-              'Settings',
+              'About & Settings',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.speed),
+            title: const Text('Odometer'),
+            trailing: Text(
+              '${basicState.odometer} km',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          const Divider(),
           ListTile(
             title: Text(
               'Settings coming soon...',
