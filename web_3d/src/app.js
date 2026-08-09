@@ -160,7 +160,7 @@ function init() {
 
 function onWindowResize() {
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 4.5;
+    const frustumSize = currentConfig.camera?.frustumSize || 6;
     camera.left = -frustumSize * aspect / 2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
