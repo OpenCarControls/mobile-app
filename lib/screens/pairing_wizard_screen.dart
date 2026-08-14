@@ -197,6 +197,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           );
 
       await connectedCompleter.future;
+      await ble.requestMtu(deviceId: deviceId, mtu: 244);
       await ble.discoverAllServices(deviceId);
 
       final vehicle = ref.read(availableVehiclesProvider).first;
