@@ -8,6 +8,7 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
@@ -109,10 +110,19 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Basic state ─────────────────────────────────────────────────
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (transportType == TransportType.ble) {
+            ref.read(bleConnectionProvider.notifier).forceReconnect();
+            // Add a small delay so the refresh animation shows.
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+          }
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            // ── Basic state ─────────────────────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -219,6 +229,7 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/providers/ble_connection_provider.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
 class EgmpDashboardScreen extends ConsumerStatefulWidget {
@@ -151,15 +152,25 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   }
 
   Widget _buildNarrowLayout() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          SizedBox(height: 400, child: _buildVehicleRepresentation()),
-          _buildRightPanel(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        final transportType = ref.read(transportTypeProvider);
+        if (transportType == TransportType.ble) {
+          ref.read(bleConnectionProvider.notifier).forceReconnect();
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+        }
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            SizedBox(height: 400, child: _buildVehicleRepresentation()),
+            _buildRightPanel(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+            ),
+          ],
+        ),
       ),
     );
   }

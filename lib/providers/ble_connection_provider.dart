@@ -52,6 +52,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
   StreamSubscription<BleStatus>? _statusSubscription;
   bool _connecting = false;
+  bool _disposed = false;
 
   @override
   BleConnectionState build() {
@@ -136,9 +137,36 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
           onError: (Object e) {
             dev.log('Connection stream error: $e', name: 'BleConnection');
             _connecting = false;
-            state = BleConnecting(remoteId); // will retry via statusStream
+            state = BleConnecting(remoteId);
+            // Reconnect after a short delay
+            Future.delayed(const Duration(seconds: 30), () {
+              if (!_disposed) _connectDirectly(remoteId);
+            });
+          },
+          onDone: () {
+            dev.log('Connection stream done', name: 'BleConnection');
+            _connecting = false;
+            state = BleConnecting(remoteId);
+            // Reconnect after a short delay
+            Future.delayed(const Duration(seconds: 30), () {
+              if (!_disposed) _connectDirectly(remoteId);
+            });
           },
         );
+  }
+
+  void forceReconnect() {
+    if (_disposed) return;
+    if (state is BleReady) {
+      dev.log('Already connected, ignoring force reconnect', name: 'BleConnection');
+      return;
+    }
+    
+    final config = ref.read(pairedVehicleProvider);
+    if (config == null || config.bleRemoteId.isEmpty) return;
+    dev.log('Force reconnect requested', name: 'BleConnection');
+    _cancelConnection();
+    _connectDirectly(config.bleRemoteId);
   }
 
   Future<void> _onConnectionUpdate(
@@ -233,6 +261,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   }
 
   void _cleanup() {
+    _disposed = true;
     _statusSubscription?.cancel();
     _statusSubscription = null;
     _connectionSubscription?.cancel();
