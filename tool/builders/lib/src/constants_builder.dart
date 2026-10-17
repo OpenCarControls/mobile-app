@@ -55,6 +55,7 @@ class ConstantsBuilder implements Builder {
       'ble.characteristics.device_to_app',
     );
     final blePairing = _map(ble['pairing'], 'ble.pairing');
+    final blePayload = _map(ble['payload'], 'ble.payload');
 
     final mqttCommandTemplate = _string(
       mqtt['command_topic_template'],
@@ -82,6 +83,11 @@ class ConstantsBuilder implements Builder {
     final bleScanTimeoutSeconds = _int(
       blePairing['scan_timeout_seconds'],
       'ble.pairing.scan_timeout_seconds',
+    );
+    final bleAttMtu = _int(blePayload['att_mtu'], 'ble.payload.att_mtu');
+    final bleMaxMessageBytes = _int(
+      blePayload['max_message_bytes'],
+      'ble.payload.max_message_bytes',
     );
 
     final outputId = AssetId(
@@ -118,7 +124,10 @@ class ConstantsBuilder implements Builder {
       ..writeln(
         'const int kBlePairingWindowSeconds = $blePairingWindowSeconds;',
       )
-      ..writeln('const int kBleScanTimeoutSeconds = $bleScanTimeoutSeconds;');
+      ..writeln('const int kBleScanTimeoutSeconds = $bleScanTimeoutSeconds;')
+      ..writeln()
+      ..writeln('const int kBleAttMtu = $bleAttMtu;')
+      ..writeln('const int kBleMaxMessageBytes = $bleMaxMessageBytes;');
 
     await buildStep.writeAsString(outputId, buffer.toString());
   }

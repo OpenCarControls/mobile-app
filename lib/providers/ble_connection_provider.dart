@@ -3,6 +3,8 @@ import 'dart:developer' as dev;
 
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Transport constants are identical in every vehicle's constants.g.dart.
+import 'package:open_car_app/cars/virtual_car/constants.g.dart' show kBleAttMtu;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
@@ -200,9 +202,18 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     final ble = ref.read(bleProvider);
 
     try {
-      // Negotiate MTU before emitting BleReady.
-      await ble.requestMtu(deviceId: remoteId, mtu: 244);
-      dev.log('MTU negotiated for $remoteId', name: 'BleConnection');
+      // Negotiate MTU before emitting BleReady. Messages aren't fragmented, so
+      // a smaller MTU means larger state updates won't arrive.
+      final mtu = await ble.requestMtu(deviceId: remoteId, mtu: kBleAttMtu);
+      if (mtu < kBleAttMtu) {
+        dev.log(
+          'MTU $mtu negotiated for $remoteId, below the $kBleAttMtu the '
+          'device needs; large messages will be lost',
+          name: 'BleConnection',
+        );
+      } else {
+        dev.log('MTU $mtu negotiated for $remoteId', name: 'BleConnection');
+      }
 
       // Clear Android's cached GATT profile before service discovery.
       // On bonded devices Android reuses the cached profile from the previous

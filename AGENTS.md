@@ -10,7 +10,7 @@ Rules for AI agents working in this repo. Project knowledge (architecture, BLE a
 *   If you can't run something (e.g. a device build), say so rather than claiming it works.
 
 ### Generated code
-*   Generated files (`lib/generated/**`, `*.g.dart`) are committed but never hand-edited. Change the source (`contracts/`, `config.toml.example`) and re-run `dart run build_runner build`.
+*   Generated files (`lib/generated/**`, `*.g.dart`) are gitignored and never hand-edited. Change the source (`contracts/`, `config.toml.example`) and re-run `dart run build_runner build`; CI regenerates them before building.
 *   Never copy-paste values from `contracts/` TOML (UUIDs, platform IDs, topics); import them from the generated `constants.g.dart`.
 *   `contracts/` is a git submodule shared with the firmware repo. Editing it is fine: follow the append-only rules in its `AGENTS.md`, commit the change in the contracts repo, and bump the submodule pin here in its own commit.
 

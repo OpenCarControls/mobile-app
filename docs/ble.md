@@ -17,6 +17,7 @@ The device advertises **only** while its pairing button is held. The app never s
 *   **Library:** `flutter_reactive_ble: ^5.4.1`. Singleton in `lib/providers/ble_provider.dart` (`bleProvider`).
 *   **Key API:** `ble.connectToDevice(id, connectionTimeout)` stream auto-retries; `discoverAllServices(deviceId)` (void) then `getDiscoveredServices(deviceId)` → `List<Service>` (`.id` is `Uuid`, `.characteristics` is `List<Characteristic>`); `subscribeToCharacteristic(QualifiedCharacteristic)`; `writeCharacteristicWithResponse(char, value: bytes)`.
 *   **`QualifiedCharacteristic`** takes `deviceId` (String), `serviceId` (Uuid), `characteristicId` (Uuid). Use `Uuid.parse(uuidString)`.
+*   **MTU and message size:** after connecting, the app requests `kBleAttMtu` (247, from `ble.payload` in the contract) and logs a warning if the phone negotiates less. BLE messages are never fragmented, so each message must fit in `kBleMaxMessageBytes` (244); `BleCarTransport.send()` rejects larger commands with a `CarTransportException`.
 *   Direct reconnect via `connectToDevice(remoteId)` — no scan after pairing. Do **not** treat pre-connect `disconnected` events as failures.
 *   **`source_device_id`:** UUID v4 generated on first launch, persisted via `SharedPreferences` (`getOrCreateDeviceId()`), injected as `bleSourceDeviceIdProvider`. Never hardcode it. (The firmware overwrites it with the verified BLE peer address anyway.)
 *   `sendBasicCommand()` / `sendAdvancedCommand()` inject `sourceDeviceId` automatically for BLE/HTTP.

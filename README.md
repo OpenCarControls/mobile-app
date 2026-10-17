@@ -16,7 +16,7 @@ Flutter mobile app for interacting with an ESP32-based car controller over BLE (
 
 ## Code generation
 
-Dart code is generated from the `contracts/` submodule and `config.toml`. Generated files are committed, so builds work without it; re-run it when the contracts or config change:
+Dart code is generated from the `contracts/` submodule and `config.toml`. Generated files are gitignored, so run it after cloning and again when the contracts or config change:
 
 ```sh
 dart run build_runner build
@@ -50,7 +50,7 @@ The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToA
 ├── lib/
 │   ├── cars/         # one folder per supported vehicle
 │   ├── config/       # app + generated MQTT config, device identity
-│   ├── generated/    # committed generated protobuf classes
+│   ├── generated/    # generated protobuf classes (gitignored)
 │   ├── models/       # VehicleDefinition
 │   ├── providers/    # Riverpod providers
 │   ├── screens/      # pairing wizard
