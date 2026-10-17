@@ -3,7 +3,7 @@
 The app generates Dart code from the `contracts/` git submodule (protobuf schemas and TOML metadata) and from `config.toml`. Generated files are **committed**, so a normal `flutter build` works without running codegen first.
 
 ```sh
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
 
 Re-run it when:

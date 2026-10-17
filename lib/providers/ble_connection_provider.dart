@@ -72,6 +72,8 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   Future<void> _initConnection(String remoteId) async {
     final granted = await _requestPermissions();
+    // Riverpod 3 throws when a disposed Ref is used after an await.
+    if (!ref.mounted) return;
     if (!granted) {
       dev.log('Bluetooth permission denied', name: 'BleConnection');
       state = const BleDisconnected(
@@ -158,10 +160,13 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   void forceReconnect() {
     if (_disposed) return;
     if (state is BleReady) {
-      dev.log('Already connected, ignoring force reconnect', name: 'BleConnection');
+      dev.log(
+        'Already connected, ignoring force reconnect',
+        name: 'BleConnection',
+      );
       return;
     }
-    
+
     final config = ref.read(pairedVehicleProvider);
     if (config == null || config.bleRemoteId.isEmpty) return;
     dev.log('Force reconnect requested', name: 'BleConnection');
@@ -219,6 +224,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       // Discover services and characteristics.
       await ble.discoverAllServices(remoteId);
       dev.log('Services discovered for $remoteId', name: 'BleConnection');
+      if (!ref.mounted) return;
 
       // Verify the required characteristics are present.
       final vehicle = ref.read(selectedVehicleProvider);
@@ -230,6 +236,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       }
 
       final services = await ble.getDiscoveredServices(remoteId);
+      if (!ref.mounted) return;
       final serviceUuid = Uuid.parse(vehicle.bleServiceUuid);
       final serviceMatch = services.where((s) => s.id == serviceUuid);
       if (serviceMatch.isEmpty) {
@@ -256,6 +263,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');
       _connecting = false;
+      if (!ref.mounted) return;
       state = BleConnecting(remoteId);
     }
   }

@@ -1,13 +1,53 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+
+/// The bundled Three.js viewer (`web_3d/`, built into `assets/web/`), served
+/// straight from the APK by Android's WebViewAssetLoader — no local server.
+final _viewerUrl = WebUri(
+  'https://${WebViewAssetLoader.DEFAULT_DOMAIN}'
+  '/assets/flutter_assets/assets/web/index.html',
+);
+
+/// SharedPreferences keys used by older builds to store snapshots. Removed on
+/// load: large values there are read into memory on every app start.
+const _legacySnapshotPrefsKeys = [
+  'vehicle_3d_last_frame',
+  'vehicle_3d_last_frame_light',
+  'vehicle_3d_last_frame_dark',
+];
+
+/// Snapshots older than this are shown grayed out.
+const _kRecentThreshold = Duration(seconds: 30);
+
+const _kAcConnectedStates = {
+  BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED,
+  BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING,
+};
+
+const _kDcConnectedStates = {
+  BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING,
+  BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED,
+  BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING,
+};
+
+bool _isRecent(VehicleSnapshot s) {
+  if (s.isStateLive) return true;
+  final lastUpdated = s.lastUpdated;
+  if (lastUpdated == null) return false;
+  return DateTime.now().difference(lastUpdated) < _kRecentThreshold;
+}
 
 class Vehicle3DViewer extends ConsumerStatefulWidget {
   const Vehicle3DViewer({super.key});
@@ -16,166 +56,146 @@ class Vehicle3DViewer extends ConsumerStatefulWidget {
   ConsumerState<Vehicle3DViewer> createState() => _Vehicle3DViewerState();
 }
 
-class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerProviderStateMixin, WidgetsBindingObserver {
-  final InAppLocalhostServer _localhostServer = InAppLocalhostServer(documentRoot: 'assets');
+class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
+    with WidgetsBindingObserver {
   InAppWebViewController? _webViewController;
-  bool _isServerRunning = false;
   bool _isModelLoaded = false;
   bool _showOverlay = true;
   bool _isImageLoaded = false;
-  
+
+  /// Last payload sent to the WebView, to skip redundant pushes.
+  String? _lastPushedStateJson;
+
   Uint8List? _lastFrameLightBytes;
   Uint8List? _lastFrameDarkBytes;
-  Timer? _screenshotTimer;
-  
-  Timer? _hazardTimer;
-  bool _hazardFlashState = false;
-
-  late final AnimationController _acAnimController;
-  late final AnimationController _dcAnimController;
-  late final AnimationController _powerFlowAnimController;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _acAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _dcAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _powerFlowAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    
-    _acAnimController.addListener(_pushStateToWebView);
-    _dcAnimController.addListener(_pushStateToWebView);
-    _powerFlowAnimController.addListener(_pushStateToWebView);
-    
-    _loadLastFrame();
-    _startServer();
-  }
-
-  Future<void> _loadLastFrame() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final lightStr = prefs.getString('vehicle_3d_last_frame_light');
-      final darkStr = prefs.getString('vehicle_3d_last_frame_dark');
-      final legacyStr = prefs.getString('vehicle_3d_last_frame');
-      
-      if (mounted) {
-        setState(() {
-          if (lightStr != null) {
-            _lastFrameLightBytes = base64Decode(lightStr);
-          } else if (legacyStr != null) {
-            _lastFrameLightBytes = base64Decode(legacyStr);
-          }
-          
-          if (darkStr != null) {
-            _lastFrameDarkBytes = base64Decode(darkStr);
-          } else if (legacyStr != null) {
-            _lastFrameDarkBytes = base64Decode(legacyStr);
-          }
-          
-          _isImageLoaded = false;
-        });
-        
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              _isImageLoaded = true;
-            });
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to load last frame: $e');
-    }
-  }
-
-  Future<void> _saveLastFrame() async {
-    if (_webViewController == null || !_isModelLoaded) return;
-    try {
-      final result = await _webViewController!.evaluateJavascript(source: "window.getSnapshot();");
-      
-      if (result != null && result is String && result.startsWith('data:image/png;base64,')) {
-        final base64String = result.substring(22);
-        
-        // If it's too small, it's likely just an empty transparent PNG
-        if (base64String.length > 1000) {
-          final prefs = await SharedPreferences.getInstance();
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final key = isDark ? 'vehicle_3d_last_frame_dark' : 'vehicle_3d_last_frame_light';
-          await prefs.setString(key, base64String);
-          
-          if (mounted) {
-            setState(() {
-              if (isDark) {
-                _lastFrameDarkBytes = base64Decode(base64String);
-              } else {
-                _lastFrameLightBytes = base64Decode(base64String);
-              }
-            });
-          }
-        } else {
-          debugPrint('Frame was too small (empty transparent image).');
-        }
-      }
-    } catch (e) {
-      debugPrint('Failed to save 3D frame: $e');
-    }
-  }
-
-  Future<void> _startServer() async {
-    if (!_localhostServer.isRunning()) {
-        await _localhostServer.start();
-    }
-    if (mounted) {
-      setState(() {
-        _isServerRunning = true;
-      });
-    }
+    _loadLastFrames();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Note: Do not close the localhost server here if you have multiple viewers or navigating back/forth
-    // InAppLocalhostServer is typically kept alive or managed globally, but we'll close it safely
-    if (_localhostServer.isRunning()) {
-      _localhostServer.close();
-    }
-    _screenshotTimer?.cancel();
-    _hazardTimer?.cancel();
-    _acAnimController.dispose();
-    _dcAnimController.dispose();
-    _powerFlowAnimController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _webViewController?.evaluateJavascript(source: "window.dispatchEvent(new Event('resize'));");
-    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      _webViewController?.evaluateJavascript(
+        source: "window.dispatchEvent(new Event('resize'));",
+      );
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       _saveLastFrame();
     }
   }
+
+  // ── Snapshot cache ─────────────────────────────────────────────────────────
+  // The last rendered frame is shown while the WebView boots and grayed out
+  // when the state is stale. Stored as PNG files, one per theme.
+
+  Future<File> _snapshotFile({required bool isDark}) async {
+    final dir = await getApplicationSupportDirectory();
+    final name = isDark ? 'last_frame_dark.png' : 'last_frame_light.png';
+    return File('${dir.path}/vehicle_3d/$name');
+  }
+
+  Future<Uint8List?> _readSnapshot({required bool isDark}) async {
+    final file = await _snapshotFile(isDark: isDark);
+    return await file.exists() ? file.readAsBytes() : null;
+  }
+
+  Future<void> _loadLastFrames() async {
+    try {
+      final light = await _readSnapshot(isDark: false);
+      final dark = await _readSnapshot(isDark: true);
+      if (!mounted) return;
+      setState(() {
+        _lastFrameLightBytes = light;
+        _lastFrameDarkBytes = dark;
+        _isImageLoaded = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _isImageLoaded = true);
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in _legacySnapshotPrefsKeys) {
+        await prefs.remove(key);
+      }
+    } catch (e) {
+      dev.log('Failed to load last frame: $e', name: 'Vehicle3DViewer');
+    }
+  }
+
+  Future<void> _saveLastFrame() async {
+    final controller = _webViewController;
+    if (controller == null || !_isModelLoaded) return;
+    // Read the theme before any await: the context may be gone afterwards.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    try {
+      final result = await controller.evaluateJavascript(
+        source: 'window.getSnapshot();',
+      );
+      const prefix = 'data:image/png;base64,';
+      if (result is! String || !result.startsWith(prefix)) return;
+      final base64String = result.substring(prefix.length);
+
+      // If it's too small, it's likely just an empty transparent PNG.
+      if (base64String.length <= 1000) {
+        dev.log('Frame was too small (empty image)', name: 'Vehicle3DViewer');
+        return;
+      }
+
+      final bytes = base64Decode(base64String);
+      final file = await _snapshotFile(isDark: isDark);
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes, flush: true);
+
+      if (mounted) {
+        setState(() {
+          if (isDark) {
+            _lastFrameDarkBytes = bytes;
+          } else {
+            _lastFrameLightBytes = bytes;
+          }
+        });
+      }
+    } catch (e) {
+      dev.log('Failed to save 3D frame: $e', name: 'Vehicle3DViewer');
+    }
+  }
+
+  // ── State → WebView ────────────────────────────────────────────────────────
+  // Flutter only sends target values; fades, the power-flow pulse and hazard
+  // blinking are animated by the render loop in web_3d/src/app.js.
 
   String _buildStateJson(VehicleSnapshot state) {
     final basicState = state.basicState as BasicState;
 
     final chargePort = basicState.chargePortState;
-    final isPortOpen = chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED && chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED;
-    final isAcConnected = chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-    final isDcConnected = chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING;
+    final isPortOpen =
+        chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED &&
+        chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED;
+    final isAcConnected = _kAcConnectedStates.contains(chargePort);
+    final isDcConnected = _kDcConnectedStates.contains(chargePort);
 
     final isLightsOn = basicState.areLightsOn;
-    final isHazardsOn = basicState.areHazardLightsOn;
     final isBraking = isLightsOn; // Simple logic for now
+    final lightsEmissive = isLightsOn ? 0xffffff : 0x000000;
+    final lightsIntensity = isLightsOn ? 50 : 0;
 
     return jsonEncode({
       'camera': {
         'targetTheta': isPortOpen ? (225 * pi / 180) : (45 * pi / 180),
       },
       'meshOpacity': {
-        'Charger_L2': _acAnimController.value,
-        'Charger_DC': _dcAnimController.value,
+        'Charger_L2': isAcConnected ? 1.0 : 0.0,
+        'Charger_DC': isDcConnected ? 1.0 : 0.0,
       },
       'animations': {
         'Anim_ChargePort': isPortOpen,
@@ -195,25 +215,13 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
       'materials': [
         {
           'name': 'Headlights',
-          'emissive': isLightsOn ? 0xffffff : 0x000000,
-          'intensity': isLightsOn ? 50 : 0,
-        },
-        {
-          'name': 'TopDRLs',
-          'color': (_hazardFlashState && isHazardsOn) ? 0xffc400 : 0xffffff,
-          'emissive': (_hazardFlashState && isHazardsOn) ? 0xffc400 : (isLightsOn ? 0xffffff : 0x000000),
-          'intensity': (_hazardFlashState && isHazardsOn) ? 50 : (isLightsOn ? 50 : 0),
+          'emissive': lightsEmissive,
+          'intensity': lightsIntensity,
         },
         {
           'name': 'BottomDRLs',
-          'emissive': isLightsOn ? 0xffffff : 0x000000,
-          'intensity': isLightsOn ? 50 : 0,
-        },
-        {
-          'name': 'MirrorTurnSignals',
-          'color': (_hazardFlashState && isHazardsOn) ? 0xffc400 : 0xe7e7e7,
-          'emissive': (_hazardFlashState && isHazardsOn) ? 0xffc400 : 0x000000,
-          'intensity': (_hazardFlashState && isHazardsOn) ? 50 : 0,
+          'emissive': lightsEmissive,
+          'intensity': lightsIntensity,
         },
         {
           'name': 'BrakeLight_Bar_Main',
@@ -225,225 +233,201 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer> with TickerPr
           'emissive': 0xff0000,
           'intensity': isBraking ? 20 : 0,
         },
-        {
-          'name': 'BrakeLight_Side_Base1',
-          'emissive': 0x970000,
-          'intensity': (_hazardFlashState && isHazardsOn) ? 20 : 0,
+      ],
+      'materialPulses': {
+        'Mat_PowerFlow': {
+          'active': basicState.powerFlowWatt != 0,
+          'maxIntensity': 5.0,
+          'scrollX': 0.18,
+          'durationMs': 500,
         },
-        {
-          'name': 'Mat_PowerFlow',
-          'emissive': 0xffffff,
-          'intensity': Curves.easeInOut.transform(_powerFlowAnimController.value) * 5.0,
-          'scrollX': _powerFlowAnimController.value > 0.0 ? 0.18 : 0.0,
-          'resetScroll': _powerFlowAnimController.value == 0.0,
-        }
-      ]
+      },
+      'blink': {
+        'active': basicState.areHazardLightsOn,
+        'periodMs': 500,
+        'on': [
+          {
+            'name': 'TopDRLs',
+            'color': 0xffc400,
+            'emissive': 0xffc400,
+            'intensity': 50,
+          },
+          {
+            'name': 'MirrorTurnSignals',
+            'color': 0xffc400,
+            'emissive': 0xffc400,
+            'intensity': 50,
+          },
+          {
+            'name': 'BrakeLight_Side_Base1',
+            'emissive': 0x970000,
+            'intensity': 20,
+          },
+        ],
+        'off': [
+          {
+            'name': 'TopDRLs',
+            'color': 0xffffff,
+            'emissive': lightsEmissive,
+            'intensity': lightsIntensity,
+          },
+          {
+            'name': 'MirrorTurnSignals',
+            'color': 0xe7e7e7,
+            'emissive': 0x000000,
+            'intensity': 0,
+          },
+          {
+            'name': 'BrakeLight_Side_Base1',
+            'emissive': 0x970000,
+            'intensity': 0,
+          },
+        ],
+      },
     });
   }
 
-  void _pushStateToWebView() {
-    if (_webViewController == null || !_isModelLoaded) return;
-    
-    final state = ref.read(vehicleStateProvider);
+  void _pushStateToWebView(VehicleSnapshot state) {
+    final controller = _webViewController;
+    if (controller == null || !_isModelLoaded) return;
+
     final stateJson = _buildStateJson(state);
-    
-    _webViewController?.evaluateJavascript(source: "window.setVehicleState('$stateJson');");
-    
-    _screenshotTimer?.cancel();
-    _screenshotTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        _saveLastFrame();
-      }
+    if (stateJson == _lastPushedStateJson) return;
+    _lastPushedStateJson = stateJson;
+
+    // JSON is a valid JS expression, so pass it as an object literal.
+    controller.evaluateJavascript(
+      source: 'window.setVehicleState($stateJson);',
+    );
+  }
+
+  void _setOverlayVisible(bool visible) {
+    if (visible) {
+      if (mounted) setState(() => _showOverlay = true);
+      return;
+    }
+    // Let the WebView render the live state before fading the snapshot out.
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) setState(() => _showOverlay = false);
     });
+  }
+
+  void _onRendererReady(List<dynamic> _) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final configJson = jsonEncode({
+      'camera': {
+        'frustumSize': 6.0,
+        'position': {
+          'radius': 10.0,
+          'phi': 60.0 * pi / 180.0,
+          'theta': 45.0 * pi / 180.0,
+        },
+      },
+      'lighting': {
+        'ambientLight': {'color': 0xffffff, 'intensity': isDark ? 1.2 : 3.5},
+        'directionalLight': {
+          'color': 0xffffff,
+          'intensity': isDark ? 3.0 : 6.0,
+          'position': {'x': 10.0, 'y': 20.0, 'z': 10.0},
+        },
+      },
+      'model': {'path': '../cars/egmp/2022_kia_ev6.glb'},
+      'shader': {'fadeStart': 4.0, 'fadeEnd': 4.25},
+    });
+    // initRenderer expects a JSON string; jsonEncode makes it a JS literal.
+    _webViewController?.evaluateJavascript(
+      source: 'window.initRenderer(${jsonEncode(configJson)});',
+    );
+  }
+
+  void _onModelLoaded(List<dynamic> _) {
+    if (!mounted) return;
+    setState(() => _isModelLoaded = true);
+    _lastPushedStateJson = null;
+    // The first push snaps instantly to the cached state.
+    final state = ref.read(vehicleStateProvider);
+    _pushStateToWebView(state);
+    if (_isRecent(state)) _setOverlayVisible(false);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(vehicleStateProvider);
-    final basicState = state.basicState as BasicState;
-    final chargePort = basicState.chargePortState;
-    
-    final isAcConnected = chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-    if (isAcConnected && _acAnimController.status != AnimationStatus.forward && _acAnimController.status != AnimationStatus.completed) {
-      _acAnimController.forward();
-    } else if (!isAcConnected && _acAnimController.status != AnimationStatus.reverse && _acAnimController.status != AnimationStatus.dismissed) {
-      _acAnimController.reverse();
-    }
 
-    final isDcConnected = chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || chargePort == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING;
-    if (isDcConnected && _dcAnimController.status != AnimationStatus.forward && _dcAnimController.status != AnimationStatus.completed) {
-      _dcAnimController.forward();
-    } else if (!isDcConnected && _dcAnimController.status != AnimationStatus.reverse && _dcAnimController.status != AnimationStatus.dismissed) {
-      _dcAnimController.reverse();
-    }
-
-    final isCharging = basicState.powerFlowWatt != 0;
-    if (isCharging && _powerFlowAnimController.status != AnimationStatus.forward && _powerFlowAnimController.status != AnimationStatus.completed) {
-      _powerFlowAnimController.forward();
-    } else if (!isCharging && _powerFlowAnimController.status != AnimationStatus.reverse && _powerFlowAnimController.status != AnimationStatus.dismissed) {
-      _powerFlowAnimController.reverse();
-    }
-
-    bool isRecent(VehicleSnapshot s) {
-      if (s.isStateLive) return true;
-      if (s.lastUpdated == null) return false;
-      return DateTime.now().difference(s.lastUpdated!) < const Duration(seconds: 30);
-    }
-    
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentLastFrameBytes = isDark ? _lastFrameDarkBytes : _lastFrameLightBytes;
-    final applyGrayFilter = !isRecent(state);
-
-    // Listen to vehicle state and push changes to the WebView
     ref.listen(vehicleStateProvider, (previous, next) {
-      final wasHazardsOn = (previous?.basicState as BasicState?)?.areHazardLightsOn ?? false;
-      final isHazardsOn = (next.basicState as BasicState).areHazardLightsOn;
-
-      if (isHazardsOn && !wasHazardsOn) {
-        _hazardFlashState = true;
-        _hazardTimer?.cancel();
-        _hazardTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-          if (mounted) {
-            setState(() {
-              _hazardFlashState = !_hazardFlashState;
-            });
-            _pushStateToWebView();
-          }
-        });
-      } else if (!isHazardsOn && wasHazardsOn) {
-        _hazardTimer?.cancel();
-        _hazardTimer = null;
-        _hazardFlashState = false;
+      // Fade out the snapshot overlay when live, fade it back in when stale.
+      if (previous != null &&
+          _isModelLoaded &&
+          _isRecent(previous) != _isRecent(next)) {
+        _setOverlayVisible(!_isRecent(next));
       }
-
-      // Fade out the snapshot overlay when live, fade it back in when stale
-      final wasRecentState = previous != null ? isRecent(previous) : false;
-      final isRecentState = isRecent(next);
-
-      if (previous != null && wasRecentState != isRecentState && _isModelLoaded) {
-        if (isRecentState) {
-          Future.delayed(const Duration(milliseconds: 150), () {
-            if (mounted) {
-              setState(() {
-                _showOverlay = false;
-              });
-            }
-          });
-        } else {
-          if (mounted) {
-            setState(() {
-              _showOverlay = true;
-            });
-          }
-        }
-      }
-
-      _pushStateToWebView();
+      _pushStateToWebView(next);
     });
 
-    Widget webView = _isServerRunning ? IgnorePointer(
-      child: InAppWebView(
-        initialUrlRequest: URLRequest(
-          url: WebUri('http://localhost:8080/web/index.html?v=${DateTime.now().millisecondsSinceEpoch}'),
-        ),
-        initialSettings: InAppWebViewSettings(
-          transparentBackground: true,
-          disableHorizontalScroll: true,
-          disableVerticalScroll: true,
-          supportZoom: false,
-        ),
-        onWebViewCreated: (controller) {
-          _webViewController = controller;
-          
-          // Add JS handler to know when the generic renderer script is loaded
-          controller.addJavaScriptHandler(
-            handlerName: 'onRendererReady',
-            callback: (args) {
-              final configJson = jsonEncode({
-                'camera': {
-                  'frustumSize': 6.0,
-                  'position': { 'radius': 10.0, 'phi': 60.0 * pi / 180.0, 'theta': 45.0 * pi / 180.0 }
-                },
-                'lighting': {
-                  'ambientLight': { 'color': 0xffffff, 'intensity': Theme.of(context).brightness == Brightness.dark ? 1.2 : 3.5 },
-                  'directionalLight': { 'color': 0xffffff, 'intensity': Theme.of(context).brightness == Brightness.dark ? 3.0 : 6.0, 'position': { 'x': 10.0, 'y': 20.0, 'z': 10.0 } }
-                },
-                'model': {
-                  'path': '../cars/egmp/2022_kia_ev6.glb'
-                },
-                'shader': {
-                  'fadeStart': 4.0,
-                  'fadeEnd': 4.25
-                }
-              });
-              controller.evaluateJavascript(source: "window.initRenderer('$configJson');");
-            },
-          );
-          
-          // Add JS handler to know when model is loaded
-          controller.addJavaScriptHandler(
-            handlerName: 'onModelLoaded',
-            callback: (args) {
-              _isModelLoaded = true;
-              _pushStateToWebView(); // First push instantly snaps to the cached state from VehicleStateProvider
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lastFrameBytes = isDark ? _lastFrameDarkBytes : _lastFrameLightBytes;
+    final applyGrayFilter = !_isRecent(state);
 
-              final state = ref.read(vehicleStateProvider);
-              final isRecentState = state.isStateLive || (state.lastUpdated != null && DateTime.now().difference(state.lastUpdated!) < const Duration(seconds: 30));
-              if (isRecentState) {
-                Future.delayed(const Duration(milliseconds: 150), () {
-                  if (mounted) {
-                    setState(() {
-                      _showOverlay = false;
-                    });
-                  }
-                });
-              }
-            },
-          );
-
-          // Listen for when all animations and camera moves have completely finished
-          controller.addJavaScriptHandler(
-            handlerName: 'onStateSettled',
-            callback: (args) {
-              if (mounted) {
-                _screenshotTimer?.cancel();
-                _saveLastFrame();
-              }
-            },
-          );
-        },
-        onConsoleMessage: (controller, consoleMessage) {
-          debugPrint('Three.js: ${consoleMessage.message}');
-        },
-      ),
-    ) : const SizedBox.shrink();
+    final snapshot = lastFrameBytes == null
+        ? null
+        : Image.memory(lastFrameBytes, fit: BoxFit.fitHeight);
 
     return Stack(
       children: [
-        webView,
-        if (!_isServerRunning && currentLastFrameBytes == null)
+        IgnorePointer(
+          child: InAppWebView(
+            initialUrlRequest: URLRequest(url: _viewerUrl),
+            initialSettings: InAppWebViewSettings(
+              transparentBackground: true,
+              disableHorizontalScroll: true,
+              disableVerticalScroll: true,
+              supportZoom: false,
+              webViewAssetLoader: WebViewAssetLoader(
+                pathHandlers: [AssetsPathHandler(path: '/assets/')],
+              ),
+            ),
+            onWebViewCreated: (controller) {
+              _webViewController = controller;
+              controller.addJavaScriptHandler(
+                handlerName: 'onRendererReady',
+                callback: _onRendererReady,
+              );
+              controller.addJavaScriptHandler(
+                handlerName: 'onModelLoaded',
+                callback: _onModelLoaded,
+              );
+              // All animations and camera moves have finished.
+              controller.addJavaScriptHandler(
+                handlerName: 'onStateSettled',
+                callback: (_) {
+                  if (mounted) _saveLastFrame();
+                },
+              );
+            },
+            onConsoleMessage: (controller, consoleMessage) {
+              dev.log(consoleMessage.message, name: 'Three.js');
+            },
+          ),
+        ),
+        if (snapshot == null && !_isModelLoaded)
           const Center(child: CircularProgressIndicator()),
-        if (currentLastFrameBytes != null)
+        if (snapshot != null)
           Positioned.fill(
             child: IgnorePointer(
               child: AnimatedOpacity(
                 opacity: (_showOverlay && _isImageLoaded) ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
-                child: applyGrayFilter ? ColorFiltered(
-                  colorFilter: const ColorFilter.matrix([
-                    0.33, 0.59, 0.11, 0, 0,
-                    0.33, 0.59, 0.11, 0, 0,
-                    0.33, 0.59, 0.11, 0, 0,
-                    0,    0,    0,    1, 0,
-                  ]),
-                  child: Image.memory(
-                    currentLastFrameBytes,
-                    fit: BoxFit.fitHeight,
-                  ),
-                ) : Image.memory(
-                  currentLastFrameBytes,
-                  fit: BoxFit.fitHeight,
-                ),
+                child: applyGrayFilter
+                    ? ColorFiltered(
+                        colorFilter: const ColorFilter.matrix([
+                          0.33, 0.59, 0.11, 0, 0, //
+                          0.33, 0.59, 0.11, 0, 0, //
+                          0.33, 0.59, 0.11, 0, 0, //
+                          0, 0, 0, 1, 0, //
+                        ]),
+                        child: snapshot,
+                      )
+                    : snapshot,
               ),
             ),
           ),

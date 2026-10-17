@@ -1,32 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:protobuf/protobuf.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 
+typedef _ChargePort = BasicState_ChargePortState;
+
+const _kAcStates = {
+  _ChargePort.CHARGE_PORT_STATE_AC_CONNECTED,
+  _ChargePort.CHARGE_PORT_STATE_AC_CHARGING,
+};
+
+const _kDcStates = {
+  _ChargePort.CHARGE_PORT_STATE_DC_NEGOTIATING,
+  _ChargePort.CHARGE_PORT_STATE_DC_CONNECTED,
+  _ChargePort.CHARGE_PORT_STATE_DC_CHARGING,
+};
+
+/// Debug-only drawer that edits the local basic state to exercise the UI and
+/// the 3D animations without a device.
 class DebugControlsDrawer extends ConsumerWidget {
   const DebugControlsDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stateNotifier = ref.read(vehicleStateProvider.notifier);
     final basicState = ref.watch(vehicleStateProvider).basicState as BasicState;
-    
-    Widget btn(String label, bool isOn, VoidCallback onTap) {
+    final colors = Theme.of(context).colorScheme;
+
+    void update(void Function(BasicState s) mutate) {
+      final next = basicState.deepCopy();
+      mutate(next);
+      ref.read(vehicleStateProvider.notifier).debugOverrideBasicState(next);
+    }
+
+    final port = basicState.chargePortState;
+    final isPortOpen =
+        port != _ChargePort.CHARGE_PORT_STATE_CLOSED &&
+        port != _ChargePort.CHARGE_PORT_STATE_UNSPECIFIED;
+    final isAc = _kAcStates.contains(port);
+    final isDc = _kDcStates.contains(port);
+    final isCharging = basicState.powerFlowWatt != 0;
+
+    _ChargePort toggledChargingPort() {
+      if (isCharging) {
+        if (isAc) return _ChargePort.CHARGE_PORT_STATE_AC_CONNECTED;
+        if (isDc) return _ChargePort.CHARGE_PORT_STATE_DC_CONNECTED;
+        return _ChargePort.CHARGE_PORT_STATE_OPEN;
+      }
+      if (isAc) return _ChargePort.CHARGE_PORT_STATE_AC_CHARGING;
+      return _ChargePort.CHARGE_PORT_STATE_DC_CHARGING;
+    }
+
+    Widget btn(String label, bool isOn, void Function(BasicState s) mutate) {
       return Padding(
         padding: const EdgeInsets.all(4.0),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isOn ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
-            foregroundColor: isOn ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+            backgroundColor: isOn
+                ? colors.primaryContainer
+                : colors.surfaceContainerHighest,
+            foregroundColor: isOn
+                ? colors.onPrimaryContainer
+                : colors.onSurfaceVariant,
           ),
-          onPressed: onTap,
+          onPressed: () => update(mutate),
           child: Text(label),
         ),
       );
     }
 
+    final b = basicState;
     return Drawer(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: colors.surface,
       child: SafeArea(
         child: Column(
           children: [
@@ -43,7 +88,7 @@ class DebugControlsDrawer extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+                  icon: Icon(Icons.close, color: colors.onSurface),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -54,51 +99,91 @@ class DebugControlsDrawer extends ConsumerWidget {
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   children: [
-                    btn('Door FL', basicState.isDriverDoorOpen, () => stateNotifier.injectTestState(isDriverDoorOpen: !basicState.isDriverDoorOpen)),
-                    btn('Door FR', basicState.isPassengerDoorOpen, () => stateNotifier.injectTestState(isPassengerDoorOpen: !basicState.isPassengerDoorOpen)),
-                    btn('Door RL', basicState.isRearLeftDoorOpen, () => stateNotifier.injectTestState(isRearLeftDoorOpen: !basicState.isRearLeftDoorOpen)),
-                    btn('Door RR', basicState.isRearRightDoorOpen, () => stateNotifier.injectTestState(isRearRightDoorOpen: !basicState.isRearRightDoorOpen)),
-                    btn('Win FL', basicState.isDriverWindowOpen, () => stateNotifier.injectTestState(isDriverWindowOpen: !basicState.isDriverWindowOpen)),
-                    btn('Win FR', basicState.isPassengerWindowOpen, () => stateNotifier.injectTestState(isPassengerWindowOpen: !basicState.isPassengerWindowOpen)),
-                    btn('Win RL', basicState.isRearLeftWindowOpen, () => stateNotifier.injectTestState(isRearLeftWindowOpen: !basicState.isRearLeftWindowOpen)),
-                    btn('Win RR', basicState.isRearRightWindowOpen, () => stateNotifier.injectTestState(isRearRightWindowOpen: !basicState.isRearRightWindowOpen)),
-                    btn('Frunk', basicState.isFrunkOpen, () => stateNotifier.injectTestState(isFrunkOpen: !basicState.isFrunkOpen)),
-                    btn('Trunk', basicState.isTrunkOpen, () => stateNotifier.injectTestState(isTrunkOpen: !basicState.isTrunkOpen)),
-                    btn('Port', basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED && basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED, () {
-                      final isOpen = basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED && basicState.chargePortState != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED;
-                      stateNotifier.injectTestState(chargePortState: isOpen ? BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED : BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN);
+                    btn(
+                      'Door FL',
+                      b.isDriverDoorOpen,
+                      (s) => s.isDriverDoorOpen = !b.isDriverDoorOpen,
+                    ),
+                    btn(
+                      'Door FR',
+                      b.isPassengerDoorOpen,
+                      (s) => s.isPassengerDoorOpen = !b.isPassengerDoorOpen,
+                    ),
+                    btn(
+                      'Door RL',
+                      b.isRearLeftDoorOpen,
+                      (s) => s.isRearLeftDoorOpen = !b.isRearLeftDoorOpen,
+                    ),
+                    btn(
+                      'Door RR',
+                      b.isRearRightDoorOpen,
+                      (s) => s.isRearRightDoorOpen = !b.isRearRightDoorOpen,
+                    ),
+                    btn(
+                      'Win FL',
+                      b.isDriverWindowOpen,
+                      (s) => s.isDriverWindowOpen = !b.isDriverWindowOpen,
+                    ),
+                    btn(
+                      'Win FR',
+                      b.isPassengerWindowOpen,
+                      (s) => s.isPassengerWindowOpen = !b.isPassengerWindowOpen,
+                    ),
+                    btn(
+                      'Win RL',
+                      b.isRearLeftWindowOpen,
+                      (s) => s.isRearLeftWindowOpen = !b.isRearLeftWindowOpen,
+                    ),
+                    btn(
+                      'Win RR',
+                      b.isRearRightWindowOpen,
+                      (s) => s.isRearRightWindowOpen = !b.isRearRightWindowOpen,
+                    ),
+                    btn(
+                      'Frunk',
+                      b.isFrunkOpen,
+                      (s) => s.isFrunkOpen = !b.isFrunkOpen,
+                    ),
+                    btn(
+                      'Trunk',
+                      b.isTrunkOpen,
+                      (s) => s.isTrunkOpen = !b.isTrunkOpen,
+                    ),
+                    btn(
+                      'Port',
+                      isPortOpen,
+                      (s) => s.chargePortState = isPortOpen
+                          ? _ChargePort.CHARGE_PORT_STATE_CLOSED
+                          : _ChargePort.CHARGE_PORT_STATE_OPEN,
+                    ),
+                    btn(
+                      'Cable AC',
+                      isAc,
+                      (s) => s.chargePortState = isAc
+                          ? _ChargePort.CHARGE_PORT_STATE_OPEN
+                          : _ChargePort.CHARGE_PORT_STATE_AC_CONNECTED,
+                    ),
+                    btn(
+                      'Cable DC',
+                      isDc,
+                      (s) => s.chargePortState = isDc
+                          ? _ChargePort.CHARGE_PORT_STATE_OPEN
+                          : _ChargePort.CHARGE_PORT_STATE_DC_CONNECTED,
+                    ),
+                    btn('Charging', isCharging, (s) {
+                      s.powerFlowWatt = isCharging ? 0 : 50000;
+                      s.chargePortState = toggledChargingPort();
                     }),
-                    btn('Cable AC', basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING, () {
-                      final isConnected = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-                      stateNotifier.injectTestState(chargePortState: isConnected ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED);
-                    }),
-                    btn('Cable DC', basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING, () {
-                      final isConnected = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING;
-                      stateNotifier.injectTestState(chargePortState: isConnected ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED);
-                    }),
-                    btn('Charging', basicState.powerFlowWatt != 0, () {
-                      final isCharging = basicState.powerFlowWatt != 0;
-                      final isAc = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-                      final isDc = basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING || basicState.chargePortState == BasicState_ChargePortState.CHARGE_PORT_STATE_DC_NEGOTIATING;
-                      
-                      BasicState_ChargePortState newState = basicState.chargePortState;
-                      if (!isCharging) {
-                        if (isAc) newState = BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING;
-                        else if (isDc) newState = BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING;
-                        else newState = BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING;
-                      } else {
-                        if (isAc) newState = BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED;
-                        else if (isDc) newState = BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CONNECTED;
-                        else newState = BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN;
-                      }
-                      
-                      stateNotifier.injectTestState(
-                        powerFlowWatt: isCharging ? 0 : 50000,
-                        chargePortState: newState,
-                      );
-                    }),
-                    btn('Lights', basicState.areLightsOn, () => stateNotifier.injectTestState(areLightsOn: !basicState.areLightsOn)),
-                    btn('Hazards', basicState.areHazardLightsOn, () => stateNotifier.injectTestState(areHazardLightsOn: !basicState.areHazardLightsOn)),
+                    btn(
+                      'Lights',
+                      b.areLightsOn,
+                      (s) => s.areLightsOn = !b.areLightsOn,
+                    ),
+                    btn(
+                      'Hazards',
+                      b.areHazardLightsOn,
+                      (s) => s.areHazardLightsOn = !b.areHazardLightsOn,
+                    ),
                   ],
                 ),
               ),

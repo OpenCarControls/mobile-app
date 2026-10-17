@@ -10,7 +10,7 @@ Rules for AI agents working in this repo. Project knowledge (architecture, BLE a
 *   If you can't run something (e.g. a device build), say so rather than claiming it works.
 
 ### Generated code
-*   Generated files (`lib/generated/**`, `*.g.dart`) are committed but never hand-edited. Change the source (`contracts/`, `config.toml.example`) and re-run `dart run build_runner build --delete-conflicting-outputs`.
+*   Generated files (`lib/generated/**`, `*.g.dart`) are committed but never hand-edited. Change the source (`contracts/`, `config.toml.example`) and re-run `dart run build_runner build`.
 *   Never copy-paste values from `contracts/` TOML (UUIDs, platform IDs, topics); import them from the generated `constants.g.dart`.
 *   `contracts/` is a git submodule shared with the firmware repo. Don't edit it from here unless explicitly asked.
 

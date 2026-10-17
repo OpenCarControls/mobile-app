@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:open_car_app/config/paired_vehicle_config.dart';
+import 'package:open_car_app/cars/virtual_car/constants.g.dart' as virtual_car;
 import 'package:open_car_app/cars/virtual_car/stub_transport.dart';
 import 'package:open_car_app/main.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
@@ -35,7 +36,7 @@ void main() {
         overrides: [
           initialPairedVehicleConfigProvider.overrideWithValue(
             const PairedVehicleConfig(
-              vehicleId: 'virtual_car',
+              vehicleId: virtual_car.kPlatformName,
               bleRemoteId: '00:11:22:33:44:55',
               transportPreference: TransportPreference.ble,
             ),

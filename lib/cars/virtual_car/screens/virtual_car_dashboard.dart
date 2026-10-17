@@ -10,6 +10,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -110,126 +111,135 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (transportType == TransportType.ble) {
-            ref.read(bleConnectionProvider.notifier).forceReconnect();
-            // Add a small delay so the refresh animation shows.
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-          }
-        },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            // ── Basic state ─────────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(child: _SectionHeader(title: 'State')),
-              _StateHeaderSuffix(
-                lastUpdated: snapshot.lastUpdated,
-                awaitingAdvanced: awaitingAdvanced,
-                isStateLive: snapshot.isStateLive,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
-            children: [
-              _StateTile(
-                label: 'Odometer',
-                value: '${basic.odometer} km',
-                icon: Icons.straighten,
-              ),
-              _StateTile(
-                label: 'Driving',
-                value: basic.isDriving ? 'Yes' : 'No',
-                icon: Icons.directions_car,
-              ),
-            ],
-          ),
-
-          // ── Advanced state (BLE only, shown once live data arrives) ────────
-          if (showAdvanced) ...[
-            const SizedBox(height: 16),
-            _SectionHeader(title: 'Advanced State'),
-            const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.6,
-              children: [
-                _StateTile(
-                  label: 'Speed',
-                  value: '${advanced.speed} kph',
-                  icon: Icons.speed,
-                ),
-                _StateTile(
-                  label: 'Gear',
-                  value: _gearLabel(advanced.gear),
-                  icon: Icons.settings_input_component,
-                ),
-              ],
-            ),
-          ],
-
-          // ── Basic controls ───────────────────────────────────────────────
-          const SizedBox(height: 24),
-          _SectionHeader(title: 'Controls'),
-          const SizedBox(height: 8),
-          _DoorLockCard(
-            locked: basic.areDoorsLocked,
-            onToggle: () {
-              ref
-                  .read(vehicleStateProvider.notifier)
-                  .sendBasicCommand(
-                    BasicCommand(
-                      doorLock: DoorLockCommand(lock: !basic.areDoorsLocked),
-                    ).writeToBuffer(),
-                  );
-            },
-          ),
-
-          // ── Advanced controls (BLE only, shown once live data arrives) ────
-          if (showAdvanced) ...[
-            const SizedBox(height: 16),
-            _SectionHeader(title: 'Advanced Controls'),
-            const SizedBox(height: 8),
-            _CustomState1Card(
-              enabled: advanced.customState1,
-              onToggle: () {
-                ref
-                    .read(vehicleStateProvider.notifier)
-                    .sendAdvancedCommand(
-                      AdvancedCommand(
-                        toggleCustomState1: ToggleCustomState1Command(),
-                      ).writeToBuffer(),
-                    );
+      body: Column(
+        children: [
+          const PlatformMismatchBanner(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (transportType == TransportType.ble) {
+                  ref.read(bleConnectionProvider.notifier).forceReconnect();
+                  // Add a small delay so the refresh animation shows.
+                  await Future<void>.delayed(const Duration(milliseconds: 500));
+                }
               },
-            ),
-          ],
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ── Basic state ─────────────────────────────────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(child: _SectionHeader(title: 'State')),
+                      _StateHeaderSuffix(
+                        lastUpdated: snapshot.lastUpdated,
+                        awaitingAdvanced: awaitingAdvanced,
+                        isStateLive: snapshot.isStateLive,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.6,
+                    children: [
+                      _StateTile(
+                        label: 'Odometer',
+                        value: '${basic.odometer} km',
+                        icon: Icons.straighten,
+                      ),
+                      _StateTile(
+                        label: 'Driving',
+                        value: basic.isDriving ? 'Yes' : 'No',
+                        icon: Icons.directions_car,
+                      ),
+                    ],
+                  ),
 
-          // ── System info ──────────────────────────────────────────────────
-          if (system != null) ...[
-            const SizedBox(height: 24),
-            _SystemInfoRow(
-              firmwareVersion: system.firmwareVersion,
-              hardwareType: system.hardwareType,
+                  // ── Advanced state (BLE only, shown once live data arrives) ────────
+                  if (showAdvanced) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'Advanced State'),
+                    const SizedBox(height: 8),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.6,
+                      children: [
+                        _StateTile(
+                          label: 'Speed',
+                          value: '${advanced.speed} kph',
+                          icon: Icons.speed,
+                        ),
+                        _StateTile(
+                          label: 'Gear',
+                          value: _gearLabel(advanced.gear),
+                          icon: Icons.settings_input_component,
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // ── Basic controls ───────────────────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionHeader(title: 'Controls'),
+                  const SizedBox(height: 8),
+                  _DoorLockCard(
+                    locked: basic.areDoorsLocked,
+                    onToggle: () {
+                      ref
+                          .read(vehicleStateProvider.notifier)
+                          .sendBasicCommand(
+                            BasicCommand(
+                              doorLock: DoorLockCommand(
+                                lock: !basic.areDoorsLocked,
+                              ),
+                            ).writeToBuffer(),
+                          );
+                    },
+                  ),
+
+                  // ── Advanced controls (BLE only, shown once live data arrives) ────
+                  if (showAdvanced) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'Advanced Controls'),
+                    const SizedBox(height: 8),
+                    _CustomState1Card(
+                      enabled: advanced.customState1,
+                      onToggle: () {
+                        ref
+                            .read(vehicleStateProvider.notifier)
+                            .sendAdvancedCommand(
+                              AdvancedCommand(
+                                toggleCustomState1: ToggleCustomState1Command(),
+                              ).writeToBuffer(),
+                            );
+                      },
+                    ),
+                  ],
+
+                  // ── System info ──────────────────────────────────────────────────
+                  if (system != null) ...[
+                    const SizedBox(height: 24),
+                    _SystemInfoRow(
+                      firmwareVersion: system.firmwareVersion,
+                      hardwareType: system.hardwareType,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ],
+          ),
         ],
-      ),
       ),
     );
   }

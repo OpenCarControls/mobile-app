@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:math';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
@@ -11,11 +12,9 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
-import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/transport/car_transport.dart';
-import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 
 class VehicleSnapshot {
   /// Decoded vehicle-specific basic state. Cast to the vehicle's BasicState
@@ -47,6 +46,10 @@ class VehicleSnapshot {
   /// transport session. Reset to false on every transport switch.
   final bool isStateLive;
 
+  /// Set when the device reported a `platform_id` that doesn't match the
+  /// paired vehicle. Its messages are ignored until the user re-pairs.
+  final int? mismatchedPlatformId;
+
   const VehicleSnapshot({
     required this.basicState,
     required this.advancedState,
@@ -54,6 +57,7 @@ class VehicleSnapshot {
     this.lastUpdated,
     this.isAdvancedStateLive = false,
     this.isStateLive = false,
+    this.mismatchedPlatformId,
   });
 
   VehicleSnapshot copyWith({
@@ -63,6 +67,7 @@ class VehicleSnapshot {
     DateTime? lastUpdated,
     bool? isAdvancedStateLive,
     bool? isStateLive,
+    int? mismatchedPlatformId,
   }) {
     return VehicleSnapshot(
       basicState: basicState ?? this.basicState,
@@ -71,6 +76,7 @@ class VehicleSnapshot {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isAdvancedStateLive: isAdvancedStateLive ?? this.isAdvancedStateLive,
       isStateLive: isStateLive ?? this.isStateLive,
+      mismatchedPlatformId: mismatchedPlatformId ?? this.mismatchedPlatformId,
     );
   }
 }
@@ -78,7 +84,10 @@ class VehicleSnapshot {
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
   Timer? _livenessTimer;
-  int _nextMessageId = 0;
+  // Random start so IDs aren't reused across app restarts (a late response
+  // to a previous session's command must not complete a new one). Stays well
+  // below 2^32, which is where MQTT heartbeat IDs start.
+  int _nextMessageId = Random().nextInt(1 << 31);
   final _pendingCommands = <Int64, Completer<CommandResponse>>{};
   // Cached across rebuilds so teardown races (vehicle → null before
   // this notifier is disposed) don't crash build().
@@ -143,22 +152,27 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       final completer = _pendingCommands.remove(response.messageId);
       if (completer != null && !completer.isCompleted) {
         if (!response.success) {
-          completer.completeError(response.errorMessage.isNotEmpty ? response.errorMessage : 'Command failed');
+          completer.completeError(
+            response.errorMessage.isNotEmpty
+                ? response.errorMessage
+                : 'Command failed',
+          );
         } else {
           completer.complete(response);
         }
       }
     }
-    
-    final vehicle = ref.read(selectedVehicleProvider)!;
+
+    final vehicle = _vehicle!;
     if (msg.platformId != 0 && msg.platformId != vehicle.platformId) {
-      dev.log(
-        'FATAL: Platform ID mismatch. Expected ${vehicle.platformId}, got ${msg.platformId}. Unpairing.',
-        name: 'VehicleState',
-      );
-      Future.microtask(() {
-        ref.read(pairedVehicleProvider.notifier).unpair();
-      });
+      if (state.mismatchedPlatformId != msg.platformId) {
+        dev.log(
+          'Platform ID mismatch: expected ${vehicle.platformId}, '
+          'got ${msg.platformId}. Ignoring device messages.',
+          name: 'VehicleState',
+        );
+        state = state.copyWith(mismatchedPlatformId: msg.platformId);
+      }
       return;
     }
 
@@ -185,7 +199,6 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
         name: 'VehicleState',
       );
     }
-
 
     final update = msg.stateUpdate;
     var current = state;
@@ -219,14 +232,11 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       current = current.copyWith(system: merged);
     }
 
-    current = current.copyWith(
-      lastUpdated: DateTime.now(),
-      isStateLive: true,
-    );
+    current = current.copyWith(lastUpdated: DateTime.now(), isStateLive: true);
     // Persist isAdvancedStateLive=false so a restored cache never starts live.
     _lastSnapshot = current;
     state = current;
-    
+
     if (kDebugMode) {
       dev.log(
         'Updated State JSON:\nbasicState=${jsonEncode(current.basicState.toProto3Json())}\nadvancedState=${jsonEncode(current.advancedState.toProto3Json())}',
@@ -234,7 +244,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       );
     }
 
-    _saveCachedState(current, ref.read(selectedVehicleProvider)!);
+    _saveCachedState(current, vehicle);
   }
 
   Future<void> _loadCachedState(
@@ -261,19 +271,20 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       final lastUpdated = DateTime.tryParse(
         (json['lastUpdated'] as String?) ?? '',
       );
-      // Only apply if no live update arrived first and the vehicle hasn't changed.
-      if (_lastSnapshot != null || _buildGeneration != generation) return;
+      // Only apply if the provider is still alive, no live update arrived
+      // first and the vehicle hasn't changed.
+      if (!ref.mounted ||
+          _lastSnapshot != null ||
+          _buildGeneration != generation) {
+        return;
+      }
       _lastSnapshot = VehicleSnapshot(
         basicState: basicState,
         advancedState: advancedState,
         system: system,
         lastUpdated: lastUpdated,
       );
-      try {
-        state = _lastSnapshot!;
-      } on StateError {
-        // Provider disposed before the async load completed.
-      }
+      state = _lastSnapshot!;
     } catch (e) {
       dev.log('Failed to restore cached state: $e', name: 'VehicleState');
     }
@@ -379,44 +390,14 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     return ref.read(carTransportProvider).send(envelope);
   }
 
-  VehicleDefinition get vehicle => ref.read(selectedVehicleProvider)!;
+  VehicleDefinition get vehicle => _vehicle!;
 
-  /// Injects a test state directly into the provider to test UI/3D animations
-  void injectTestState({
-    bool? isDriverDoorOpen,
-    bool? isPassengerDoorOpen,
-    bool? isRearLeftDoorOpen,
-    bool? isRearRightDoorOpen,
-    bool? isDriverWindowOpen,
-    bool? isPassengerWindowOpen,
-    bool? isRearLeftWindowOpen,
-    bool? isRearRightWindowOpen,
-    bool? isFrunkOpen,
-    bool? isTrunkOpen,
-    BasicState_ChargePortState? chargePortState,
-    bool? areLightsOn,
-    bool? areHazardLightsOn,
-    int? powerFlowWatt,
-  }) {
-    final currentBasic = state.basicState as BasicState;
-    
-    final newBasic = currentBasic.deepCopy();
-    if (isDriverDoorOpen != null) newBasic.isDriverDoorOpen = isDriverDoorOpen;
-    if (isPassengerDoorOpen != null) newBasic.isPassengerDoorOpen = isPassengerDoorOpen;
-    if (isRearLeftDoorOpen != null) newBasic.isRearLeftDoorOpen = isRearLeftDoorOpen;
-    if (isRearRightDoorOpen != null) newBasic.isRearRightDoorOpen = isRearRightDoorOpen;
-    if (isDriverWindowOpen != null) newBasic.isDriverWindowOpen = isDriverWindowOpen;
-    if (isPassengerWindowOpen != null) newBasic.isPassengerWindowOpen = isPassengerWindowOpen;
-    if (isRearLeftWindowOpen != null) newBasic.isRearLeftWindowOpen = isRearLeftWindowOpen;
-    if (isRearRightWindowOpen != null) newBasic.isRearRightWindowOpen = isRearRightWindowOpen;
-    if (isFrunkOpen != null) newBasic.isFrunkOpen = isFrunkOpen;
-    if (isTrunkOpen != null) newBasic.isTrunkOpen = isTrunkOpen;
-    if (chargePortState != null) newBasic.chargePortState = chargePortState;
-    if (areLightsOn != null) newBasic.areLightsOn = areLightsOn;
-    if (areHazardLightsOn != null) newBasic.areHazardLightsOn = areHazardLightsOn;
-    if (powerFlowWatt != null) newBasic.powerFlowWatt = powerFlowWatt;
-
-    state = state.copyWith(basicState: newBasic);
+  /// Debug only: replaces the basic state locally (no device involved) to
+  /// exercise the UI and 3D animations. [basicState] must be the vehicle's own
+  /// BasicState type. The next live update overwrites it.
+  void debugOverrideBasicState(GeneratedMessage basicState) {
+    assert(kDebugMode, 'debugOverrideBasicState is debug-only');
+    state = state.copyWith(basicState: basicState);
     _saveCachedState(state, vehicle);
   }
 }

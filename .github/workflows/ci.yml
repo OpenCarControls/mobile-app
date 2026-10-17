@@ -33,7 +33,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Verify formatting
         run: find lib test -name "*.dart" ! -name "*.g.dart" ! -path "*/generated/*" | xargs dart format --output=none --set-exit-if-changed
@@ -76,7 +76,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Build APK
         run: flutter build apk --release

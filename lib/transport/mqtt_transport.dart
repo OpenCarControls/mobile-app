@@ -32,7 +32,9 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
   late final String _dataTopic;
   late final int _platformId;
   late final List<int> _sourceDeviceId;
-  int _heartbeatMessageId = 0;
+  // Heartbeat IDs start at 2^32 so they never collide with command IDs, which
+  // the firmware echoes back in CommandResponse.message_id.
+  Int64 _heartbeatMessageId = Int64.ONE << 32;
 
   MqttCarTransport({
     required String commandTopicTemplate,
@@ -141,7 +143,7 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
     // fires on every CONNACK (initial connection and each auto-reconnect), so
     // without this guard we would accumulate duplicate listeners.
     _updatesSubscription?.cancel();
-    _updatesSubscription = _client.updates.listen(_onMessage);
+    _updatesSubscription = _client.updates?.listen(_onMessage);
   }
 
   void _startHeartbeat() {
@@ -160,7 +162,7 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
     }
 
     final msg = AppToDevice()
-      ..messageId = Int64(_heartbeatMessageId++)
+      ..messageId = _heartbeatMessageId++
       ..platformId = _platformId
       ..sourceDeviceId = _sourceDeviceId
       ..heartbeat = true;
@@ -239,16 +241,15 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
 
   @override
   Future<void> send(AppToDevice message) async {
-    if (_client.connectionStatus?.state != MqttConnectionState.connected) {
-      dev.log('Send skipped: not connected', name: 'MqttTransport');
-      return;
-    }
     if (!message.hasBasicCommandBytes() && !message.hasHeartbeat()) {
-      dev.log(
-        'Send skipped: advanced command not supported over MQTT',
-        name: 'MqttTransport',
+      throw const CarTransportException(
+        'This command is only available over Bluetooth.',
       );
-      return;
+    }
+    if (_client.connectionStatus?.state != MqttConnectionState.connected) {
+      throw const CarTransportException(
+        'Not connected to the vehicle. Check your network connection.',
+      );
     }
 
     final buffer = typed.Uint8Buffer()..addAll(message.writeToBuffer());

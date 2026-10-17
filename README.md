@@ -19,7 +19,7 @@ Flutter mobile app for interacting with an ESP32-based car controller over BLE (
 Dart code is generated from the `contracts/` submodule and `config.toml`. Generated files are committed, so builds work without it; re-run it when the contracts or config change:
 
 ```sh
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
 
 See [Code generation](docs/code-generation.md) for what gets generated.

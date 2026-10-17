@@ -27,16 +27,17 @@ abstract class CarTransport {
 **Selection order (debug):** HTTP (if `transportPreference == http` in `pairedVehicleProvider`) → BLE (if `BleReady`) → MQTT. The HTTP branch is compiled away in release builds via `kDebugMode`. `vehicleStateProvider` uses `ref.watch(carTransportProvider)` to re-subscribe on transport switch.
 
 ## UI architecture
-Entry: `main.dart` loads `PairedVehicleConfig` and the device ID at startup, then `AppEntryRouter` routes to `PairingWizardScreen` (unpaired) or `vehicle.buildDashboard()` (paired). It reacts to `pairedVehicleProvider`, so unpairing returns to the wizard automatically. The wizard currently uses the first entry of `availableVehiclesProvider`.
+Entry: `main.dart` loads `PairedVehicleConfig` and the device ID at startup, then `AppEntryRouter` routes to `PairingWizardScreen` (unpaired) or `vehicle.buildDashboard()` (paired). It reacts to `pairedVehicleProvider`, so unpairing returns to the wizard automatically. The wizard connects using the shared BLE service UUIDs, then picks the vehicle whose `platformId` matches the device's first message that carries one, so the stored `vehicleId` is always a supported `platformName`. If the stored `vehicleId` isn't supported by the build, `selectedVehicleProvider` is null and the wizard is shown.
 
-`lib/screens/vehicle_selection_screen.dart` is legacy and unused.
+### Platform mismatch
+If a paired device later reports a different non-zero `platform_id`, `vehicleStateProvider` ignores its messages and sets `VehicleSnapshot.mismatchedPlatformId`. Dashboards show `PlatformMismatchBanner` (`lib/widgets/`), which offers to unpair. The app never unpairs on its own.
 
 ### Key providers
 
 | Provider | Purpose |
 |---|---|
 | `availableVehiclesProvider` | All supported vehicles |
-| `selectedVehicleProvider` | Computed from `pairedVehicleProvider`; null when unpaired |
+| `selectedVehicleProvider` | Computed from `pairedVehicleProvider`; null when unpaired or the vehicle is unsupported |
 | `pairedVehicleProvider` | Source of truth for pairing state (`PairedVehicleConfig?`) |
 | `initialPairedVehicleConfigProvider` | Pre-loaded config override injected at startup |
 | `bleConnectionProvider` | BLE connection lifecycle (`BleConnecting`/`BleReady`/`BleDisconnected`) |
@@ -46,6 +47,10 @@ Entry: `main.dart` loads `PairedVehicleConfig` and the device ID at startup, the
 | `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` |
 
 `VehicleSnapshot` fields (`basicState`, `advancedState`) are typed as `GeneratedMessage`; cast in the vehicle's own screen. They are decoded once per message and merged via `mergeFromMessage`.
+
+Commands complete when a `CommandResponse` with the same `message_id` arrives (15 s timeout). Command IDs start at a random value below 2^32 on each launch; MQTT heartbeats use IDs from 2^32 up so a response can never match a heartbeat. `CarTransport.send` throws `CarTransportException` when it can't send (e.g. MQTT offline, or an advanced command over MQTT), so the UI shows the error at once instead of waiting for the timeout.
+
+`debugOverrideBasicState()` (debug builds only) replaces the basic state locally; the E-GMP debug drawer uses it to exercise the UI and 3D animations.
 
 ### Per-vehicle screens (`lib/cars/<vehicle>/screens/`)
 Transport gating pattern:
@@ -58,4 +63,8 @@ final isBle = transportType == TransportType.ble ||
 Screen sections: **State** (always) | **Advanced State** (isBle) | **Controls** (always) | **Advanced Controls** (isBle).
 
 ## 3D viewer
-The E-GMP dashboard renders the car with a Three.js viewer (`web_3d/`, bundled with Vite into `assets/web/` and shown in a `flutter_inappwebview`). See [`web_3d/README.md`](../web_3d/README.md). Source models are in `assets_src/`.
+The E-GMP dashboard renders the car with a Three.js viewer (`web_3d/`, bundled with Vite into `assets/web/` and shown in a `flutter_inappwebview`). The page is served from the APK by Android's `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/flutter_assets/...`), not a local HTTP server.
+
+Flutter only sends target state (`window.setVehicleState(...)`), and only when it changes. Fades, the power-flow pulse and hazard blinking are animated by the render loop in `app.js`. When the scene settles, the viewer saves a PNG snapshot (one per theme) to the app support directory. The snapshot is shown while the WebView boots and grayed out when the state is stale.
+
+The runtime model is meshopt-compressed from an uncompressed export in `assets_src/`. See [`web_3d/README.md`](../web_3d/README.md).

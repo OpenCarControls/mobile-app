@@ -16,6 +16,16 @@ enum TransportType {
   http,
 }
 
+/// Thrown by [CarTransport.send] when the message can't be sent, e.g. the
+/// transport is offline or doesn't carry that kind of message.
+class CarTransportException implements Exception {
+  final String message;
+  const CarTransportException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 abstract class CarTransport {
   TransportType get transportType;
 

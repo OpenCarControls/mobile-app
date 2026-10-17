@@ -9,8 +9,10 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
+import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
+
 class EgmpDashboardScreen extends ConsumerStatefulWidget {
   const EgmpDashboardScreen({super.key});
 
@@ -46,14 +48,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     setState(() {
       _pendingAction = actionId;
     });
-    
+
     try {
       await command();
     } catch (e) {
       if (mounted && _pendingAction == actionId) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted && _pendingAction == actionId) {
@@ -147,7 +149,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ),
         ],
       ),
-      body: isWideScreen ? _buildWideLayout() : _buildNarrowLayout(),
+      body: Column(
+        children: [
+          const PlatformMismatchBanner(),
+          Expanded(
+            child: isWideScreen ? _buildWideLayout() : _buildNarrowLayout(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -180,9 +189,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       children: [
         Expanded(
           child: Column(
-            children: [
-              Expanded(child: _buildVehicleRepresentation()),
-            ],
+            children: [Expanded(child: _buildVehicleRepresentation())],
           ),
         ),
         SizedBox(width: 350, child: _buildRightPanel()),
@@ -197,7 +204,6 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final batterySoc = basicState.batterySoc;
     final batteryRange = basicState.batteryRangeKm;
     final powerFlow = basicState.powerFlowWatt;
-    final odometer = basicState.odometer;
     final isDriving = basicState.isDriving;
     final speed = basicState.speed;
     final chargePortState = basicState.chargePortState;
@@ -207,7 +213,6 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final isChargePortOpen =
         basicState.chargePortState ==
         BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN;
-    final areLightsOn = basicState.areLightsOn;
     final isClimateOn = basicState.isClimateOn;
 
     final bool isCharging =
@@ -231,17 +236,23 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     if (state.isStateLive) {
       statusLabel = 'Updated just now';
     } else if (state.lastUpdated != null) {
-      final diff = DateTime.now().difference(state.lastUpdated!);
+      final now = DateTime.now();
+      final diff = now.difference(state.lastUpdated!);
       final localTime = state.lastUpdated!.toLocal();
-      if (diff.inHours >= 12 || DateTime.now().day != localTime.day) {
+      final isToday =
+          now.year == localTime.year &&
+          now.month == localTime.month &&
+          now.day == localTime.day;
+      if (diff.inHours >= 12 || !isToday) {
         final hours = localTime.hour.toString().padLeft(2, '0');
         final minutes = localTime.minute.toString().padLeft(2, '0');
         final month = localTime.month.toString().padLeft(2, '0');
         final day = localTime.day.toString().padLeft(2, '0');
-        if (DateTime.now().day == localTime.day) {
+        if (isToday) {
           statusLabel = 'Last synced: Today at $hours:$minutes';
         } else {
-          statusLabel = 'Last synced: ${localTime.year}-$month-$day $hours:$minutes';
+          statusLabel =
+              'Last synced: ${localTime.year}-$month-$day $hours:$minutes';
         }
       } else if (diff.inHours > 0) {
         statusLabel = 'Last updated ${diff.inHours}h ago';
@@ -279,9 +290,12 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
                           chargeStatusStr,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ),
                     Padding(
@@ -360,7 +374,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   _buildQuickActionButton(
                     actionId: 'lights',
                     icon: Icons.highlight,
-                    isActive: areLightsOn,
+                    // Flashing is momentary; there's no on/off state to show.
+                    isActive: false,
                     onPressed: () async {
                       final cmd = BasicCommand(
                         flashLightsCommand: FlashLightsCommand(),
@@ -407,7 +422,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isActive ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: isActive
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
         child: isLoading
@@ -416,12 +433,16 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 height: 32,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onPrimaryContainer
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               )
             : Icon(
                 icon,
-                color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isActive
+                    ? Theme.of(context).colorScheme.onPrimaryContainer
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,
               ),
       ),
@@ -470,9 +491,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final basicState = state.basicState as BasicState;
 
     final isClimateOn = basicState.isClimateOn;
-    final targetTemp = basicState.targetClimateTemperature == 0
-        ? 22.0
-        : basicState.targetClimateTemperature;
+    final targetTemp = basicState.hasTargetClimateTemperature()
+        ? basicState.targetClimateTemperature
+        : 22.0;
     final isWindshieldDefrostOn = basicState.isWindshieldDefrostOn;
     final isRearDefrostOn = basicState.isRearWindowDefrostOn;
     final isSteeringHeaterOn = basicState.isSteeringWheelHeaterOn;
@@ -489,14 +510,17 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+              icon: Icon(
+                Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               onPressed: () => setState(() => _currentSubMenu = null),
             ),
             title: Text(
               'Climate & Windows',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Padding(
@@ -546,21 +570,32 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     constraints: const BoxConstraints(),
                     icon: _pendingAction == 'temp_down'
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.remove, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    onPressed: _pendingAction == 'temp_down' ? null : () {
-                      _executeCommand('temp_down', () async {
-                        final cmd = BasicCommand(
-                          climateControlCommand: ClimateControlCommand(
-                            climateOn: isClimateOn,
-                            targetTemperature: targetTemp - 0.5,
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.remove,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
-                        );
-                        await ref
-                            .read(vehicleStateProvider.notifier)
-                            .sendBasicCommand(cmd.writeToBuffer());
-                      });
-                    },
+                    onPressed: _pendingAction == 'temp_down'
+                        ? null
+                        : () {
+                            _executeCommand('temp_down', () async {
+                              final cmd = BasicCommand(
+                                climateControlCommand: ClimateControlCommand(
+                                  climateOn: isClimateOn,
+                                  targetTemperature: targetTemp - 0.5,
+                                ),
+                              );
+                              await ref
+                                  .read(vehicleStateProvider.notifier)
+                                  .sendBasicCommand(cmd.writeToBuffer());
+                            });
+                          },
                   ),
                   Text(
                     '${targetTemp.toStringAsFixed(1)}°',
@@ -573,21 +608,32 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     constraints: const BoxConstraints(),
                     icon: _pendingAction == 'temp_up'
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.add, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    onPressed: _pendingAction == 'temp_up' ? null : () {
-                      _executeCommand('temp_up', () async {
-                        final cmd = BasicCommand(
-                          climateControlCommand: ClimateControlCommand(
-                            climateOn: isClimateOn,
-                            targetTemperature: targetTemp + 0.5,
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.add,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
-                        );
-                        await ref
-                            .read(vehicleStateProvider.notifier)
-                            .sendBasicCommand(cmd.writeToBuffer());
-                      });
-                    },
+                    onPressed: _pendingAction == 'temp_up'
+                        ? null
+                        : () {
+                            _executeCommand('temp_up', () async {
+                              final cmd = BasicCommand(
+                                climateControlCommand: ClimateControlCommand(
+                                  climateOn: isClimateOn,
+                                  targetTemperature: targetTemp + 0.5,
+                                ),
+                              );
+                              await ref
+                                  .read(vehicleStateProvider.notifier)
+                                  .sendBasicCommand(cmd.writeToBuffer());
+                            });
+                          },
                   ),
                 ],
               ),
@@ -596,65 +642,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 icon: Icons.sensor_window,
                 isActive: false,
                 onTap: () async {
-                  await showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                    ),
-                    builder: (ctx) => Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: Icon(
-                            Icons.arrow_downward,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          title: Text(
-                            'Vent Windows',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                          ),
-                          onTap: () {
-                            final cmd = BasicCommand(
-                              windowCommand: WindowCommand(
-                                action: WindowCommand_WindowAction
-                                    .WINDOW_ACTION_VENT,
-                              ),
-                            );
-                            ref
-                                .read(vehicleStateProvider.notifier)
-                                .sendBasicCommand(cmd.writeToBuffer());
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                        ListTile(
-                          leading: Icon(
-                            Icons.arrow_upward,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          title: Text(
-                            'Close Windows',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                          ),
-                          onTap: () {
-                            final cmd = BasicCommand(
-                              windowCommand: WindowCommand(
-                                action: WindowCommand_WindowAction
-                                    .WINDOW_ACTION_CLOSE,
-                              ),
-                            );
-                            ref
-                                .read(vehicleStateProvider.notifier)
-                                .sendBasicCommand(cmd.writeToBuffer());
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
+                  final action = await _pickWindowAction();
+                  if (action == null) return;
+                  final cmd = BasicCommand(
+                    windowCommand: WindowCommand(action: action),
                   );
+                  await ref
+                      .read(vehicleStateProvider.notifier)
+                      .sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -722,6 +717,42 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     );
   }
 
+  /// Asks which window action to run; null when dismissed.
+  Future<WindowCommand_WindowAction?> _pickWindowAction() {
+    final colors = Theme.of(context).colorScheme;
+    Widget option(IconData icon, String label, WindowCommand_WindowAction a) {
+      return ListTile(
+        leading: Icon(icon, color: colors.onSurface),
+        title: Text(label, style: TextStyle(color: colors.onSurface)),
+        onTap: () => Navigator.pop(context, a),
+      );
+    }
+
+    return showModalBottomSheet<WindowCommand_WindowAction>(
+      context: context,
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          option(
+            Icons.arrow_downward,
+            'Vent Windows',
+            WindowCommand_WindowAction.WINDOW_ACTION_VENT,
+          ),
+          option(
+            Icons.arrow_upward,
+            'Close Windows',
+            WindowCommand_WindowAction.WINDOW_ACTION_CLOSE,
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
   Widget _buildClimateIconButton({
     required String actionId,
     required IconData icon,
@@ -738,7 +769,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: isActive ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: isActive
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: isLoading
@@ -748,13 +781,17 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   height: iconSize,
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.onPrimaryContainer
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               )
             : Icon(
                 icon,
-                color: isActive ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isActive
+                    ? Theme.of(context).colorScheme.onPrimaryContainer
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: iconSize,
               ),
       ),
@@ -771,7 +808,12 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildClimateIconButton(actionId: actionId, icon: icon, isActive: isActive, onTap: onTap),
+        _buildClimateIconButton(
+          actionId: actionId,
+          icon: icon,
+          isActive: isActive,
+          onTap: onTap,
+        ),
         const SizedBox(height: 8),
         Text(
           label,
@@ -798,14 +840,17 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+              icon: Icon(
+                Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               onPressed: () => setState(() => _currentSubMenu = null),
             ),
             title: Text(
               'About & Settings',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           ListTile(
@@ -843,10 +888,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       elevation: 0,
       child: ListTile(
         leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        title: Text(title, style: Theme.of(context).textTheme.titleMedium),
         subtitle: subtitle != null
             ? Text(
                 subtitle,
@@ -855,7 +897,10 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 ),
               )
             : null,
-        trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         onTap: onTap,
       ),
     );

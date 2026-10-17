@@ -53,7 +53,7 @@ class StubCarTransport implements CarTransport {
 
   bool _isLocked = false;
   bool _isChargePortOpen = false;
-  bool _allDoorsOpen = false;
+  final bool _allDoorsOpen = false;
   bool _allWindowsOpen = false;
   bool _frunkTrunkOpen = false;
 
@@ -75,7 +75,13 @@ class StubCarTransport implements CarTransport {
       // Since it's a stateless flash command, we'll just toggle them open for 3 seconds
       _frunkTrunkOpen = true;
       Future.delayed(const Duration(seconds: 3), () {
-        _emitTestState(doors: _allDoorsOpen, windows: _allWindowsOpen, frunkTrunk: false, chargePort: _isChargePortOpen, locked: _isLocked);
+        _emitTestState(
+          doors: _allDoorsOpen,
+          windows: _allWindowsOpen,
+          frunkTrunk: false,
+          chargePort: _isChargePortOpen,
+          locked: _isLocked,
+        );
       });
     }
 
@@ -91,10 +97,22 @@ class StubCarTransport implements CarTransport {
     );
 
     // Emit the resulting state update.
-    _emitTestState(doors: _allDoorsOpen, windows: _allWindowsOpen, frunkTrunk: _frunkTrunkOpen, chargePort: _isChargePortOpen, locked: _isLocked);
+    _emitTestState(
+      doors: _allDoorsOpen,
+      windows: _allWindowsOpen,
+      frunkTrunk: _frunkTrunkOpen,
+      chargePort: _isChargePortOpen,
+      locked: _isLocked,
+    );
   }
 
-  void _emitTestState({required bool doors, required bool windows, required bool frunkTrunk, required bool chargePort, required bool locked}) {
+  void _emitTestState({
+    required bool doors,
+    required bool windows,
+    required bool frunkTrunk,
+    required bool chargePort,
+    required bool locked,
+  }) {
     _emit(
       DeviceToApp(
         stateUpdate: StateUpdate(
@@ -111,7 +129,9 @@ class StubCarTransport implements CarTransport {
               isRearRightWindowOpen: windows,
               isFrunkOpen: frunkTrunk,
               isTrunkOpen: frunkTrunk,
-              chargePortState: chargePort ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN : BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED,
+              chargePortState: chargePort
+                  ? BasicState_ChargePortState.CHARGE_PORT_STATE_OPEN
+                  : BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED,
             ).writeToBuffer(),
           ),
         ),

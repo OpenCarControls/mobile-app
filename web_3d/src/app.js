@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 let scene, camera, renderer, mixer, clock;
 let carModel;
@@ -9,6 +10,13 @@ let actions = {};
 let cachedMaterials = {};
 let needsRender = true;
 let activeMaterialScrolls = {};
+// Tweens driven by the render loop so Flutter only has to send target values.
+// meshFades: { meshName: { current, target, durationS } }
+// materialPulses: { materialName: { t, active, maxIntensity, scrollX, durationS } }
+let meshFades = {};
+let materialPulses = {};
+// Periodic toggle between two sets of material definitions (e.g. hazards).
+let blink = null; // { active, periodS, on: [...], off: [...], elapsed, isOn }
 
 let isInitialized = false;
 let animationFrameId = null;
@@ -59,6 +67,12 @@ window.initRenderer = function(configJson) {
         cachedMaterials = {};
         actions = {};
         mixer = null;
+        meshFades = {};
+        materialPulses = {};
+        blink = null;
+        activeMaterialScrolls = {};
+        window.animStates = {};
+        window._isFirstStatePush = true;
     }
 
     isInitialized = true;
@@ -116,6 +130,7 @@ function init() {
 
     // Load Model
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     const modelPath = currentConfig.model?.path || '../cars/egmp/2022_kia_ev6.glb';
     const fadeStart = currentConfig.shader?.fadeStart || 4.0;
     const fadeEnd = currentConfig.shader?.fadeEnd || 4.25;
@@ -200,7 +215,11 @@ function animate() {
         }
     }
 
-    let isMoving = isCameraMoving || isAnimating;
+    const isTweening = updateTweens(delta);
+    if (isTweening) shouldRender = true;
+    if (updateBlink(delta)) shouldRender = true;
+
+    let isMoving = isCameraMoving || isAnimating || isTweening;
     
     if (window._forceRenderFrames > 0) {
         shouldRender = true;
@@ -237,6 +256,76 @@ function animate() {
     if (shouldRender) {
         renderer.render(scene, camera);
     }
+}
+
+function easeInOut(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Advances mesh fades and material pulses. Returns true while any is moving.
+function updateTweens(delta) {
+    let moving = false;
+
+    for (const name in meshFades) {
+        const fade = meshFades[name];
+        if (fade.current === fade.target) continue;
+        const step = delta / fade.durationS;
+        fade.current = fade.target > fade.current
+            ? Math.min(fade.target, fade.current + step)
+            : Math.max(fade.target, fade.current - step);
+        window.setMeshOpacity(name, fade.current);
+        moving = true;
+    }
+
+    for (const name in materialPulses) {
+        const pulse = materialPulses[name];
+        const target = pulse.active ? 1 : 0;
+        if (pulse.t === target) continue;
+        const step = delta / pulse.durationS;
+        pulse.t = pulse.active ? Math.min(1, pulse.t + step) : Math.max(0, pulse.t - step);
+        applyMaterialPulse(name, pulse);
+        moving = true;
+    }
+
+    return moving;
+}
+
+function applyMaterialPulse(name, pulse) {
+    const mats = cachedMaterials[name];
+    if (mats) {
+        mats.forEach(mat => {
+            mat.emissiveIntensity = easeInOut(pulse.t) * pulse.maxIntensity;
+        });
+    }
+    // Scroll while visible; reset the texture offset once fully faded out.
+    window.setMaterialScroll(name, pulse.t > 0 ? pulse.scrollX : 0, 0, pulse.t === 0);
+}
+
+function applyMaterialDefs(defs) {
+    defs.forEach((matDef) => {
+        if (matDef.emissive !== undefined) {
+            setMaterialEmissive(matDef.name, matDef.emissive, matDef.intensity || 0);
+        }
+        if (matDef.color !== undefined) {
+            setMaterialColor(matDef.name, matDef.color);
+        }
+        if (matDef.visible !== undefined) {
+            window.setMaterialVisibility(matDef.name, matDef.visible);
+        }
+    });
+}
+
+// Toggles the blink "on"/"off" material sets. Returns true when it changed
+// something that needs a render. Blinking is not "moving": it must not hold
+// back onStateSettled, or the snapshot would never be taken.
+function updateBlink(delta) {
+    if (!blink || !blink.active) return false;
+    blink.elapsed += delta;
+    if (blink.elapsed < blink.periodS) return false;
+    blink.elapsed = 0;
+    blink.isOn = !blink.isOn;
+    applyMaterialDefs(blink.isOn ? blink.on : blink.off);
+    return true;
 }
 
 function setMaterialEmissive(name, hexColor, intensity) {
@@ -353,13 +442,14 @@ window.getSnapshot = function() {
 
 window._isFirstStatePush = true;
 
-window.setVehicleState = function (stateJson) {
+// Accepts either a state object or its JSON string.
+window.setVehicleState = function (state) {
     if (!carModel) return;
 
     needsRender = true;
     window._statePending = true;
     window._forceRenderFrames = 10;
-    const payload = JSON.parse(stateJson);
+    const payload = typeof state === 'string' ? JSON.parse(state) : state;
     const isInstant = window._isFirstStatePush;
     window._isFirstStatePush = false;
 
@@ -387,28 +477,58 @@ window.setVehicleState = function (stateJson) {
         }
     }
     
+    // Target opacities, faded in the render loop.
+    // { meshName: opacity } or { meshName: { opacity, durationMs } }
     if (payload.meshOpacity) {
-        for (const [meshName, opacity] of Object.entries(payload.meshOpacity)) {
-            window.setMeshOpacity(meshName, opacity);
+        for (const [meshName, value] of Object.entries(payload.meshOpacity)) {
+            const target = typeof value === 'number' ? value : value.opacity;
+            const durationS = (value.durationMs ?? 500) / 1000;
+            const fade = meshFades[meshName] ?? { current: isInstant ? target : 0 };
+            fade.target = target;
+            fade.durationS = durationS;
+            if (isInstant) fade.current = target;
+            meshFades[meshName] = fade;
+            window.setMeshOpacity(meshName, fade.current);
         }
     }
 
     // 3. Materials
     if (payload.materials) {
+        applyMaterialDefs(payload.materials);
         payload.materials.forEach((matDef) => {
-            if (matDef.emissive !== undefined) {
-                setMaterialEmissive(matDef.name, matDef.emissive, matDef.intensity || 0);
-            }
-            if (matDef.color !== undefined) {
-                setMaterialColor(matDef.name, matDef.color);
-            }
-            if (matDef.visible !== undefined) {
-                window.setMaterialVisibility(matDef.name, matDef.visible);
-            }
             if (matDef.scrollX !== undefined || matDef.scrollY !== undefined) {
                 window.setMaterialScroll(matDef.name, matDef.scrollX || 0, matDef.scrollY || 0, matDef.resetScroll === true);
             }
         });
+    }
+
+    // Emissive fade + texture scroll, eased in the render loop.
+    // { materialName: { active, maxIntensity, scrollX, durationMs } }
+    if (payload.materialPulses) {
+        for (const [name, def] of Object.entries(payload.materialPulses)) {
+            const pulse = materialPulses[name] ?? { t: 0 };
+            pulse.active = def.active;
+            pulse.maxIntensity = def.maxIntensity ?? 1;
+            pulse.scrollX = def.scrollX ?? 0;
+            pulse.durationS = (def.durationMs ?? 500) / 1000;
+            if (isInstant) pulse.t = def.active ? 1 : 0;
+            materialPulses[name] = pulse;
+            applyMaterialPulse(name, pulse);
+        }
+    }
+
+    // { active, periodMs, on: [materialDefs], off: [materialDefs] }
+    if (payload.blink) {
+        const wasActive = blink?.active === true;
+        blink = {
+            active: payload.blink.active,
+            periodS: (payload.blink.periodMs ?? 500) / 1000,
+            on: payload.blink.on ?? [],
+            off: payload.blink.off ?? [],
+            elapsed: wasActive ? blink.elapsed : 0,
+            isOn: wasActive ? blink.isOn : payload.blink.active,
+        };
+        applyMaterialDefs(blink.isOn && blink.active ? blink.on : blink.off);
     }
 
     // 4. Animations

@@ -254,26 +254,35 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         );
       }
 
-      dev.log('Wizard: bond confirmed — waiting for platform ID', name: 'PairingWizard');
-      
+      dev.log(
+        'Wizard: bond confirmed — waiting for platform ID',
+        name: 'PairingWizard',
+      );
+
       final txChar = QualifiedCharacteristic(
         deviceId: deviceId,
         serviceId: Uuid.parse(vehicle.bleServiceUuid),
         characteristicId: Uuid.parse(vehicle.bleDeviceToAppCharacteristicUuid),
       );
-      
-      final firstMsgBytes = await ble.subscribeToCharacteristic(txChar).first.timeout(
-        const Duration(seconds: 5),
-      );
+
+      final firstMsgBytes = await ble
+          .subscribeToCharacteristic(txChar)
+          .first
+          .timeout(const Duration(seconds: 5));
       final msg = DeviceToApp.fromBuffer(firstMsgBytes);
-      
+
       final allVehicles = ref.read(availableVehiclesProvider);
       final actualVehicle = allVehicles.firstWhere(
         (v) => v.platformId == msg.platformId,
-        orElse: () => throw Exception('Unsupported vehicle platform ID: ${msg.platformId}'),
+        orElse: () => throw Exception(
+          'Unsupported vehicle platform ID: ${msg.platformId}',
+        ),
       );
 
-      dev.log('Wizard: platform ID validated as ${actualVehicle.platformName} — saving config', name: 'PairingWizard');
+      dev.log(
+        'Wizard: platform ID validated as ${actualVehicle.platformName} — saving config',
+        name: 'PairingWizard',
+      );
       await connSub.cancel();
       connSub = null;
 
@@ -374,15 +383,19 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     );
     try {
       await t.registerAsPairedPhone(ref.read(bleSourceDeviceIdProvider));
-      
-      final msg = await t.messages.first.timeout(const Duration(seconds: 5));
+
+      // Messages without a platform ID (e.g. a bare command response) can't
+      // identify the vehicle; wait for one that does.
+      final msg = await t.messages
+          .firstWhere((m) => m.platformId != 0)
+          .timeout(const Duration(seconds: 5));
       final allVehicles = ref.read(availableVehiclesProvider);
       final actualVehicle = allVehicles.firstWhere(
         (v) => v.platformId == msg.platformId,
-        orElse: () => throw Exception('Unsupported vehicle platform ID: ${msg.platformId}'),
+        orElse: () => throw Exception(
+          'Unsupported vehicle platform ID: ${msg.platformId}',
+        ),
       );
-      
-      t.dispose();
 
       await ref
           .read(pairedVehicleProvider.notifier)
@@ -395,9 +408,10 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
               httpPort: port,
             ),
           );
-    } on Exception catch (e) {
-      t.dispose();
+    } catch (e) {
       _setError('HTTP pairing failed: $e');
+    } finally {
+      t.dispose();
     }
   }
 
