@@ -31,7 +31,10 @@ const _legacySnapshotPrefsKeys = [
 /// Snapshots older than this are shown grayed out.
 const _kRecentThreshold = Duration(seconds: 30);
 
-const _kAcConnectedStates = {
+/// States drawn with the small L2 cable. `CONNECTED` (cable in, charger type not known
+/// yet) uses it too until the 3D model gets a generic cable.
+const _kL2CableStates = {
+  BasicState_ChargePortState.CHARGE_PORT_STATE_CONNECTED,
   BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CONNECTED,
   BasicState_ChargePortState.CHARGE_PORT_STATE_AC_CHARGING,
 };
@@ -181,7 +184,7 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
     final isPortOpen =
         chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_CLOSED &&
         chargePort != BasicState_ChargePortState.CHARGE_PORT_STATE_UNSPECIFIED;
-    final isAcConnected = _kAcConnectedStates.contains(chargePort);
+    final isL2CableShown = _kL2CableStates.contains(chargePort);
     final isDcConnected = _kDcConnectedStates.contains(chargePort);
 
     final isLightsOn = basicState.areLightsOn;
@@ -194,12 +197,12 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
         'targetTheta': isPortOpen ? (225 * pi / 180) : (45 * pi / 180),
       },
       'meshOpacity': {
-        'Charger_L2': isAcConnected ? 1.0 : 0.0,
+        'Charger_L2': isL2CableShown ? 1.0 : 0.0,
         'Charger_DC': isDcConnected ? 1.0 : 0.0,
       },
       'animations': {
         'Anim_ChargePort': isPortOpen,
-        'Anim_Connect_L2': isAcConnected,
+        'Anim_Connect_L2': isL2CableShown,
         'Anim_Connect_DC': isDcConnected,
         'Anim_Door_FL': basicState.isDriverDoorOpen,
         'Anim_Door_FR': basicState.isPassengerDoorOpen,
