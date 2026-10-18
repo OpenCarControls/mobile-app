@@ -238,6 +238,23 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         ? (hasChargeTime ? 'Charging • $timeRemaining mins left' : 'Charging')
         : (isV2L ? 'V2L Active' : '');
 
+    // Advanced state only comes over BLE; a cached value could be long out of date.
+    final advancedState = state.advancedState as AdvancedState;
+    final String preconditioningStr = !state.isAdvancedStateLive
+        ? ''
+        : switch (advancedState.preconditioningState) {
+            AdvancedState_PreconditioningState
+                .PRECONDITIONING_STATE_PREPARING =>
+              'Battery preconditioning: preparing',
+            AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING =>
+              'Battery preconditioning: heating',
+            _ => '',
+          };
+    final String batteryStatusStr = [
+      chargeStatusStr,
+      preconditioningStr,
+    ].where((s) => s.isNotEmpty).join(' • ');
+
     String statusLabel = 'Waiting for vehicle...';
     if (state.isStateLive) {
       statusLabel = 'Updated just now';
@@ -291,11 +308,11 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (chargeStatusStr.isNotEmpty)
+                    if (batteryStatusStr.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          chargeStatusStr,
+                          batteryStatusStr,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
                                 color: Theme.of(

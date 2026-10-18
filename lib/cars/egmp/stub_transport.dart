@@ -24,6 +24,8 @@ class StubCarTransport implements CarTransport {
     final advancedState = AdvancedState(
       batteryVoltage: 800,
       gear: AdvancedState_Gear.GEAR_PARK,
+      preconditioningState:
+          AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF,
     );
     final systemState = SystemState(
       firmwareVersion: 'egmp-stub-1.0.0',
