@@ -228,8 +228,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         ? ' ${(powerFlow / 1000).toStringAsFixed(1)} kW'
         : '';
 
+    // The firmware only reports the time on DC so far (time to the charge limit); on AC a
+    // stale DC estimate could still be in the state, so it isn't shown there.
+    final bool hasChargeTime =
+        chargePortState ==
+            BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING &&
+        basicState.hasTimeRemainingMinutes();
     final String chargeStatusStr = isCharging
-        ? 'Charging • $timeRemaining mins to full'
+        ? (hasChargeTime ? 'Charging • $timeRemaining mins left' : 'Charging')
         : (isV2L ? 'V2L Active' : '');
 
     String statusLabel = 'Waiting for vehicle...';
