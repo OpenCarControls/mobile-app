@@ -20,6 +20,8 @@ class StubCarTransport implements CarTransport {
       odometer: 0,
       isDriving: false,
       areDoorsLocked: false,
+      driverSeatClimate: BasicState_SeatClimate.SEAT_CLIMATE_OFF,
+      passengerSeatClimate: BasicState_SeatClimate.SEAT_CLIMATE_OFF,
     );
     final advancedState = AdvancedState(
       batteryVoltage: 800,

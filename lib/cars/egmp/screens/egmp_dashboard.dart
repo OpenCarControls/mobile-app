@@ -532,6 +532,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final isWindshieldDefrostOn = basicState.isWindshieldDefrostOn;
     final isRearDefrostOn = basicState.isRearWindowDefrostOn;
     final isSteeringHeaterOn = basicState.isSteeringWheelHeaterOn;
+    final driverSeat = basicState.driverSeatClimate;
+    final passengerSeat = basicState.passengerSeatClimate;
     final outdoorTemp = basicState.outdoorTemperature;
     final indoorTemp = basicState.indoorTemperature;
 
@@ -747,6 +749,47 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildLabeledClimateButton(
+                actionId: 'driver_seat',
+                icon: Icons.event_seat,
+                label: 'Driver Seat\n${_seatLabel(driverSeat)}',
+                isActive: _isSeatOn(driverSeat),
+                onTap: () async {
+                  final cmd = BasicCommand(
+                    climateControlCommand: ClimateControlCommand(
+                      climateOn: isClimateOn,
+                      driverSeatClimate: _nextSeatClimate(driverSeat),
+                    ),
+                  );
+                  await ref
+                      .read(vehicleStateProvider.notifier)
+                      .sendBasicCommand(cmd.writeToBuffer());
+                },
+              ),
+              _buildLabeledClimateButton(
+                actionId: 'passenger_seat',
+                icon: Icons.event_seat,
+                label: 'Passenger Seat\n${_seatLabel(passengerSeat)}',
+                isActive: _isSeatOn(passengerSeat),
+                onTap: () async {
+                  final cmd = BasicCommand(
+                    climateControlCommand: ClimateControlCommand(
+                      climateOn: isClimateOn,
+                      passengerSeatClimate: _nextSeatClimate(passengerSeat),
+                    ),
+                  );
+                  await ref
+                      .read(vehicleStateProvider.notifier)
+                      .sendBasicCommand(cmd.writeToBuffer());
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -832,6 +875,30 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       ),
     );
   }
+
+  static bool _isSeatOn(BasicState_SeatClimate seat) =>
+      seat != BasicState_SeatClimate.SEAT_CLIMATE_OFF &&
+      seat != BasicState_SeatClimate.SEAT_CLIMATE_UNSPECIFIED;
+
+  static String _seatLabel(BasicState_SeatClimate seat) => switch (seat) {
+    BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_1 => 'Level 1',
+    BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_2 => 'Level 2',
+    BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_3 => 'Level 3',
+    BasicState_SeatClimate.SEAT_CLIMATE_OFF => 'Off',
+    _ => '--',
+  };
+
+  /// The next level as the car's seat button steps them: off, 3, 2, 1, off.
+  static BasicState_SeatClimate _nextSeatClimate(BasicState_SeatClimate seat) =>
+      switch (seat) {
+        BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_3 =>
+          BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_2,
+        BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_2 =>
+          BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_1,
+        BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_1 =>
+          BasicState_SeatClimate.SEAT_CLIMATE_OFF,
+        _ => BasicState_SeatClimate.SEAT_CLIMATE_HEAT_LEVEL_3,
+      };
 
   Widget _buildLabeledClimateButton({
     required String actionId,
