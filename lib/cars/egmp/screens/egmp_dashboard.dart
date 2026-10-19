@@ -207,7 +207,6 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     final isDriving = basicState.isDriving;
     final speed = basicState.speed;
     final chargePortState = basicState.chargePortState;
-    final timeRemaining = basicState.timeRemainingMinutes;
 
     final isLocked = basicState.areDoorsLocked;
     final isChargePortOpen =
@@ -228,14 +227,27 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         ? ' ${(powerFlow / 1000).toStringAsFixed(1)} kW'
         : '';
 
-    // The firmware only reports the time on DC so far (time to the charge limit); on AC a
-    // stale DC estimate could still be in the state, so it isn't shown there.
-    final bool hasChargeTime =
+    // Like the cluster: the time to the charge limit, and on DC also the time to 80%.
+    final bool isDcCharging =
         chargePortState ==
-            BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING &&
-        basicState.hasTimeRemainingMinutes();
+        BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING;
+    final bool hasLimit = isDcCharging
+        ? basicState.hasDcChargeLimitPercent()
+        : basicState.hasAcChargeLimitPercent();
+    final int limit = isDcCharging
+        ? basicState.dcChargeLimitPercent
+        : basicState.acChargeLimitPercent;
     final String chargeStatusStr = isCharging
-        ? (hasChargeTime ? 'Charging • $timeRemaining mins left' : 'Charging')
+        ? [
+            'Charging',
+            if (basicState.timeRemainingMinutes > 0)
+              '${_formatMinutes(basicState.timeRemainingMinutes)} to '
+                  '${hasLimit ? '$limit%' : 'limit'}',
+            if (isDcCharging &&
+                basicState.timeTo80PercentMinutes > 0 &&
+                !(hasLimit && limit == 80))
+              '${_formatMinutes(basicState.timeTo80PercentMinutes)} to 80%',
+          ].join(' • ')
         : (isV2L ? 'V2L Active' : '');
 
     // Advanced state only comes over BLE; a cached value could be long out of date.
@@ -496,7 +508,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
             icon: Icons.ac_unit,
             title: 'Climate & Windows',
             subtitle:
-                'Indoor: ${basicState.indoorTemperature.toStringAsFixed(1)}°C',
+                'Indoor: ${_formatTemperature(basicState.indoorTemperature, basicState)}',
             onTap: () => setState(() => _currentSubMenu = 'climate'),
           ),
           _buildMenuTile(
@@ -552,13 +564,13 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Outdoor: ${outdoorTemp.toStringAsFixed(1)}°C',
+                  'Outdoor: ${_formatTemperature(outdoorTemp, basicState)}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Text(
-                  'Indoor: ${indoorTemp.toStringAsFixed(1)}°C',
+                  'Indoor: ${_formatTemperature(indoorTemp, basicState)}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -621,7 +633,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           },
                   ),
                   Text(
-                    '${targetTemp.toStringAsFixed(1)}°',
+                    _formatTargetTemperature(targetTemp, basicState),
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                     ),
@@ -929,3 +941,21 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     );
   }
 }
+
+String _formatMinutes(int minutes) =>
+    minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min';
+
+bool _isFahrenheit(BasicState s) =>
+    s.temperatureUnit == BasicState_TemperatureUnit.TEMPERATURE_UNIT_FAHRENHEIT;
+
+/// Temperatures arrive in Celsius; show them in the unit the car displays.
+String _formatTemperature(double celsius, BasicState s) => _isFahrenheit(s)
+    ? '${(celsius * 9 / 5 + 32).round()}°F'
+    : '${celsius.toStringAsFixed(1)}°C';
+
+/// The climate target steps 1 °F per 0.5 °C (17 °C is 62 °F, 27 °C is 82 °F), so a plain
+/// conversion wouldn't match what the car shows.
+String _formatTargetTemperature(double celsius, BasicState s) =>
+    _isFahrenheit(s)
+    ? '${((celsius - 14) * 2 + 56).round()}°'
+    : '${celsius.toStringAsFixed(1)}°';
