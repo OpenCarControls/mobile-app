@@ -55,6 +55,9 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   StreamSubscription<BleStatus>? _statusSubscription;
   bool _connecting = false;
   bool _disposed = false;
+  // Pending retry after the connection stream ends. Only one may be scheduled,
+  // and any new connection attempt cancels it.
+  Timer? _retryTimer;
 
   @override
   BleConnectionState build() {
@@ -67,6 +70,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       return const BleDisconnected();
     }
 
+    _disposed = false;
     ref.onDispose(_cleanup);
     unawaited(_initConnection(config.bleRemoteId));
     return BleConnecting(config.bleRemoteId);
@@ -115,22 +119,28 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   }
 
   void _cancelConnection() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _connectionSubscription?.cancel();
     _connectionSubscription = null;
     _connecting = false;
   }
 
   void _connectDirectly(String remoteId) {
-    if (_connecting) return;
+    if (_connecting || state is BleReady) return;
     _connecting = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    // Drop any previous connection stream so it can't leak or emit into this one.
+    _connectionSubscription?.cancel();
     state = BleConnecting(remoteId);
 
     final ble = ref.read(bleProvider);
     dev.log('Connecting to $remoteId', name: 'BleConnection');
 
     // connectToDevice emits updates for the lifetime of the subscription and
-    // automatically retries when the device is out of range — no manual
-    // reconnect timer needed.
+    // automatically retries when the device is out of range. Only when the
+    // stream itself ends does `_scheduleRetry` start a new one.
     _connectionSubscription = ble
         .connectToDevice(
           id: remoteId,
@@ -142,21 +152,23 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
             dev.log('Connection stream error: $e', name: 'BleConnection');
             _connecting = false;
             state = BleConnecting(remoteId);
-            // Reconnect after a short delay
-            Future.delayed(const Duration(seconds: 30), () {
-              if (!_disposed) _connectDirectly(remoteId);
-            });
+            _scheduleRetry(remoteId);
           },
           onDone: () {
             dev.log('Connection stream done', name: 'BleConnection');
             _connecting = false;
             state = BleConnecting(remoteId);
-            // Reconnect after a short delay
-            Future.delayed(const Duration(seconds: 30), () {
-              if (!_disposed) _connectDirectly(remoteId);
-            });
+            _scheduleRetry(remoteId);
           },
         );
+  }
+
+  void _scheduleRetry(String remoteId) {
+    _retryTimer?.cancel();
+    _retryTimer = Timer(const Duration(seconds: 30), () {
+      _retryTimer = null;
+      if (!_disposed) _connectDirectly(remoteId);
+    });
   }
 
   void forceReconnect() {
@@ -281,6 +293,8 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   void _cleanup() {
     _disposed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _statusSubscription?.cancel();
     _statusSubscription = null;
     _connectionSubscription?.cancel();
