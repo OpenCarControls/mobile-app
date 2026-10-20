@@ -35,6 +35,17 @@ jobs:
       - name: Generate code
         run: dart run build_runner build
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web_3d/package-lock.json
+
+      # The 3D viewer bundle in assets/web/ is gitignored; pubspec.yaml needs it.
+      - name: Build 3D viewer
+        working-directory: web_3d
+        run: npm ci && npm run build
+
       - name: Verify formatting
         run: find lib test -name "*.dart" ! -name "*.g.dart" ! -path "*/generated/*" | xargs dart format --output=none --set-exit-if-changed
 
@@ -77,6 +88,17 @@ jobs:
 
       - name: Generate code
         run: dart run build_runner build
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web_3d/package-lock.json
+
+      # The 3D viewer bundle in assets/web/ is gitignored; pubspec.yaml needs it.
+      - name: Build 3D viewer
+        working-directory: web_3d
+        run: npm ci && npm run build
 
       - name: Build APK
         run: flutter build apk --release
