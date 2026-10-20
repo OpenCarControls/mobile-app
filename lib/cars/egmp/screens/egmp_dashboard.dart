@@ -315,7 +315,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$batteryRange km - $batterySoc% 🔋$powerFlowStr',
+                      '${_formatRange(batteryRange, basicState)} - $batterySoc% 🔋$powerFlowStr',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -346,7 +346,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 ),
                 if (isDriving)
                   Text(
-                    '$speed km/h',
+                    _formatSpeed(speed, basicState),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -959,7 +959,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
             leading: const Icon(Icons.speed),
             title: const Text('Odometer'),
             trailing: Text(
-              '${basicState.odometer} km',
+              _formatOdometer(basicState.odometer, basicState),
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
@@ -1011,6 +1011,24 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
 
 String _formatMinutes(int minutes) =>
     minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min';
+
+const double _kmPerMile = 1.609344;
+
+bool _isMiles(BasicState s) =>
+    s.distanceUnit == BasicState_DistanceUnit.DISTANCE_UNIT_MILES;
+
+/// Distances and speeds arrive in km and km/h; show them in the unit the car displays.
+/// The cluster rounds the range (336 km is 209 mi) but truncates the odometer (22916 km
+/// is 14239 mi).
+String _formatRange(int km, BasicState s) =>
+    _isMiles(s) ? '${(km / _kmPerMile).round()} mi' : '$km km';
+
+String _formatOdometer(int km, BasicState s) =>
+    _isMiles(s) ? '${(km / _kmPerMile).floor()} mi' : '$km km';
+
+/// The speed arrives in whole km/h, so it can be 1 mph off the cluster.
+String _formatSpeed(int kmh, BasicState s) =>
+    _isMiles(s) ? '${(kmh / _kmPerMile).round()} mph' : '$kmh km/h';
 
 bool _isFahrenheit(BasicState s) =>
     s.temperatureUnit == BasicState_TemperatureUnit.TEMPERATURE_UNIT_FAHRENHEIT;
