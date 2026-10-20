@@ -10,4 +10,6 @@ This directory contains raw design assets, 3D source files (such as `.blend` Ble
 
 ## Attributions
 
-- ["2022 Kia EV6"](https://sketchfab.com/3d-models/2022-kia-ev6-44d11e83ef40492bb4bc3d9fbc41e5e0) by tonielpro520 is licensed under Creative Commons Attribution.
+- ["2022 Kia EV6"](https://sketchfab.com/3d-models/2022-kia-ev6-44d11e83ef40492bb4bc3d9fbc41e5e0) by tonielpro520 is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changed for this app: parts of the mesh simplified, parts separated for animation, the paint recolored, emissive lights and a plane under the hood added, and the mesh compressed.
+
+The app shows these attributions on its licenses page; when an asset or its changes change, update `lib/cars/<platform>/licenses.dart` too.

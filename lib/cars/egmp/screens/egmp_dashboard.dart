@@ -100,6 +100,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     }
                   }
                 }
+              } else if (value == 'licenses') {
+                showLicensePage(context: context, applicationName: 'Open Car');
               } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
@@ -137,6 +139,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
+              const PopupMenuItem(
+                value: 'licenses',
+                child: ListTile(
+                  leading: Icon(Icons.description_outlined),
+                  title: Text('Open-source licenses'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(

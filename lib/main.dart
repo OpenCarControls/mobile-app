@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/cars/egmp/licenses.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
@@ -11,6 +12,7 @@ import 'package:open_car_app/screens/pairing_wizard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerEgmpLicenses();
 
   final (deviceId, isNew) = await getOrCreateDeviceId();
   dev.log(
