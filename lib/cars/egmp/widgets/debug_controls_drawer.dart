@@ -5,6 +5,24 @@ import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 
 typedef _ChargePort = BasicState_ChargePortState;
+typedef _Window = BasicState_WindowPosition;
+
+/// Front window positions in the order the debug buttons step through them.
+const _kWindowSteps = [
+  _Window.WINDOW_POSITION_CLOSED,
+  _Window.WINDOW_POSITION_SLIGHTLY_OPEN,
+  _Window.WINDOW_POSITION_PARTLY_OPEN,
+  _Window.WINDOW_POSITION_FULLY_OPEN,
+];
+
+_Window _nextWindowStep(_Window position) {
+  final i = _kWindowSteps.indexOf(position);
+  return _kWindowSteps[(i + 1) % _kWindowSteps.length];
+}
+
+bool _isWindowOpen(_Window position) =>
+    position != _Window.WINDOW_POSITION_CLOSED &&
+    position != _Window.WINDOW_POSITION_UNSPECIFIED;
 
 const _kAcStates = {
   _ChargePort.CHARGE_PORT_STATE_AC_CONNECTED,
@@ -121,13 +139,17 @@ class DebugControlsDrawer extends ConsumerWidget {
                     ),
                     btn(
                       'Win FL',
-                      b.isDriverWindowOpen,
-                      (s) => s.isDriverWindowOpen = !b.isDriverWindowOpen,
+                      _isWindowOpen(b.driverWindowPosition),
+                      (s) => s.driverWindowPosition = _nextWindowStep(
+                        b.driverWindowPosition,
+                      ),
                     ),
                     btn(
                       'Win FR',
-                      b.isPassengerWindowOpen,
-                      (s) => s.isPassengerWindowOpen = !b.isPassengerWindowOpen,
+                      _isWindowOpen(b.passengerWindowPosition),
+                      (s) => s.passengerWindowPosition = _nextWindowStep(
+                        b.passengerWindowPosition,
+                      ),
                     ),
                     btn(
                       'Win RL',

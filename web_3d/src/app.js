@@ -7,6 +7,8 @@ let carModel;
 let targetTheta = 45 * Math.PI / 180;
 let currentTheta = 45 * Math.PI / 180;
 let actions = {};
+// Clip times where partly played animations stop: { animName: seconds }
+let animStops = {};
 let cachedMaterials = {};
 let needsRender = true;
 let activeMaterialScrolls = {};
@@ -66,6 +68,7 @@ window.initRenderer = function(configJson) {
         carModel = null;
         cachedMaterials = {};
         actions = {};
+        animStops = {};
         mixer = null;
         meshFades = {};
         materialPulses = {};
@@ -173,6 +176,23 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 }
 
+// Pauses the actions that reached their stop time. Returns true when it moved
+// one back onto its stop, so the caller re-applies the pose before rendering.
+function stopAnimationsAtTargets() {
+    let clamped = false;
+    for (const name in animStops) {
+        const action = actions[name];
+        const stop = animStops[name];
+        const reached = action.timeScale > 0 ? action.time >= stop : action.time <= stop;
+        if (!reached) continue;
+        if (action.time !== stop) clamped = true;
+        action.time = stop;
+        action.paused = true;
+        delete animStops[name];
+    }
+    return clamped;
+}
+
 function onWindowResize() {
     const aspect = window.innerWidth / window.innerHeight;
     const frustumSize = currentConfig.camera?.frustumSize || 6;
@@ -206,6 +226,7 @@ function animate() {
     let isAnimating = false;
     if (mixer) {
         mixer.update(delta);
+        if (stopAnimationsAtTargets()) mixer.update(0);
         for (const name in actions) {
             if (actions[name].isRunning()) {
                 shouldRender = true;
@@ -532,37 +553,40 @@ window.setVehicleState = function (state) {
     }
 
     // 4. Animations
+    // { animName: true | false | 0..1 }: true and false play the whole clip,
+    // a number stops partway, e.g. 0.5 at the middle of the clip.
     if (payload.animations) {
         if (!window.animStates) window.animStates = {};
 
         for (const animName in payload.animations) {
-            const isOpen = payload.animations[animName];
+            const value = payload.animations[animName];
+            const target = value === true ? 1 : value === false ? 0 : value;
             const action = actions[animName];
-            
+
             if (!action) continue;
-            if (window.animStates[animName] === isOpen) continue;
+            if (window.animStates[animName] === target) continue;
 
             // On first load, if the state is closed, record it and skip snap
-            if (window.animStates[animName] === undefined && !isOpen) {
-                window.animStates[animName] = isOpen;
+            if (window.animStates[animName] === undefined && target === 0) {
+                window.animStates[animName] = target;
                 continue;
             }
 
-            window.animStates[animName] = isOpen;
-            action.paused = false;
-            action.timeScale = isOpen ? 1 : -1;
+            const previous = window.animStates[animName] ?? 0;
+            window.animStates[animName] = target;
+            const duration = action.getClip().duration;
+            const stop = target * duration;
 
-            if (isOpen) {
-                action.play();
-                if (isInstant) {
-                    action.time = action.getClip().duration;
-                }
+            action.paused = false;
+            if (action.time === 0 && previous > 0) action.time = previous * duration;
+            action.timeScale = stop >= action.time ? 1 : -1;
+            action.play();
+            if (isInstant) {
+                action.time = stop;
+                action.paused = true;
+                delete animStops[animName];
             } else {
-                if (action.time === 0) action.time = action.getClip().duration;
-                action.play();
-                if (isInstant) {
-                    action.time = 0;
-                }
+                animStops[animName] = stop;
             }
         }
     }

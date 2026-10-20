@@ -45,6 +45,19 @@ const _kDcConnectedStates = {
   BasicState_ChargePortState.CHARGE_PORT_STATE_DC_CHARGING,
 };
 
+/// How far along its open animation a window is shown, from 0 (closed) to 1
+/// (fully open). The car reports steps, not a position: in log_07 "slightly"
+/// lasts about the first 30% of the travel and "partly" the rest until the
+/// bottom, so each step is shown inside its range.
+double _windowOpenFraction(BasicState_WindowPosition position) {
+  return switch (position) {
+    BasicState_WindowPosition.WINDOW_POSITION_SLIGHTLY_OPEN => 0.2,
+    BasicState_WindowPosition.WINDOW_POSITION_PARTLY_OPEN => 0.6,
+    BasicState_WindowPosition.WINDOW_POSITION_FULLY_OPEN => 1.0,
+    _ => 0.0,
+  };
+}
+
 bool _isRecent(VehicleSnapshot s) {
   if (s.isStateLive) return true;
   final lastUpdated = s.lastUpdated;
@@ -210,8 +223,10 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
         'Anim_Door_RR': basicState.isRearRightDoorOpen,
         'Anim_Hood': basicState.isFrunkOpen,
         'Anim_Trunk': basicState.isTrunkOpen,
-        'Anim_Window_FL': basicState.isDriverWindowOpen,
-        'Anim_Window_FR': basicState.isPassengerWindowOpen,
+        'Anim_Window_FL': _windowOpenFraction(basicState.driverWindowPosition),
+        'Anim_Window_FR': _windowOpenFraction(
+          basicState.passengerWindowPosition,
+        ),
         'Anim_Window_RL': basicState.isRearLeftWindowOpen,
         'Anim_Window_RR': basicState.isRearRightWindowOpen,
       },
