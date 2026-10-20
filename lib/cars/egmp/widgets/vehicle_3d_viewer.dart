@@ -227,8 +227,12 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
         'Anim_Window_FR': _windowOpenFraction(
           basicState.passengerWindowPosition,
         ),
-        'Anim_Window_RL': basicState.isRearLeftWindowOpen,
-        'Anim_Window_RR': basicState.isRearRightWindowOpen,
+        'Anim_Window_RL': _windowOpenFraction(
+          basicState.rearLeftWindowPosition,
+        ),
+        'Anim_Window_RR': _windowOpenFraction(
+          basicState.rearRightWindowPosition,
+        ),
       },
       'materials': [
         {

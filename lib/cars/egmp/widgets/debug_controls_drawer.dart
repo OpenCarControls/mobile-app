@@ -153,13 +153,17 @@ class DebugControlsDrawer extends ConsumerWidget {
                     ),
                     btn(
                       'Win RL',
-                      b.isRearLeftWindowOpen,
-                      (s) => s.isRearLeftWindowOpen = !b.isRearLeftWindowOpen,
+                      _isWindowOpen(b.rearLeftWindowPosition),
+                      (s) => s.rearLeftWindowPosition = _nextWindowStep(
+                        b.rearLeftWindowPosition,
+                      ),
                     ),
                     btn(
                       'Win RR',
-                      b.isRearRightWindowOpen,
-                      (s) => s.isRearRightWindowOpen = !b.isRearRightWindowOpen,
+                      _isWindowOpen(b.rearRightWindowPosition),
+                      (s) => s.rearRightWindowPosition = _nextWindowStep(
+                        b.rearRightWindowPosition,
+                      ),
                     ),
                     btn(
                       'Frunk',

@@ -134,8 +134,12 @@ class StubCarTransport implements CarTransport {
               passengerWindowPosition: windows
                   ? BasicState_WindowPosition.WINDOW_POSITION_FULLY_OPEN
                   : BasicState_WindowPosition.WINDOW_POSITION_CLOSED,
-              isRearLeftWindowOpen: windows,
-              isRearRightWindowOpen: windows,
+              rearLeftWindowPosition: windows
+                  ? BasicState_WindowPosition.WINDOW_POSITION_FULLY_OPEN
+                  : BasicState_WindowPosition.WINDOW_POSITION_CLOSED,
+              rearRightWindowPosition: windows
+                  ? BasicState_WindowPosition.WINDOW_POSITION_FULLY_OPEN
+                  : BasicState_WindowPosition.WINDOW_POSITION_CLOSED,
               isFrunkOpen: frunkTrunk,
               isTrunkOpen: frunkTrunk,
               chargePortState: chargePort
