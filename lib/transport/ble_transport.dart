@@ -29,6 +29,9 @@ class BleCarTransport implements CarTransport {
   // sends run one after the other.
   Future<void> _writeQueue = Future<void>.value();
 
+  // Message sequence number, the same on every chunk of a message.
+  int _nextSeq = 0;
+
   BleCarTransport({
     required FlutterReactiveBle ble,
     required String deviceId,
@@ -90,7 +93,8 @@ class BleCarTransport implements CarTransport {
   Future<void> send(AppToDevice message) async {
     final bytes = message.writeToBuffer();
     // Throws when the message is over the limit or the MTU is too small.
-    final chunks = splitIntoBleChunks(bytes, _attMtu);
+    final chunks = splitIntoBleChunks(bytes, _attMtu, _nextSeq);
+    _nextSeq = (_nextSeq + 1) & 0xFF;
     if (kDebugMode) {
       dev.log(
         'Sending ${bytes.length} bytes in ${chunks.length} chunk(s) '

@@ -100,6 +100,7 @@ class ConstantsBuilder implements Builder {
     final bleChunkLastFlag = fragmentation('last_chunk_flag');
     final bleChunkIndexMask = fragmentation('chunk_index_mask');
     final bleMaxChunks = fragmentation('max_chunks');
+    final bleCrcBytes = fragmentation('crc_bytes');
     final bleMinAttMtu = fragmentation('min_att_mtu');
     final bleReassemblyTimeoutMs = fragmentation('reassembly_timeout_ms');
 
@@ -146,6 +147,7 @@ class ConstantsBuilder implements Builder {
       ..writeln('const int kBleChunkHeaderBytes = $bleChunkHeaderBytes;')
       ..writeln('const int kBleChunkLastFlag = $bleChunkLastFlag;')
       ..writeln('const int kBleChunkIndexMask = $bleChunkIndexMask;')
+      ..writeln('const int kBleCrcBytes = $bleCrcBytes;')
       ..writeln('const int kBleMaxChunks = $bleMaxChunks;')
       ..writeln('const int kBleMinAttMtu = $bleMinAttMtu;')
       ..writeln('const int kBleReassemblyTimeoutMs = $bleReassemblyTimeoutMs;');

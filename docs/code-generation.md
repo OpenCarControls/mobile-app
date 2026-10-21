@@ -19,7 +19,7 @@ It does not need to run on every build, only when its inputs change. Unlike Rust
 | `contracts/opencar/cars/*/v1/meta.toml` + `transport.toml` | `lib/cars/<vehicle>/constants.g.dart` | `ConstantsBuilder` |
 | `config.toml.example` (+ optional `config.toml`) | `lib/config/mqtt_broker_config.g.dart` | `MqttConfigBuilder` |
 
-**`constants.g.dart`** exposes: `kPlatformId` (CRC32), `kPlatformName`, `kCanBusCount`, BLE UUIDs, MQTT topic templates, `kBlePairingWindowSeconds`, `kBleScanTimeoutSeconds`, and the BLE size and chunking constants (`kBleAttMtu`, `kBleMaxChunkBytes`, `kBleMaxMessageBytes`, `kBleChunk*`, `kBleMaxChunks`, `kBleMinAttMtu`, `kBleReassemblyTimeoutMs`). Never copy-paste TOML values — always import from the generated file.
+**`constants.g.dart`** exposes: `kPlatformId` (CRC32), `kPlatformName`, `kCanBusCount`, BLE UUIDs, MQTT topic templates, `kBlePairingWindowSeconds`, `kBleScanTimeoutSeconds`, and the BLE size and chunking constants (`kBleAttMtu`, `kBleMaxChunkBytes`, `kBleMaxMessageBytes`, `kBleChunk*`, `kBleCrcBytes`, `kBleMaxChunks`, `kBleMinAttMtu`, `kBleReassemblyTimeoutMs`). Never copy-paste TOML values — always import from the generated file.
 
 **`mqtt_broker_config.g.dart`** exposes: `kMqttBrokerHost/Port`, `kMqttUsername/Password`, `kMqttClientId`, `kDebugServerHost/Port`, `kDebugServerPollingIntervalMs`.
 
