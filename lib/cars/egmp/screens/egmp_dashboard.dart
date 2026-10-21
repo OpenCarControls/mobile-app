@@ -996,6 +996,13 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     );
   }
 
+  bool get _isBle {
+    final transportType = ref.watch(transportTypeProvider);
+    return transportType == TransportType.ble ||
+        transportType == TransportType.stub ||
+        transportType == TransportType.http;
+  }
+
   Widget _buildBatteryMenu({bool shrinkWrap = false, ScrollPhysics? physics}) {
     final state = ref.watch(vehicleStateProvider);
     final basicState = state.basicState as BasicState;
@@ -1004,6 +1011,19 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       isLive: state.isAdvancedStateLive,
       formatTemperature: (celsius) => _formatTemperature(celsius, basicState),
       onBack: () => setState(() => _currentSubMenu = null),
+      onPreconditioningChanged: _isBle
+          ? (enable) => _executeCommand('preconditioning', () async {
+              final cmd = AdvancedCommand(
+                batteryPreconditioningCommand: BatteryPreconditioningCommand(
+                  enable: enable,
+                ),
+              );
+              await ref
+                  .read(vehicleStateProvider.notifier)
+                  .sendAdvancedCommand(cmd.writeToBuffer());
+            })
+          : null,
+      isPreconditioningPending: _pendingAction == 'preconditioning',
       shrinkWrap: shrinkWrap,
       physics: physics,
     );

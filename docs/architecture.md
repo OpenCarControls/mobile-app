@@ -64,6 +64,8 @@ Screen sections: **State** (always) | **Advanced State** (isBle) | **Controls** 
 
 The E-GMP dashboard shows its advanced state (battery voltage and power, min/max battery temperature, gear, power state) in the "Battery & Drivetrain" menu (`BatteryMenu`). The entry is always listed; when `VehicleSnapshot.isAdvancedStateLive` is false (no BLE link) it is marked "Not live" and the values are hidden, because a cached value could be long out of date.
 
+The same menu has the battery preconditioning toggle, an advanced command (`BatteryPreconditioningCommand`) that is only enabled over BLE while the state is live. The switch follows `preconditioning_state` (on for `PREPARING` and `HEATING`) rather than the last tap, and is disabled with a spinner while the command is in flight. The E-GMP stub transport answers the command with `PREPARING`, then `HEATING` a few seconds later.
+
 ## 3D viewer
 The E-GMP dashboard renders the car with a Three.js viewer (`web_3d/`, bundled with Vite into `assets/web/` and shown in a `flutter_inappwebview`). The page is served from the APK by Android's `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/flutter_assets/...`), not a local HTTP server.
 

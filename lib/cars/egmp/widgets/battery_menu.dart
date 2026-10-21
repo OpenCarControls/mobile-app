@@ -10,6 +10,8 @@ class BatteryMenu extends StatelessWidget {
     required this.isLive,
     required this.formatTemperature,
     required this.onBack,
+    this.onPreconditioningChanged,
+    this.isPreconditioningPending = false,
     this.shrinkWrap = false,
     this.physics,
   });
@@ -18,6 +20,13 @@ class BatteryMenu extends StatelessWidget {
   final bool isLive;
   final String Function(double celsius) formatTemperature;
   final VoidCallback onBack;
+
+  /// Sends the preconditioning command. Null when it can't be sent (advanced commands
+  /// are BLE-only), which disables the toggle.
+  final ValueChanged<bool>? onPreconditioningChanged;
+
+  /// A preconditioning command is in flight.
+  final bool isPreconditioningPending;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
@@ -63,6 +72,7 @@ class BatteryMenu extends StatelessWidget {
                 'These values are only available while connected over Bluetooth.',
               ),
             ),
+          _buildPreconditioningToggle(context),
           row(
             Icons.bolt,
             'Battery voltage',
@@ -99,6 +109,44 @@ class BatteryMenu extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// The switch follows the car's reported state (including the "preparing" step, where
+  /// the heater isn't on yet) rather than the last tap, so it can't drift from the car.
+  Widget _buildPreconditioningToggle(BuildContext context) {
+    final preconditioning = isLive && advancedState.hasPreconditioningState()
+        ? advancedState.preconditioningState
+        : AdvancedState_PreconditioningState.PRECONDITIONING_STATE_UNSPECIFIED;
+    final isOn =
+        preconditioning ==
+            AdvancedState_PreconditioningState
+                .PRECONDITIONING_STATE_PREPARING ||
+        preconditioning ==
+            AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING;
+    final subtitle = switch (preconditioning) {
+      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_PREPARING =>
+        'Preparing: the battery heater isn\'t on yet',
+      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING =>
+        'Heating the battery',
+      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF => 'Off',
+      _ => null,
+    };
+    final onChanged = onPreconditioningChanged;
+    return SwitchListTile(
+      secondary: isPreconditioningPending
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.local_fire_department),
+      title: const Text('Battery preconditioning'),
+      subtitle: subtitle != null ? Text(subtitle) : null,
+      value: isOn,
+      onChanged: !isLive || onChanged == null || isPreconditioningPending
+          ? null
+          : onChanged,
     );
   }
 }

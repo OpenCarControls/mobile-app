@@ -73,4 +73,114 @@ void main() {
 
     expect(find.text('7.2 kW (charging)'), findsOneWidget);
   });
+
+  _preconditioningTests();
+}
+
+Future<void> _pumpToggle(
+  WidgetTester tester, {
+  required AdvancedState_PreconditioningState? state,
+  bool isLive = true,
+  ValueChanged<bool>? onChanged,
+  bool pending = false,
+}) => tester.pumpWidget(
+  MaterialApp(
+    home: Scaffold(
+      body: BatteryMenu(
+        advancedState: state == null
+            ? AdvancedState()
+            : AdvancedState(preconditioningState: state),
+        isLive: isLive,
+        formatTemperature: (c) => '$c',
+        onBack: () {},
+        onPreconditioningChanged: onChanged,
+        isPreconditioningPending: pending,
+      ),
+    ),
+  ),
+);
+
+bool _switchValue(WidgetTester tester) =>
+    tester.widget<Switch>(find.byType(Switch)).value;
+
+void _preconditioningTests() {
+  group('preconditioning toggle', () {
+    testWidgets('is off and sends enable when tapped', (tester) async {
+      final sent = <bool>[];
+      await _pumpToggle(
+        tester,
+        state: AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF,
+        onChanged: sent.add,
+      );
+
+      expect(_switchValue(tester), isFalse);
+      await tester.tap(find.byType(Switch));
+      expect(sent, [true]);
+    });
+
+    testWidgets('is on while preparing and says the heater is not on', (
+      tester,
+    ) async {
+      final sent = <bool>[];
+      await _pumpToggle(
+        tester,
+        state:
+            AdvancedState_PreconditioningState.PRECONDITIONING_STATE_PREPARING,
+        onChanged: sent.add,
+      );
+
+      expect(_switchValue(tester), isTrue);
+      expect(find.textContaining('Preparing'), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      expect(sent, [false]);
+    });
+
+    testWidgets('is on while heating', (tester) async {
+      await _pumpToggle(
+        tester,
+        state: AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING,
+        onChanged: (_) {},
+      );
+
+      expect(_switchValue(tester), isTrue);
+      expect(find.text('Heating the battery'), findsOneWidget);
+    });
+
+    testWidgets('is disabled without a command callback (not BLE)', (
+      tester,
+    ) async {
+      await _pumpToggle(
+        tester,
+        state: AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF,
+      );
+
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+    });
+
+    testWidgets('is disabled and off when the state is not live', (
+      tester,
+    ) async {
+      await _pumpToggle(
+        tester,
+        state: AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING,
+        isLive: false,
+        onChanged: (_) {},
+      );
+
+      expect(_switchValue(tester), isFalse);
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+    });
+
+    testWidgets('is disabled while a command is pending', (tester) async {
+      await _pumpToggle(
+        tester,
+        state: AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF,
+        onChanged: (_) {},
+        pending: true,
+      );
+
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+  });
 }

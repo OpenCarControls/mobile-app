@@ -64,6 +64,10 @@ class StubCarTransport implements CarTransport {
 
   @override
   Future<void> send(AppToDevice message) async {
+    if (message.hasAdvancedCommandBytes()) {
+      _handleAdvancedCommand(message);
+      return;
+    }
     if (!message.hasBasicCommandBytes()) return;
 
     final cmd = BasicCommand.fromBuffer(message.basicCommandBytes);
@@ -108,6 +112,58 @@ class StubCarTransport implements CarTransport {
       frunkTrunk: _frunkTrunkOpen,
       chargePort: _isChargePortOpen,
       locked: _isLocked,
+    );
+  }
+
+  /// Mimics the car: preconditioning goes through "preparing" before the heater is on.
+  void _handleAdvancedCommand(AppToDevice message) {
+    final cmd = AdvancedCommand.fromBuffer(message.advancedCommandBytes);
+    if (cmd.whichAction() ==
+        AdvancedCommand_Action.batteryPreconditioningCommand) {
+      final enable = cmd.batteryPreconditioningCommand.enable;
+      _emit(
+        DeviceToApp(
+          commandResponse: CommandResponse(
+            messageId: message.messageId,
+            success: true,
+            statusCode: CommandStatusCode.COMMAND_STATUS_CODE_OK,
+          ),
+        ),
+      );
+      _emitPreconditioning(
+        enable
+            ? AdvancedState_PreconditioningState.PRECONDITIONING_STATE_PREPARING
+            : AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF,
+      );
+      if (enable) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_preconditioning ==
+              AdvancedState_PreconditioningState
+                  .PRECONDITIONING_STATE_PREPARING) {
+            _emitPreconditioning(
+              AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING,
+            );
+          }
+        });
+      }
+    }
+  }
+
+  AdvancedState_PreconditioningState _preconditioning =
+      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF;
+
+  void _emitPreconditioning(AdvancedState_PreconditioningState state) {
+    _preconditioning = state;
+    _emit(
+      DeviceToApp(
+        stateUpdate: StateUpdate(
+          vehicleState: VehicleState(
+            advancedStateBytes: AdvancedState(
+              preconditioningState: state,
+            ).writeToBuffer(),
+          ),
+        ),
+      ),
     );
   }
 
