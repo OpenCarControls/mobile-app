@@ -3,7 +3,12 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
-    "postCreateCommand": "flutter config --no-enable-linux-desktop && flutter pub get",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
+        }
+    },
+    "postCreateCommand": "flutter config --no-enable-linux-desktop && flutter pub get && cd web_3d && npm install && npm run build",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -14,7 +19,7 @@
                 "dotenv.dotenv-vscode",
                 "EditorConfig.EditorConfig",
                 "chneau.resource-monitor",
-                "Gruntfuggly.todo-tree",
+                "FanaticPythoner.better-todo-tree",
                 "mk12.better-git-line-blame",
                 "bufbuild.vscode-buf"
             ]

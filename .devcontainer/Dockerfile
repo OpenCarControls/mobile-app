@@ -5,7 +5,7 @@ ARG ANDROID_COMPILE_SDK="36"
 ARG ANDROID_BUILD_TOOLS="36.0.0"
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && \
-    apt-get install -y curl git unzip xz-utils zip libglu1-mesa openjdk-21-jdk protobuf-compiler && \
+    apt-get install -y curl git git-lfs unzip xz-utils zip libglu1-mesa openjdk-21-jdk protobuf-compiler && \
     rm -rf /var/lib/apt/lists/*
 
 USER vscode

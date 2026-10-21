@@ -1,0 +1,24 @@
+# BLE & pairing
+
+How the app pairs with and talks to the controller over BLE. For the firmware side see the firmware repo's BLE doc. Overall design: [Architecture](architecture.md).
+
+## Pairing & connection model
+The device advertises **only** while its pairing button is held. The app never scans outside `PairingWizardScreen`. BLE is implemented with **`flutter_reactive_ble: ^5.4.1`**.
+
+*   **First launch / unpaired:** `AppEntryRouter` shows `PairingWizardScreen`. The user holds the button → the wizard scans → taps Pair → `connectToDevice()` → `discoverAllServices()` → write-probe to the RX characteristic triggers the Android pairing dialog → bond confirmed (write succeeds) → `pairedVehicleProvider.notifier.pair(config)` → the router rebuilds to the dashboard.
+*   **Write-probe bonding:** the wizard writes `[0]` to the app→device (RX) characteristic in a retry loop. Firmware enforces bonding on writes (not CCCD/subscribe), so the first write returns `ATT_INSUFFICIENT_AUTH`, Android shows the dialog, bonds, and the retry succeeds. Config is saved **only** after the write succeeds (bond proven). A `Future.any([write, disconnectCompleter.future])` race prevents hanging if the link drops mid-write.
+*   **Subsequent launches:** `bleConnectionProvider` reconnects via `connectToDevice()` (no scan). The stream auto-retries on disconnect; pre-connect `disconnected` events are NOT errors. If the stream itself ends or errors, one retry is scheduled 30 s later; any new connection attempt (including pull-to-refresh) cancels it.
+*   **HTTP debug path** (debug builds only): the wizard offers host/port entry + POST `/pairing` + POST `/pair`; saves config with `transportPreference = http`.
+*   **Unpair:** overflow menu on the dashboard → confirmation dialog → `pairedVehicleProvider.notifier.unpair()` → the router returns to the wizard.
+*   **`createBond()` is never called** — bonding is driven by the write-probe, not explicit bond requests.
+*   **Stale-bond recovery:** if the firmware drops the link after connecting (it had a stale bond, the phone forgot it), `disconnectCompleter` fires and the wizard returns to the "found" step with a warning banner. Firmware clears its entry on that drop; the next Pair tap succeeds normally (the user sees two OS pairing prompts in total).
+
+## BLE specifics
+*   **Library:** `flutter_reactive_ble: ^5.4.1`. Singleton in `lib/providers/ble_provider.dart` (`bleProvider`).
+*   **Key API:** `ble.connectToDevice(id, connectionTimeout)` stream auto-retries; `discoverAllServices(deviceId)` (void) then `getDiscoveredServices(deviceId)` → `List<Service>` (`.id` is `Uuid`, `.characteristics` is `List<Characteristic>`); `subscribeToCharacteristic(QualifiedCharacteristic)`; `writeCharacteristicWithResponse(char, value: bytes)`.
+*   **`QualifiedCharacteristic`** takes `deviceId` (String), `serviceId` (Uuid), `characteristicId` (Uuid). Use `Uuid.parse(uuidString)`.
+*   **MTU and message size:** after connecting, the app requests `kBleAttMtu` (247, from `ble.payload` in the contract) and logs a warning if the phone negotiates less. BLE messages are never fragmented, so each message must fit in `kBleMaxMessageBytes` (244); `BleCarTransport.send()` rejects larger commands with a `CarTransportException`.
+*   Direct reconnect via `connectToDevice(remoteId)` — no scan after pairing. Do **not** treat pre-connect `disconnected` events as failures.
+*   **`source_device_id`:** UUID v4 generated on first launch, persisted via `SharedPreferences` (`getOrCreateDeviceId()`), injected as `bleSourceDeviceIdProvider`. Never hardcode it. (The firmware overwrites it with the verified BLE peer address anyway.)
+*   `sendBasicCommand()` / `sendAdvancedCommand()` inject `sourceDeviceId` automatically for BLE/HTTP.
+*   **RxJava 2 crash fix:** `OpenCarApplication.kt` sets a global `RxJavaPlugins.setErrorHandler` to suppress `UndeliverableException` from `reactive_ble_mobile`. An explicit `rxjava:2.2.17` dependency is required in `app/build.gradle.kts` for the Kotlin imports.

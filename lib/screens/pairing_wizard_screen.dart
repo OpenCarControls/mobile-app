@@ -13,6 +13,7 @@ import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 // ── Wizard step state machine ─────────────────────────────────────────────────
@@ -196,6 +197,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           );
 
       await connectedCompleter.future;
+      await ble.requestMtu(deviceId: deviceId, mtu: kBleAttMtu);
       await ble.discoverAllServices(deviceId);
 
       final vehicle = ref.read(availableVehiclesProvider).first;
@@ -252,7 +254,35 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         );
       }
 
-      dev.log('Wizard: bond confirmed — saving config', name: 'PairingWizard');
+      dev.log(
+        'Wizard: bond confirmed — waiting for platform ID',
+        name: 'PairingWizard',
+      );
+
+      final txChar = QualifiedCharacteristic(
+        deviceId: deviceId,
+        serviceId: Uuid.parse(vehicle.bleServiceUuid),
+        characteristicId: Uuid.parse(vehicle.bleDeviceToAppCharacteristicUuid),
+      );
+
+      final firstMsgBytes = await ble
+          .subscribeToCharacteristic(txChar)
+          .first
+          .timeout(const Duration(seconds: 5));
+      final msg = DeviceToApp.fromBuffer(firstMsgBytes);
+
+      final allVehicles = ref.read(availableVehiclesProvider);
+      final actualVehicle = allVehicles.firstWhere(
+        (v) => v.platformId == msg.platformId,
+        orElse: () => throw Exception(
+          'Unsupported vehicle platform ID: ${msg.platformId}',
+        ),
+      );
+
+      dev.log(
+        'Wizard: platform ID validated as ${actualVehicle.platformName} — saving config',
+        name: 'PairingWizard',
+      );
       await connSub.cancel();
       connSub = null;
 
@@ -260,7 +290,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           .read(pairedVehicleProvider.notifier)
           .pair(
             PairedVehicleConfig(
-              vehicleId: vehicle.platformName,
+              vehicleId: actualVehicle.platformName,
               bleRemoteId: deviceId,
               transportPreference: TransportPreference.ble,
             ),
@@ -311,14 +341,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       return;
     }
     try {
-      final t = HttpCarTransport(
-        host: host,
-        port: port,
-        pollingIntervalMs: kDebugServerPollingIntervalMs,
-      );
-      // One poll to verify the server is reachable.
-      await Future.delayed(const Duration(milliseconds: 600));
-      t.dispose();
+      await HttpCarTransport.testConnection(host, port);
       setState(() {
         _httpTesting = false;
         _httpTestResult = 'Connected ✓';
@@ -360,23 +383,35 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     );
     try {
       await t.registerAsPairedPhone(ref.read(bleSourceDeviceIdProvider));
-      t.dispose();
 
-      final vehicle = ref.read(availableVehiclesProvider).first;
+      // Messages without a platform ID (e.g. a bare command response) can't
+      // identify the vehicle; wait for one that does.
+      final msg = await t.messages
+          .firstWhere((m) => m.platformId != 0)
+          .timeout(const Duration(seconds: 5));
+      final allVehicles = ref.read(availableVehiclesProvider);
+      final actualVehicle = allVehicles.firstWhere(
+        (v) => v.platformId == msg.platformId,
+        orElse: () => throw Exception(
+          'Unsupported vehicle platform ID: ${msg.platformId}',
+        ),
+      );
+
       await ref
           .read(pairedVehicleProvider.notifier)
           .pair(
             PairedVehicleConfig(
-              vehicleId: vehicle.platformName,
+              vehicleId: actualVehicle.platformName,
               bleRemoteId: '',
               transportPreference: TransportPreference.http,
               httpHost: host,
               httpPort: port,
             ),
           );
-    } on Exception catch (e) {
-      t.dispose();
+    } catch (e) {
       _setError('HTTP pairing failed: $e');
+    } finally {
+      t.dispose();
     }
   }
 

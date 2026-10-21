@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/cars/egmp/licenses.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
@@ -11,6 +12,7 @@ import 'package:open_car_app/screens/pairing_wizard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerEgmpLicenses();
 
   final (deviceId, isNew) = await getOrCreateDeviceId();
   dev.log(
@@ -44,8 +46,19 @@ class OpenCarApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Open Car',
+      themeMode: ThemeMode.system,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
       ),
       home: const AppEntryRouter(),

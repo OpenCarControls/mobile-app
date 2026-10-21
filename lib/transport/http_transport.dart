@@ -61,11 +61,13 @@ class HttpCarTransport implements CarTransport {
 
   @override
   Future<void> send(AppToDevice message) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/cmd'),
-      headers: {'Content-Type': 'application/x-protobuf'},
-      body: Uint8List.fromList(message.writeToBuffer()),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/cmd'),
+          headers: {'Content-Type': 'application/x-protobuf'},
+          body: Uint8List.fromList(message.writeToBuffer()),
+        )
+        .timeout(const Duration(seconds: 5));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       dev.log(
         'POST /cmd failed: ${response.statusCode}',
@@ -78,7 +80,9 @@ class HttpCarTransport implements CarTransport {
   /// Ask the device to open its pairing window.
   Future<void> openPairingWindow() async {
     dev.log('POST /pairing', name: 'HttpTransport');
-    final response = await http.post(Uri.parse('$_baseUrl/pairing'));
+    final response = await http
+        .post(Uri.parse('$_baseUrl/pairing'))
+        .timeout(const Duration(seconds: 5));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpTransportException(
         'POST /pairing returned ${response.statusCode}',
@@ -91,11 +95,13 @@ class HttpCarTransport implements CarTransport {
   /// [bleSourceDeviceIdProvider]).
   Future<void> registerAsPairedPhone(List<int> sourceDeviceId) async {
     dev.log('POST /pair', name: 'HttpTransport');
-    final response = await http.post(
-      Uri.parse('$_baseUrl/pair'),
-      headers: {'Content-Type': 'application/octet-stream'},
-      body: Uint8List.fromList(sourceDeviceId),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/pair'),
+          headers: {'Content-Type': 'application/octet-stream'},
+          body: Uint8List.fromList(sourceDeviceId),
+        )
+        .timeout(const Duration(seconds: 5));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpTransportException(
         'POST /pair returned ${response.statusCode}',
@@ -103,14 +109,39 @@ class HttpCarTransport implements CarTransport {
     }
   }
 
+  /// Ask the device to toggle state simulation (HTTP debug only).
+  Future<void> simulate() async {
+    dev.log('POST /simulate', name: 'HttpTransport');
+    final response = await http
+        .post(Uri.parse('$_baseUrl/simulate'))
+        .timeout(const Duration(seconds: 5));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw HttpTransportException(
+        'POST /simulate returned ${response.statusCode}',
+      );
+    }
+  }
+
   /// Remove all paired phones from the device.
   Future<void> clearBonds() async {
     dev.log('POST /clear-bonds', name: 'HttpTransport');
-    final response = await http.post(Uri.parse('$_baseUrl/clear-bonds'));
+    final response = await http
+        .post(Uri.parse('$_baseUrl/clear-bonds'))
+        .timeout(const Duration(seconds: 5));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw HttpTransportException(
         'POST /clear-bonds returned ${response.statusCode}',
       );
+    }
+  }
+
+  /// Test connection to the HTTP server
+  static Future<void> testConnection(String host, int port) async {
+    final response = await http
+        .get(Uri.parse('http://$host:$port/state'))
+        .timeout(const Duration(seconds: 3));
+    if (response.statusCode != 200) {
+      throw HttpTransportException('Server returned ${response.statusCode}');
     }
   }
 

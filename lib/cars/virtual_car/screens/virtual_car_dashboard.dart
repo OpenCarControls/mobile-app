@@ -8,6 +8,9 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/providers/ble_connection_provider.dart';
+import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -45,7 +48,20 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'unpair') {
+              if (value == 'simulate') {
+                final transport = ref.read(carTransportProvider);
+                if (transport is HttpCarTransport) {
+                  try {
+                    await transport.simulate();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Simulation error: $e')),
+                      );
+                    }
+                  }
+                }
+              } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -73,8 +89,17 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                 }
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
+            itemBuilder: (_) => [
+              if (transportType == TransportType.http)
+                const PopupMenuItem(
+                  value: 'simulate',
+                  child: ListTile(
+                    leading: Icon(Icons.bug_report),
+                    title: Text('Toggle Simulation'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(
                   leading: Icon(Icons.link_off),
@@ -86,114 +111,134 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          // ── Basic state ─────────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(child: _SectionHeader(title: 'State')),
-              _StateHeaderSuffix(
-                lastUpdated: snapshot.lastUpdated,
-                awaitingAdvanced: awaitingAdvanced,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
-            children: [
-              _StateTile(
-                label: 'Odometer',
-                value: '${basic.odometer} km',
-                icon: Icons.straighten,
-              ),
-              _StateTile(
-                label: 'Driving',
-                value: basic.isDriving ? 'Yes' : 'No',
-                icon: Icons.directions_car,
-              ),
-            ],
-          ),
-
-          // ── Advanced state (BLE only, shown once live data arrives) ────────
-          if (showAdvanced) ...[
-            const SizedBox(height: 16),
-            _SectionHeader(title: 'Advanced State'),
-            const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.6,
-              children: [
-                _StateTile(
-                  label: 'Speed',
-                  value: '${advanced.speed} kph',
-                  icon: Icons.speed,
-                ),
-                _StateTile(
-                  label: 'Gear',
-                  value: _gearLabel(advanced.gear),
-                  icon: Icons.settings_input_component,
-                ),
-              ],
-            ),
-          ],
-
-          // ── Basic controls ───────────────────────────────────────────────
-          const SizedBox(height: 24),
-          _SectionHeader(title: 'Controls'),
-          const SizedBox(height: 8),
-          _DoorLockCard(
-            locked: basic.areDoorsLocked,
-            onToggle: () {
-              ref
-                  .read(vehicleStateProvider.notifier)
-                  .sendBasicCommand(
-                    BasicCommand(
-                      doorLock: DoorLockCommand(lock: !basic.areDoorsLocked),
-                    ).writeToBuffer(),
-                  );
-            },
-          ),
-
-          // ── Advanced controls (BLE only, shown once live data arrives) ────
-          if (showAdvanced) ...[
-            const SizedBox(height: 16),
-            _SectionHeader(title: 'Advanced Controls'),
-            const SizedBox(height: 8),
-            _CustomState1Card(
-              enabled: advanced.customState1,
-              onToggle: () {
-                ref
-                    .read(vehicleStateProvider.notifier)
-                    .sendAdvancedCommand(
-                      AdvancedCommand(
-                        toggleCustomState1: ToggleCustomState1Command(),
-                      ).writeToBuffer(),
-                    );
+          const PlatformMismatchBanner(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (transportType == TransportType.ble) {
+                  ref.read(bleConnectionProvider.notifier).forceReconnect();
+                  // Add a small delay so the refresh animation shows.
+                  await Future<void>.delayed(const Duration(milliseconds: 500));
+                }
               },
-            ),
-          ],
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ── Basic state ─────────────────────────────────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(child: _SectionHeader(title: 'State')),
+                      _StateHeaderSuffix(
+                        lastUpdated: snapshot.lastUpdated,
+                        awaitingAdvanced: awaitingAdvanced,
+                        isStateLive: snapshot.isStateLive,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.6,
+                    children: [
+                      _StateTile(
+                        label: 'Odometer',
+                        value: '${basic.odometer} km',
+                        icon: Icons.straighten,
+                      ),
+                      _StateTile(
+                        label: 'Driving',
+                        value: basic.isDriving ? 'Yes' : 'No',
+                        icon: Icons.directions_car,
+                      ),
+                    ],
+                  ),
 
-          // ── System info ──────────────────────────────────────────────────
-          if (system != null) ...[
-            const SizedBox(height: 24),
-            _SystemInfoRow(
-              firmwareVersion: system.firmwareVersion,
-              hardwareType: system.hardwareType,
+                  // ── Advanced state (BLE only, shown once live data arrives) ────────
+                  if (showAdvanced) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'Advanced State'),
+                    const SizedBox(height: 8),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.6,
+                      children: [
+                        _StateTile(
+                          label: 'Speed',
+                          value: '${advanced.speed} kph',
+                          icon: Icons.speed,
+                        ),
+                        _StateTile(
+                          label: 'Gear',
+                          value: _gearLabel(advanced.gear),
+                          icon: Icons.settings_input_component,
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // ── Basic controls ───────────────────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionHeader(title: 'Controls'),
+                  const SizedBox(height: 8),
+                  _DoorLockCard(
+                    locked: basic.areDoorsLocked,
+                    onToggle: () {
+                      ref
+                          .read(vehicleStateProvider.notifier)
+                          .sendBasicCommand(
+                            BasicCommand(
+                              doorLock: DoorLockCommand(
+                                lock: !basic.areDoorsLocked,
+                              ),
+                            ).writeToBuffer(),
+                          );
+                    },
+                  ),
+
+                  // ── Advanced controls (BLE only, shown once live data arrives) ────
+                  if (showAdvanced) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'Advanced Controls'),
+                    const SizedBox(height: 8),
+                    _CustomState1Card(
+                      enabled: advanced.customState1,
+                      onToggle: () {
+                        ref
+                            .read(vehicleStateProvider.notifier)
+                            .sendAdvancedCommand(
+                              AdvancedCommand(
+                                toggleCustomState1: ToggleCustomState1Command(),
+                              ).writeToBuffer(),
+                            );
+                      },
+                    ),
+                  ],
+
+                  // ── System info ──────────────────────────────────────────────────
+                  if (system != null) ...[
+                    const SizedBox(height: 24),
+                    _SystemInfoRow(
+                      firmwareVersion: system.firmwareVersion,
+                      hardwareType: system.hardwareType,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -233,68 +278,22 @@ String _formatTimestamp(DateTime dt) {
 }
 
 /// Displays a spinner and/or "Updated …" timestamp to the right of a section
-/// header. The timestamp is hidden while it is less than [_kStaleThreshold]
-/// old — there is no value in showing it for very recent data. A one-shot
-/// [Timer] fires exactly when the threshold is crossed so the text appears
-/// without requiring a new state update to trigger a rebuild.
-class _StateHeaderSuffix extends StatefulWidget {
+/// header. The timestamp is hidden while the state is live.
+class _StateHeaderSuffix extends StatelessWidget {
   final DateTime? lastUpdated;
   final bool awaitingAdvanced;
+  final bool isStateLive;
 
   const _StateHeaderSuffix({
     required this.lastUpdated,
     required this.awaitingAdvanced,
+    required this.isStateLive,
   });
 
   @override
-  State<_StateHeaderSuffix> createState() => _StateHeaderSuffixState();
-}
-
-class _StateHeaderSuffixState extends State<_StateHeaderSuffix> {
-  static const _kStaleThreshold = Duration(seconds: 30);
-  Timer? _revealTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleRevealIfNeeded();
-  }
-
-  @override
-  void didUpdateWidget(_StateHeaderSuffix old) {
-    super.didUpdateWidget(old);
-    if (widget.lastUpdated != old.lastUpdated) {
-      _revealTimer?.cancel();
-      _scheduleRevealIfNeeded();
-    }
-  }
-
-  @override
-  void dispose() {
-    _revealTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleRevealIfNeeded() {
-    final ts = widget.lastUpdated;
-    if (ts == null) return;
-    final age = DateTime.now().difference(ts);
-    if (age >= _kStaleThreshold) return; // already stale — show immediately
-    _revealTimer = Timer(_kStaleThreshold - age, () {
-      if (mounted) setState(() {});
-    });
-  }
-
-  bool get _showTimestamp {
-    final ts = widget.lastUpdated;
-    if (ts == null) return false;
-    return DateTime.now().difference(ts) >= _kStaleThreshold;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final showTimestamp = _showTimestamp;
-    if (!widget.awaitingAdvanced && !showTimestamp) {
+    final showTimestamp = !isStateLive;
+    if (!awaitingAdvanced && !showTimestamp) {
       return const SizedBox.shrink();
     }
 
@@ -302,16 +301,16 @@ class _StateHeaderSuffixState extends State<_StateHeaderSuffix> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (widget.awaitingAdvanced)
+        if (awaitingAdvanced)
           const SizedBox(
             width: 12,
             height: 12,
             child: CircularProgressIndicator(strokeWidth: 1.5),
           ),
-        if (showTimestamp) ...[
-          if (widget.awaitingAdvanced) const SizedBox(width: 6),
+        if (showTimestamp && lastUpdated != null) ...[
+          if (awaitingAdvanced) const SizedBox(width: 6),
           Text(
-            'Updated ${_formatTimestamp(widget.lastUpdated!)}',
+            'Updated ${_formatTimestamp(lastUpdated!)}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

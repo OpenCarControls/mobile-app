@@ -7,6 +7,6 @@ environment:
   sdk: ^3.11.4
 
 dependencies:
-  build: ^2.4.1
+  build: ^4.0.0
   glob: ^2.1.2
   toml: ^0.16.0

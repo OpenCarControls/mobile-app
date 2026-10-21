@@ -3,6 +3,8 @@ import 'dart:developer' as dev;
 
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Transport constants are identical in every vehicle's constants.g.dart.
+import 'package:open_car_app/cars/virtual_car/constants.g.dart' show kBleAttMtu;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
@@ -52,6 +54,10 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   StreamSubscription<ConnectionStateUpdate>? _connectionSubscription;
   StreamSubscription<BleStatus>? _statusSubscription;
   bool _connecting = false;
+  bool _disposed = false;
+  // Pending retry after the connection stream ends. Only one may be scheduled,
+  // and any new connection attempt cancels it.
+  Timer? _retryTimer;
 
   @override
   BleConnectionState build() {
@@ -64,6 +70,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       return const BleDisconnected();
     }
 
+    _disposed = false;
     ref.onDispose(_cleanup);
     unawaited(_initConnection(config.bleRemoteId));
     return BleConnecting(config.bleRemoteId);
@@ -71,6 +78,8 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   Future<void> _initConnection(String remoteId) async {
     final granted = await _requestPermissions();
+    // Riverpod 3 throws when a disposed Ref is used after an await.
+    if (!ref.mounted) return;
     if (!granted) {
       dev.log('Bluetooth permission denied', name: 'BleConnection');
       state = const BleDisconnected(
@@ -110,22 +119,28 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   }
 
   void _cancelConnection() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _connectionSubscription?.cancel();
     _connectionSubscription = null;
     _connecting = false;
   }
 
   void _connectDirectly(String remoteId) {
-    if (_connecting) return;
+    if (_connecting || state is BleReady) return;
     _connecting = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    // Drop any previous connection stream so it can't leak or emit into this one.
+    _connectionSubscription?.cancel();
     state = BleConnecting(remoteId);
 
     final ble = ref.read(bleProvider);
     dev.log('Connecting to $remoteId', name: 'BleConnection');
 
     // connectToDevice emits updates for the lifetime of the subscription and
-    // automatically retries when the device is out of range — no manual
-    // reconnect timer needed.
+    // automatically retries when the device is out of range. Only when the
+    // stream itself ends does `_scheduleRetry` start a new one.
     _connectionSubscription = ble
         .connectToDevice(
           id: remoteId,
@@ -136,9 +151,41 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
           onError: (Object e) {
             dev.log('Connection stream error: $e', name: 'BleConnection');
             _connecting = false;
-            state = BleConnecting(remoteId); // will retry via statusStream
+            state = BleConnecting(remoteId);
+            _scheduleRetry(remoteId);
+          },
+          onDone: () {
+            dev.log('Connection stream done', name: 'BleConnection');
+            _connecting = false;
+            state = BleConnecting(remoteId);
+            _scheduleRetry(remoteId);
           },
         );
+  }
+
+  void _scheduleRetry(String remoteId) {
+    _retryTimer?.cancel();
+    _retryTimer = Timer(const Duration(seconds: 30), () {
+      _retryTimer = null;
+      if (!_disposed) _connectDirectly(remoteId);
+    });
+  }
+
+  void forceReconnect() {
+    if (_disposed) return;
+    if (state is BleReady) {
+      dev.log(
+        'Already connected, ignoring force reconnect',
+        name: 'BleConnection',
+      );
+      return;
+    }
+
+    final config = ref.read(pairedVehicleProvider);
+    if (config == null || config.bleRemoteId.isEmpty) return;
+    dev.log('Force reconnect requested', name: 'BleConnection');
+    _cancelConnection();
+    _connectDirectly(config.bleRemoteId);
   }
 
   Future<void> _onConnectionUpdate(
@@ -167,9 +214,18 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     final ble = ref.read(bleProvider);
 
     try {
-      // Negotiate MTU before emitting BleReady.
-      await ble.requestMtu(deviceId: remoteId, mtu: 244);
-      dev.log('MTU negotiated for $remoteId', name: 'BleConnection');
+      // Negotiate MTU before emitting BleReady. Messages aren't fragmented, so
+      // a smaller MTU means larger state updates won't arrive.
+      final mtu = await ble.requestMtu(deviceId: remoteId, mtu: kBleAttMtu);
+      if (mtu < kBleAttMtu) {
+        dev.log(
+          'MTU $mtu negotiated for $remoteId, below the $kBleAttMtu the '
+          'device needs; large messages will be lost',
+          name: 'BleConnection',
+        );
+      } else {
+        dev.log('MTU $mtu negotiated for $remoteId', name: 'BleConnection');
+      }
 
       // Clear Android's cached GATT profile before service discovery.
       // On bonded devices Android reuses the cached profile from the previous
@@ -191,6 +247,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       // Discover services and characteristics.
       await ble.discoverAllServices(remoteId);
       dev.log('Services discovered for $remoteId', name: 'BleConnection');
+      if (!ref.mounted) return;
 
       // Verify the required characteristics are present.
       final vehicle = ref.read(selectedVehicleProvider);
@@ -202,6 +259,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       }
 
       final services = await ble.getDiscoveredServices(remoteId);
+      if (!ref.mounted) return;
       final serviceUuid = Uuid.parse(vehicle.bleServiceUuid);
       final serviceMatch = services.where((s) => s.id == serviceUuid);
       if (serviceMatch.isEmpty) {
@@ -228,11 +286,15 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');
       _connecting = false;
+      if (!ref.mounted) return;
       state = BleConnecting(remoteId);
     }
   }
 
   void _cleanup() {
+    _disposed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _statusSubscription?.cancel();
     _statusSubscription = null;
     _connectionSubscription?.cancel();

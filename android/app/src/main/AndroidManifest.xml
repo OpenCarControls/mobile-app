@@ -17,7 +17,8 @@
     <application
         android:label="open_car_app"
         android:name=".OpenCarApplication"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

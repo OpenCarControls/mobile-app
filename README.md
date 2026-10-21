@@ -1,80 +1,67 @@
 # Open Car App
 
-Flutter mobile app for interacting with an ESP32-based car controller over BLE (local) and MQTT (remote).
+Flutter mobile app for interacting with an ESP32-based car controller over BLE (local) and MQTT (remote). Supports the Kia/Hyundai E-GMP platform and a virtual car for UI testing without hardware.
 
-## Prerequisites
+## Getting started
 
-Use the provided dev container — it includes Flutter, the Android SDK, `protoc`, and `protoc-gen-dart` pre-installed.
+1.  Open the repo in the provided dev container (Flutter, Android SDK, `protoc` and `protoc-gen-dart` are pre-installed). For a native Windows setup, see [Development setup](docs/development-setup.md).
+2.  Fetch the shared contracts submodule: `git submodule update --init`.
+3.  Create your local config: `cp config.toml.example config.toml` and fill in the MQTT credentials (gitignored).
+4.  Connect a phone over wireless debugging (steps in [Development setup](docs/development-setup.md#running-on-android-wireless-debugging)) and run:
 
-If you are **not** using the dev container, run this once after cloning to prevent Flutter from listing Linux as a target device:
-
-```sh
-flutter config --no-enable-linux-desktop
-```
-
-This setting is user-level (`~/.config/flutter/settings`) — there is no project-level equivalent. The dev container handles it automatically via `postCreateCommand`.
-
-### Native Windows Setup (Optional)
-While the dev container is recommended, you can set up a local Windows environment directly:
-1. **Android Studio**: Download and install [Android Studio](https://developer.android.com/studio).
-2. **Android SDK**: Open Android Studio's SDK Manager and install:
-   - Android SDK Platform 36
-   - Android SDK Build-Tools 36.0.0
-   - Android SDK Command-line Tools (latest)
-3. **Flutter SDK**: Download Flutter SDK version `3.41.6` from [flutter.dev](https://docs.flutter.dev/release/archive) or clone it via git. Extract it (e.g., to `C:\flutter`) and add `C:\flutter\bin` to your system `PATH`.
-4. **Java JDK**: Java 21 is required. If Android Studio's bundled JDK is not Java 21, you may need to install OpenJDK 21 manually.
-5. **Protoc Plugin**: Install the Dart protocol buffers plugin globally:
-   ```powershell
-   dart pub global activate protoc_plugin 21.1.2
-   ```
-   Add your pub-cache bin to your system `PATH` if it isn't already (e.g. `C:\Users\<user>\AppData\Local\Pub\Cache\bin`).
-
-## Running on Android (wireless debugging)
-
-The dev container has no USB passthrough, so use ADB over Wi-Fi.
-
-1. On the phone, enable **Developer options → Wireless debugging** and tap **Pair device with pairing code**.
-2. In the terminal, pair once using the pairing port and code shown on the phone:
-   ```sh
-   adb pair <phone-ip>:<pairing-port>
-   ```
-3. Connect using the main wireless debugging port (different from the pairing port, also shown on the phone):
-   ```sh
-   adb connect <phone-ip>:<port>
-   ```
-4. Verify the device is listed:
-   ```sh
-   flutter devices
-   ```
-5. Run the app:
-   ```sh
-   flutter run
-   ```
-
-The pairing step (steps 1–2) is only needed once per network session. The `adb connect` (step 3) must be repeated each time the dev container restarts.
+    ```sh
+    flutter pub get
+    flutter run
+    ```
 
 ## Code generation
 
-This project generates Dart code from the `contracts/` git submodule (protobuf schemas and TOML metadata). Generated files are committed, so a normal `flutter build` always works without running codegen first.
+Dart code is generated from the `contracts/` submodule and `config.toml`. Generated files are gitignored, so run it after cloning and again when the contracts or config change:
 
-You need to regenerate when:
-- The `contracts` submodule is updated (`git submodule update`)
-- You add a new vehicle platform under `contracts/opencar/cars/`
-
-Run:
 ```sh
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 ```
 
-This produces:
-- `lib/generated/` — Dart classes for all `.proto` files (`AppToDevice`, `DeviceToApp`, `BasicState`, etc.)
-- `lib/cars/<vehicle>/constants.g.dart` — typed constants sourced from each vehicle's `meta.toml` and the shared `transport.toml` (platform ID, BLE UUIDs, MQTT topic templates)
+See [Code generation](docs/code-generation.md) for what gets generated.
 
-Both are driven by a custom `build_runner` builder in `tool/builders/`. Unlike Rust's `build.rs`, Dart has no compiler-integrated codegen hook, so this step is manual. There is no need to run it on every build — only when the contracts change.
+## Checks
+
+```sh
+flutter analyze --fatal-infos
+flutter test
+```
 
 ## Architecture
 
-Communication between the app and the car controller uses a common protobuf envelope pattern:
-- `AppToDevice` / `DeviceToApp` — core transport envelope (platform-agnostic)
-- Vehicle-specific state and commands are serialized to `bytes` fields inside the envelope and decoded using the `platform_id` CRC32 from `meta.toml`
-- The same wire format is used over both BLE and MQTT
+The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToApp`) carrying vehicle-specific bytes, decoded by `platform_id`; the same wire format runs over BLE and MQTT. Each supported vehicle is a `VehicleDefinition` under `lib/cars/<vehicle>/`.
+
+*   [Architecture](docs/architecture.md) — vehicles, transports, providers, UI
+*   [BLE & pairing](docs/ble.md)
+*   [Code generation](docs/code-generation.md)
+*   [Development setup](docs/development-setup.md)
+*   [CI & releases](docs/releases.md)
+*   [3D viewer](web_3d/README.md)
+
+## Project structure
+
+```
+.
+├── contracts/        # git submodule: protobuf + TOML metadata shared with the firmware
+├── lib/
+│   ├── cars/         # one folder per supported vehicle
+│   ├── config/       # app + generated MQTT config, device identity
+│   ├── generated/    # generated protobuf classes (gitignored)
+│   ├── models/       # VehicleDefinition
+│   ├── providers/    # Riverpod providers
+│   ├── screens/      # pairing wizard
+│   └── transport/    # BLE, MQTT, HTTP (debug) transports
+├── tool/builders/    # build_runner codegen package
+├── web_3d/           # Three.js 3D car viewer (bundled into assets/web/)
+├── assets_src/       # source 3D models
+├── docs/             # project documentation
+└── AGENTS.md         # rules for AI agents (CLAUDE.md imports it)
+```
+
+## License
+
+This project is licensed under the terms of the [LICENSE](LICENSE) file.

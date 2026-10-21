@@ -57,3 +57,12 @@ config.toml
 *.pbenum.dart
 *.pbjson.dart
 *.pbserver.dart
+
+# Web renderer app
+web_3d/node_modules
+assets/web/*
+!assets/web/.gitkeep
+
+# Blender backup and autosave files
+*.blend[0-9]
+

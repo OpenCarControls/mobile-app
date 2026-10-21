@@ -3,6 +3,9 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+// Transport constants are identical in every vehicle's constants.g.dart.
+import 'package:open_car_app/cars/virtual_car/constants.g.dart'
+    show kBleMaxMessageBytes;
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 
 import 'car_transport.dart';
@@ -69,6 +72,13 @@ class BleCarTransport implements CarTransport {
   @override
   Future<void> send(AppToDevice message) async {
     final bytes = message.writeToBuffer();
+    // BLE messages aren't fragmented; the device can't receive a larger one.
+    if (bytes.length > kBleMaxMessageBytes) {
+      throw CarTransportException(
+        'Command too large for BLE: ${bytes.length} bytes, '
+        'limit is $kBleMaxMessageBytes',
+      );
+    }
     if (kDebugMode) {
       dev.log(
         'Sending ${bytes.length} bytes (msgId: ${message.messageId})',

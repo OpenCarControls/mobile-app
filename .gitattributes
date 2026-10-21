@@ -1,0 +1,4 @@
+# Track Blender source files using Git LFS
+*.blend filter=lfs diff=lfs merge=lfs -text
+# Uncompressed model exports (compressed into assets/ by web_3d's compress-model)
+assets_src/**/*.glb filter=lfs diff=lfs merge=lfs -text

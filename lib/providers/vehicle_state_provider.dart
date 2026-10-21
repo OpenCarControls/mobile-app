@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'dart:math';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
@@ -41,12 +42,22 @@ class VehicleSnapshot {
   /// firmware has sent a fresh update.
   final bool isAdvancedStateLive;
 
+  /// True once ANY state has been received over the current live
+  /// transport session. Reset to false on every transport switch.
+  final bool isStateLive;
+
+  /// Set when the device reported a `platform_id` that doesn't match the
+  /// paired vehicle. Its messages are ignored until the user re-pairs.
+  final int? mismatchedPlatformId;
+
   const VehicleSnapshot({
     required this.basicState,
     required this.advancedState,
     this.system,
     this.lastUpdated,
     this.isAdvancedStateLive = false,
+    this.isStateLive = false,
+    this.mismatchedPlatformId,
   });
 
   VehicleSnapshot copyWith({
@@ -55,6 +66,8 @@ class VehicleSnapshot {
     SystemState? system,
     DateTime? lastUpdated,
     bool? isAdvancedStateLive,
+    bool? isStateLive,
+    int? mismatchedPlatformId,
   }) {
     return VehicleSnapshot(
       basicState: basicState ?? this.basicState,
@@ -62,13 +75,20 @@ class VehicleSnapshot {
       system: system ?? this.system,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isAdvancedStateLive: isAdvancedStateLive ?? this.isAdvancedStateLive,
+      isStateLive: isStateLive ?? this.isStateLive,
+      mismatchedPlatformId: mismatchedPlatformId ?? this.mismatchedPlatformId,
     );
   }
 }
 
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
-  int _nextMessageId = 0;
+  Timer? _livenessTimer;
+  // Random start so IDs aren't reused across app restarts (a late response
+  // to a previous session's command must not complete a new one). Stays well
+  // below 2^32, which is where MQTT heartbeat IDs start.
+  int _nextMessageId = Random().nextInt(1 << 31);
+  final _pendingCommands = <Int64, Completer<CommandResponse>>{};
   // Cached across rebuilds so teardown races (vehicle → null before
   // this notifier is disposed) don't crash build().
   VehicleDefinition? _vehicle;
@@ -93,7 +113,16 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     final transport = ref.watch(carTransportProvider);
 
     _subscription = transport.messages.listen(_onMessage);
-    ref.onDispose(() => _subscription?.cancel());
+    ref.onDispose(() {
+      _subscription?.cancel();
+      _livenessTimer?.cancel();
+      for (final completer in _pendingCommands.values) {
+        if (!completer.isCompleted) {
+          completer.completeError('Provider disposed');
+        }
+      }
+      _pendingCommands.clear();
+    });
 
     // On cold start (no in-memory cache yet) kick off an async restore
     // from SharedPreferences. A generation counter ensures a late-arriving
@@ -114,11 +143,47 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
           basicState: vehicle.decodeBasicState(const []),
           advancedState: vehicle.decodeAdvancedState(const []),
         );
-    return base.copyWith(isAdvancedStateLive: false);
+    return base.copyWith(isAdvancedStateLive: false, isStateLive: false);
   }
 
   void _onMessage(DeviceToApp msg) {
+    if (msg.hasCommandResponse()) {
+      final response = msg.commandResponse;
+      final completer = _pendingCommands.remove(response.messageId);
+      if (completer != null && !completer.isCompleted) {
+        if (!response.success) {
+          completer.completeError(
+            response.errorMessage.isNotEmpty
+                ? response.errorMessage
+                : 'Command failed',
+          );
+        } else {
+          completer.complete(response);
+        }
+      }
+    }
+
+    final vehicle = _vehicle!;
+    if (msg.platformId != 0 && msg.platformId != vehicle.platformId) {
+      if (state.mismatchedPlatformId != msg.platformId) {
+        dev.log(
+          'Platform ID mismatch: expected ${vehicle.platformId}, '
+          'got ${msg.platformId}. Ignoring device messages.',
+          name: 'VehicleState',
+        );
+        state = state.copyWith(mismatchedPlatformId: msg.platformId);
+      }
+      return;
+    }
+
     if (!msg.hasStateUpdate()) return;
+
+    _livenessTimer?.cancel();
+    _livenessTimer = Timer(const Duration(seconds: 30), () {
+      if (state.isStateLive || state.isAdvancedStateLive) {
+        state = state.copyWith(isStateLive: false, isAdvancedStateLive: false);
+      }
+    });
 
     if (kDebugMode) {
       final u = msg.stateUpdate;
@@ -135,7 +200,6 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       );
     }
 
-    final vehicle = ref.read(selectedVehicleProvider)!;
     final update = msg.stateUpdate;
     var current = state;
 
@@ -168,11 +232,19 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       current = current.copyWith(system: merged);
     }
 
-    current = current.copyWith(lastUpdated: DateTime.now());
+    current = current.copyWith(lastUpdated: DateTime.now(), isStateLive: true);
     // Persist isAdvancedStateLive=false so a restored cache never starts live.
     _lastSnapshot = current;
     state = current;
-    _saveCachedState(current, ref.read(selectedVehicleProvider)!);
+
+    if (kDebugMode) {
+      dev.log(
+        'Updated State JSON:\nbasicState=${jsonEncode(current.basicState.toProto3Json())}\nadvancedState=${jsonEncode(current.advancedState.toProto3Json())}',
+        name: 'VehicleState',
+      );
+    }
+
+    _saveCachedState(current, vehicle);
   }
 
   Future<void> _loadCachedState(
@@ -199,19 +271,20 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       final lastUpdated = DateTime.tryParse(
         (json['lastUpdated'] as String?) ?? '',
       );
-      // Only apply if no live update arrived first and the vehicle hasn't changed.
-      if (_lastSnapshot != null || _buildGeneration != generation) return;
+      // Only apply if the provider is still alive, no live update arrived
+      // first and the vehicle hasn't changed.
+      if (!ref.mounted ||
+          _lastSnapshot != null ||
+          _buildGeneration != generation) {
+        return;
+      }
       _lastSnapshot = VehicleSnapshot(
         basicState: basicState,
         advancedState: advancedState,
         system: system,
         lastUpdated: lastUpdated,
       );
-      try {
-        state = _lastSnapshot!;
-      } on StateError {
-        // Provider disposed before the async load completed.
-      }
+      state = _lastSnapshot!;
     } catch (e) {
       dev.log('Failed to restore cached state: $e', name: 'VehicleState');
     }
@@ -245,25 +318,59 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   /// Send a serialised basic command for the active vehicle.
   /// The caller (vehicle-specific screen) is responsible for serialising the
   /// vehicle's own proto command type: `myCommand.writeToBuffer()`.
-  Future<void> sendBasicCommand(List<int> commandBytes) {
-    return _send(
-      AppToDevice(
-        messageId: Int64(_nextMessageId++),
-        platformId: vehicle.platformId,
-        basicCommandBytes: commandBytes,
-      ),
+  Future<CommandResponse> sendBasicCommand(List<int> commandBytes) async {
+    final messageId = Int64(_nextMessageId++);
+    final completer = Completer<CommandResponse>();
+    _pendingCommands[messageId] = completer;
+
+    try {
+      await _send(
+        AppToDevice(
+          messageId: messageId,
+          platformId: vehicle.platformId,
+          basicCommandBytes: commandBytes,
+        ),
+      );
+    } catch (e) {
+      _pendingCommands.remove(messageId);
+      rethrow;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _pendingCommands.remove(messageId);
+        throw TimeoutException('Command timed out');
+      },
     );
   }
 
   /// Send a serialised advanced command for the active vehicle.
   /// Only meaningful over BLE; the BLE transport sends all envelope types.
-  Future<void> sendAdvancedCommand(List<int> commandBytes) {
-    return _send(
-      AppToDevice(
-        messageId: Int64(_nextMessageId++),
-        platformId: vehicle.platformId,
-        advancedCommandBytes: commandBytes,
-      ),
+  Future<CommandResponse> sendAdvancedCommand(List<int> commandBytes) async {
+    final messageId = Int64(_nextMessageId++);
+    final completer = Completer<CommandResponse>();
+    _pendingCommands[messageId] = completer;
+
+    try {
+      await _send(
+        AppToDevice(
+          messageId: messageId,
+          platformId: vehicle.platformId,
+          advancedCommandBytes: commandBytes,
+        ),
+      );
+    } catch (e) {
+      _pendingCommands.remove(messageId);
+      rethrow;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _pendingCommands.remove(messageId);
+        throw TimeoutException('Command timed out');
+      },
     );
   }
 
@@ -283,7 +390,16 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     return ref.read(carTransportProvider).send(envelope);
   }
 
-  VehicleDefinition get vehicle => ref.read(selectedVehicleProvider)!;
+  VehicleDefinition get vehicle => _vehicle!;
+
+  /// Debug only: replaces the basic state locally (no device involved) to
+  /// exercise the UI and 3D animations. [basicState] must be the vehicle's own
+  /// BasicState type. The next live update overwrites it.
+  void debugOverrideBasicState(GeneratedMessage basicState) {
+    assert(kDebugMode, 'debugOverrideBasicState is debug-only');
+    state = state.copyWith(basicState: basicState);
+    _saveCachedState(state, vehicle);
+  }
 }
 
 final vehicleStateProvider =
