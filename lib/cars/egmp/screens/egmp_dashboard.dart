@@ -10,6 +10,7 @@ import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
+import '../widgets/battery_menu.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
 
@@ -497,6 +498,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   Widget _buildRightPanel({bool shrinkWrap = false, ScrollPhysics? physics}) {
     if (_currentSubMenu == 'climate') {
       return _buildClimateMenu(shrinkWrap: shrinkWrap, physics: physics);
+    } else if (_currentSubMenu == 'battery') {
+      return _buildBatteryMenu(shrinkWrap: shrinkWrap, physics: physics);
     } else if (_currentSubMenu == 'settings') {
       return _buildSettingsMenu(shrinkWrap: shrinkWrap, physics: physics);
     } else {
@@ -520,6 +523,12 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
             subtitle:
                 'Indoor: ${_formatTemperature(basicState.indoorTemperature, basicState)}',
             onTap: () => setState(() => _currentSubMenu = 'climate'),
+          ),
+          _buildMenuTile(
+            icon: Icons.battery_charging_full,
+            title: 'Battery & Drivetrain',
+            subtitle: state.isAdvancedStateLive ? null : 'Not live',
+            onTap: () => setState(() => _currentSubMenu = 'battery'),
           ),
           _buildMenuTile(
             icon: Icons.settings,
@@ -984,6 +993,19 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBatteryMenu({bool shrinkWrap = false, ScrollPhysics? physics}) {
+    final state = ref.watch(vehicleStateProvider);
+    final basicState = state.basicState as BasicState;
+    return BatteryMenu(
+      advancedState: state.advancedState as AdvancedState,
+      isLive: state.isAdvancedStateLive,
+      formatTemperature: (celsius) => _formatTemperature(celsius, basicState),
+      onBack: () => setState(() => _currentSubMenu = null),
+      shrinkWrap: shrinkWrap,
+      physics: physics,
     );
   }
 
