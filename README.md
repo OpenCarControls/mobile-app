@@ -1,5 +1,17 @@
 # Open Car App
 
+> [!WARNING]
+> **This project is under active construction. Do not use it on a real vehicle.**
+> It is experimental, largely untested on real cars, and may behave unpredictably.
+> The app talks to a controller that can interfere with a vehicle's CAN bus, which
+> can cause malfunctions, disable safety systems, void warranties, or put people
+> at risk. There is no warranty (see
+> [LICENSE](LICENSE)); you use this entirely at your own risk.
+>
+> This is an independent project. It is not affiliated with, endorsed by, or
+> sponsored by any vehicle manufacturer. Brand and model names are used only to
+> describe compatibility.
+
 Flutter mobile app for interacting with an ESP32-based car controller over BLE (local) and MQTT (remote). Supports the Kia/Hyundai E-GMP platform and a virtual car for UI testing without hardware.
 
 ## Getting started
@@ -61,6 +73,10 @@ The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToA
 ├── docs/             # project documentation
 └── AGENTS.md         # rules for AI agents (CLAUDE.md imports it)
 ```
+
+## Contributing
+
+Contributions are welcome; please read [CONTRIBUTING.md](CONTRIBUTING.md) first and open an issue before starting anything large. Report security problems privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
