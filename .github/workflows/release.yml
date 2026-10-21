@@ -62,15 +62,17 @@ jobs:
         working-directory: web_3d
         run: npm ci && npm run build
 
+      # Majors are pinned: the conventionalcommits preset must match the
+      # conventional-changelog-writer major bundled by release-notes-generator.
       - name: Install release tooling
         run: >-
           npm install --no-save
-          semantic-release
-          @semantic-release/commit-analyzer
-          @semantic-release/exec
-          @semantic-release/release-notes-generator
-          @semantic-release/github
-          conventional-changelog-conventionalcommits
+          semantic-release@25
+          @semantic-release/commit-analyzer@13
+          @semantic-release/exec@7
+          @semantic-release/release-notes-generator@14
+          @semantic-release/github@12
+          conventional-changelog-conventionalcommits@9
 
       - name: Create GitHub release
         env:
