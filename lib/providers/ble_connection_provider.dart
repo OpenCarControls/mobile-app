@@ -4,7 +4,8 @@ import 'dart:developer' as dev;
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Transport constants are identical in every vehicle's constants.g.dart.
-import 'package:open_car_app/cars/virtual_car/constants.g.dart' show kBleAttMtu;
+import 'package:open_car_app/cars/virtual_car/constants.g.dart'
+    show kBleAttMtu, kBleMinAttMtu;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
@@ -37,7 +38,10 @@ class BleConnecting extends BleConnectionState {
 /// enabled. The transport provider switches to BLE on this state.
 class BleReady extends BleConnectionState {
   final String deviceId;
-  const BleReady(this.deviceId);
+
+  /// ATT MTU negotiated for this connection; sizes the outgoing BLE chunks.
+  final int attMtu;
+  const BleReady(this.deviceId, {required this.attMtu});
 }
 
 /// Not connected and not attempting to connect (BLE unavailable, disabled,
@@ -224,13 +228,21 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     final ble = ref.read(bleProvider);
 
     try {
-      // Negotiate MTU before emitting BleReady. Messages aren't fragmented, so
-      // a smaller MTU means larger state updates won't arrive.
+      // Negotiate MTU before emitting BleReady. Messages are split into
+      // chunks sized from it, so a smaller MTU only means more chunks, down to
+      // kBleMinAttMtu: below that the device can't send its largest messages
+      // and drops them.
       final mtu = await ble.requestMtu(deviceId: remoteId, mtu: kBleAttMtu);
-      if (mtu < kBleAttMtu) {
+      if (mtu < kBleMinAttMtu) {
         dev.log(
-          'MTU $mtu negotiated for $remoteId, below the $kBleAttMtu the '
-          'device needs; large messages will be lost',
+          'MTU $mtu negotiated for $remoteId, below the $kBleMinAttMtu BLE '
+          'needs; the device will drop its messages and commands will fail',
+          name: 'BleConnection',
+        );
+      } else if (mtu < kBleAttMtu) {
+        dev.log(
+          'MTU $mtu negotiated for $remoteId, below the $kBleAttMtu '
+          'requested; messages will use smaller chunks',
           name: 'BleConnection',
         );
       } else {
@@ -291,7 +303,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       }
 
       dev.log('BLE ready: $remoteId', name: 'BleConnection');
-      state = BleReady(remoteId);
+      state = BleReady(remoteId, attMtu: mtu);
       _connecting = false;
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');

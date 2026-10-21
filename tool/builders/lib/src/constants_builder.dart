@@ -56,6 +56,7 @@ class ConstantsBuilder implements Builder {
     );
     final blePairing = _map(ble['pairing'], 'ble.pairing');
     final blePayload = _map(ble['payload'], 'ble.payload');
+    final bleFragmentation = _map(ble['fragmentation'], 'ble.fragmentation');
 
     final mqttCommandTemplate = _string(
       mqtt['command_topic_template'],
@@ -85,10 +86,22 @@ class ConstantsBuilder implements Builder {
       'ble.pairing.scan_timeout_seconds',
     );
     final bleAttMtu = _int(blePayload['att_mtu'], 'ble.payload.att_mtu');
+    final bleMaxChunkBytes = _int(
+      blePayload['max_chunk_bytes'],
+      'ble.payload.max_chunk_bytes',
+    );
     final bleMaxMessageBytes = _int(
       blePayload['max_message_bytes'],
       'ble.payload.max_message_bytes',
     );
+    int fragmentation(String key) =>
+        _int(bleFragmentation[key], 'ble.fragmentation.$key');
+    final bleChunkHeaderBytes = fragmentation('header_bytes');
+    final bleChunkLastFlag = fragmentation('last_chunk_flag');
+    final bleChunkIndexMask = fragmentation('chunk_index_mask');
+    final bleMaxChunks = fragmentation('max_chunks');
+    final bleMinAttMtu = fragmentation('min_att_mtu');
+    final bleReassemblyTimeoutMs = fragmentation('reassembly_timeout_ms');
 
     final outputId = AssetId(
       input.package,
@@ -127,7 +140,15 @@ class ConstantsBuilder implements Builder {
       ..writeln('const int kBleScanTimeoutSeconds = $bleScanTimeoutSeconds;')
       ..writeln()
       ..writeln('const int kBleAttMtu = $bleAttMtu;')
-      ..writeln('const int kBleMaxMessageBytes = $bleMaxMessageBytes;');
+      ..writeln('const int kBleMaxChunkBytes = $bleMaxChunkBytes;')
+      ..writeln('const int kBleMaxMessageBytes = $bleMaxMessageBytes;')
+      ..writeln()
+      ..writeln('const int kBleChunkHeaderBytes = $bleChunkHeaderBytes;')
+      ..writeln('const int kBleChunkLastFlag = $bleChunkLastFlag;')
+      ..writeln('const int kBleChunkIndexMask = $bleChunkIndexMask;')
+      ..writeln('const int kBleMaxChunks = $bleMaxChunks;')
+      ..writeln('const int kBleMinAttMtu = $bleMinAttMtu;')
+      ..writeln('const int kBleReassemblyTimeoutMs = $bleReassemblyTimeoutMs;');
 
     await buildStep.writeAsString(outputId, buffer.toString());
   }

@@ -67,6 +67,7 @@ final carTransportProvider = Provider<CarTransport>((ref) {
       serviceUuid: vehicle.bleServiceUuid,
       appToDeviceCharacteristicUuid: vehicle.bleAppToDeviceCharacteristicUuid,
       deviceToAppCharacteristicUuid: vehicle.bleDeviceToAppCharacteristicUuid,
+      attMtu: ble.attMtu,
     );
     dev.log(
       'Using BLE transport (device: ${ble.deviceId})',
