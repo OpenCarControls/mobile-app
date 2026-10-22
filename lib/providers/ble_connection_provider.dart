@@ -48,6 +48,16 @@ class BleDisconnected extends BleConnectionState {
   const BleDisconnected({this.warning});
 }
 
+/// The connected device doesn't look like the paired car (service or
+/// characteristics missing). Thrown from the post-connect setup.
+class _BleSetupException implements Exception {
+  final String message;
+  const _BleSetupException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class BleConnectionNotifier extends Notifier<BleConnectionState> {
@@ -263,7 +273,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       final serviceUuid = Uuid.parse(vehicle.bleServiceUuid);
       final serviceMatch = services.where((s) => s.id == serviceUuid);
       if (serviceMatch.isEmpty) {
-        throw StateError(
+        throw _BleSetupException(
           'BLE service ${vehicle.bleServiceUuid} not found on $remoteId',
         );
       }
@@ -274,7 +284,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
         vehicle.bleDeviceToAppCharacteristicUuid.toLowerCase(),
       };
       if (!charIds.containsAll(needed)) {
-        throw StateError(
+        throw _BleSetupException(
           'Required BLE characteristics not found in service '
           '${vehicle.bleServiceUuid}',
         );
@@ -285,9 +295,13 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       _connecting = false;
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');
-      _connecting = false;
       if (!ref.mounted) return;
+      // The link is still up, so connectToDevice won't emit `connected` again
+      // and nothing else would retry. Drop the connection (cancelling the
+      // stream disconnects) and start over after the usual delay.
+      _cancelConnection();
       state = BleConnecting(remoteId);
+      _scheduleRetry(remoteId);
     }
   }
 
