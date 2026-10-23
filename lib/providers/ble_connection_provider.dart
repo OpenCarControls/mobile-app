@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Transport constants are identical in every vehicle's constants.g.dart.
 import 'package:open_car_app/cars/virtual_car/constants.g.dart'
     show kBleAttMtu, kBleMinAttMtu;
-import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
@@ -78,9 +77,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     final config = ref.watch(pairedVehicleProvider);
 
     // No paired device, or user prefers HTTP — BLE not needed.
-    if (config == null ||
-        config.transportPreference == TransportPreference.http ||
-        config.bleRemoteId.isEmpty) {
+    if (config == null || !config.usesBle) {
       return const BleDisconnected();
     }
 
@@ -196,10 +193,25 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     }
 
     final config = ref.read(pairedVehicleProvider);
-    if (config == null || config.bleRemoteId.isEmpty) return;
+    if (config == null || !config.usesBle) return;
     dev.log('Force reconnect requested', name: 'BleConnection');
     _cancelConnection();
     _connectDirectly(config.bleRemoteId);
+  }
+
+  /// Pull-to-refresh on a dashboard: reconnects BLE now, cancelling the
+  /// pending retry. Decided from the paired vehicle's config, not the current
+  /// transport, which stays MQTT until BLE is ready (the only time a manual
+  /// retry helps). Nothing to do while connected.
+  Future<void> pullToRefresh() async {
+    final config = ref.read(pairedVehicleProvider);
+    if (config == null || !config.usesBle) return;
+    // Bluetooth off or permission denied: the adapter status stream connects
+    // once that's fixed, and a pull can't help meanwhile.
+    if (state is BleDisconnected) return;
+    forceReconnect();
+    // A short delay so the refresh indicator shows.
+    await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 
   Future<void> _onConnectionUpdate(

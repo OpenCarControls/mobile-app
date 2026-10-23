@@ -69,15 +69,18 @@ class _FakeBle implements FlutterReactiveBle {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-ProviderContainer _container(_FakeBle ble) {
+ProviderContainer _container(
+  _FakeBle ble, {
+  TransportPreference preference = TransportPreference.ble,
+}) {
   final container = ProviderContainer(
     overrides: [
       bleProvider.overrideWithValue(ble),
       initialPairedVehicleConfigProvider.overrideWithValue(
-        const PairedVehicleConfig(
+        PairedVehicleConfig(
           vehicleId: egmp.kPlatformName,
           bleRemoteId: _remoteId,
-          transportPreference: TransportPreference.ble,
+          transportPreference: preference,
         ),
       ),
     ],
@@ -125,6 +128,43 @@ void main() {
       container.dispose();
     });
   }
+
+  testWidgets('pull-to-refresh reconnects at once while BLE is not ready', (
+    tester,
+  ) async {
+    final ble = _FakeBle();
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 1);
+    // Setup failed and a retry is pending in 30 s; the transport is MQTT.
+    expect(container.read(bleConnectionProvider), isA<BleConnecting>());
+
+    final pull = container.read(bleConnectionProvider.notifier).pullToRefresh();
+    await tester.pump(const Duration(seconds: 1));
+    await pull;
+    expect(ble.connectCalls, 2, reason: 'the pull connects without waiting');
+
+    // The pull replaced the retry due at 31 s instead of adding a second one.
+    await tester.pump(const Duration(seconds: 25));
+    expect(ble.connectCalls, 2);
+    container.dispose();
+  });
+
+  testWidgets('pull-to-refresh does nothing for a vehicle paired over HTTP', (
+    tester,
+  ) async {
+    final ble = _FakeBle();
+    final container = _container(ble, preference: TransportPreference.http);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    final pull = container.read(bleConnectionProvider.notifier).pullToRefresh();
+    await tester.pump(const Duration(seconds: 1));
+    await pull;
+    expect(ble.connectCalls, 0);
+    container.dispose();
+  });
 }
 
 /// permission_handler's `PermissionStatus.granted` as sent over its channel.

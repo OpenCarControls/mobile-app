@@ -53,6 +53,11 @@ class PairedVehicleConfig {
     this.mqttPassword,
   });
 
+  /// Whether this vehicle is reached over BLE when in range: paired over BLE
+  /// (not the HTTP debug path) with a bonded device to connect to.
+  bool get usesBle =>
+      transportPreference == TransportPreference.ble && bleRemoteId.isNotEmpty;
+
   static Future<PairedVehicleConfig?> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_kPrefsKey);
