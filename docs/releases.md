@@ -1,7 +1,7 @@
 # CI & releases
 
 ## CI (`.github/workflows/ci.yml`)
-Installs `protoc`, runs `flutter pub get` and codegen, builds the 3D viewer bundle into `assets/web/` (`npm ci && npm run build` in `web_3d/`; it is gitignored but `pubspec.yaml` needs it), then checks formatting (`dart format`, excluding `*.g.dart` and `lib/generated/`), `flutter analyze --fatal-infos` and `flutter test`. PR titles are validated as semantic/conventional-commit titles (`pr-lint.yml`, `semantic-pr.yml`).
+Installs `protoc`, runs `flutter pub get` and codegen, builds the 3D viewer bundle into `assets/web/` (`npm ci && npm run build` in `web_3d/`; it is gitignored but `pubspec.yaml` needs it), then checks formatting (`dart format`, excluding `*.g.dart` and `lib/generated/`), `flutter analyze --fatal-infos` and `flutter test`. PR titles are validated as semantic/conventional-commit titles (`semantic-pr.yml`).
 
 ## Releases
 Releases are automated with `semantic-release` (`.releaserc.json`) from the `release.yml` workflow, which runs after CI succeeds on `main` (or manually via `workflow_dispatch`).

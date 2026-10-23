@@ -1,5 +1,5 @@
-# MQTT broker configuration — copy to mqtt_broker.toml and fill in real values.
-# mqtt_broker.toml is gitignored; this example is committed as the template.
+# App configuration — copy to config.toml and fill in real values.
+# config.toml is gitignored; this example is committed as the template.
 
 [broker]
 host     = "your-broker.example.com"
