@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- The debug-only HTTP transport (lib/transport/http_transport.dart) talks
+         plain HTTP to the device. Release builds must not allow cleartext traffic. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>
