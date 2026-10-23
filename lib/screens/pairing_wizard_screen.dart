@@ -12,6 +12,7 @@ import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/transport/ble_fragmentation.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -265,11 +266,19 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         characteristicId: Uuid.parse(vehicle.bleDeviceToAppCharacteristicUuid),
       );
 
+      // Notifications are chunks, like on the dashboard's transport.
+      final reassembler = BleReassembler(
+        onDrop: (reason) =>
+            dev.log('Dropped BLE chunk: ${reason.name}', name: 'PairingWizard'),
+      );
       final firstMsgBytes = await ble
           .subscribeToCharacteristic(txChar)
-          .first
-          .timeout(const Duration(seconds: 5));
-      final msg = DeviceToApp.fromBuffer(firstMsgBytes);
+          .map(reassembler.push)
+          .firstWhere((message) => message != null)
+          // A state update sent before the subscription is lost, so this can
+          // take a full publish interval (5 s on the virtual car).
+          .timeout(const Duration(seconds: 15));
+      final msg = DeviceToApp.fromBuffer(firstMsgBytes!);
 
       final allVehicles = ref.read(availableVehiclesProvider);
       final actualVehicle = allVehicles.firstWhere(
