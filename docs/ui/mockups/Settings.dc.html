@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--danger:#B3261E}
+.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--danger:#FFB4AB}
+.oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
+.oc-light.oc-skin-boxy,.oc-dark.oc-skin-boxy{--rS:2px;--rM:2px;--rL:2px;--rP:2px;--rRound:2px}
+.oc-light.oc-skin-round,.oc-dark.oc-skin-round{--rS:22px;--rM:28px;--rL:40px;--rP:999px;--rRound:50%}
+.oc-light.oc-skin-boxy{--accent:#37474F;--onAccentC:#1C262B;--tileOn:rgba(207,216,220,.94)}
+.oc-dark.oc-skin-boxy{--accent:#CFD8DC;--onAccentC:#ECEFF1;--tileOn:rgba(55,71,79,.94)}
+.oc-light.oc-skin-round{--accent:#B3245A;--onAccentC:#5B0F2C;--tileOn:rgba(252,214,226,.94)}
+.oc-dark.oc-skin-round{--accent:#FF8FB1;--onAccentC:#FFD9E5;--tileOn:rgba(94,26,52,.94)}
+.oc-card{border:1px solid var(--tileBorder);background:var(--tileBg);border-radius:var(--rM);overflow:hidden}
+.oc-row{box-sizing:border-box;width:100%;min-height:56px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;color:var(--text);font:inherit;text-align:left}
+button.oc-row{cursor:pointer}
+.oc-seg{flex:1;min-height:44px;padding:0 10px;border-radius:var(--rS);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.oc-seg.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.oc-sw{position:relative;flex-shrink:0;width:52px;height:32px;border-radius:var(--rP);border:0;background:var(--outline);cursor:pointer;padding:0}
+.oc-sw.on{background:var(--accent)}
+.oc-sw span{position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:var(--rRound);background:var(--surface);transition:left .15s ease}
+.oc-sw.on span{left:24px}
+.oc-round{width:44px;height:44px;flex-shrink:0;border-radius:var(--rRound);border:1px solid var(--outline);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.oc-row:focus-visible,.oc-seg:focus-visible,.oc-sw:focus-visible,.oc-round:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (prefers-reduced-motion: reduce){.oc-sw span{transition:none}}
+</style>
+</helmet>
+<div class="{{themeClass}}" style="width: 390px; height: {{h}}px; box-sizing: border-box; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Manrope', system-ui, sans-serif; padding: 24px 16px 32px">
+
+  <div style="display: flex; align-items: center; gap: 12px">
+    <button class="oc-round" aria-label="Back"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div style="font-size: 20px; font-weight: 800">Settings</div>
+  </div>
+
+  <!-- Vehicle summary -->
+  <div class="oc-card" style="margin-top: 16px; padding: 14px; display: flex; align-items: center; gap: 14px">
+    <div style="width: 52px; height: 52px; border-radius: var(--rRound); background: var(--tileOn); color: var(--onAccentC); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 16 M4 16h16v3H4z M7 19v1.5 M17 19v1.5 M7.5 13.5h.01 M16.5 13.5h.01"/></svg>
+    </div>
+    <div style="min-width: 0">
+      <div style="font-size: 18px; font-weight: 800">EV6</div>
+      <div style="font-size: 12px; color: var(--text2)">E-GMP platform · paired</div>
+      <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span>{{connText}}</div>
+    </div>
+  </div>
+
+  <sc-for list="{{sections}}" as="sec" hint-placeholder-count="4">
+    <div>
+      <div style="margin: 22px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text2)">{{sec.title}}</div>
+      <div class="oc-card">
+        <sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+          <div style="border-top: {{r.bt}}">
+
+            <sc-if value="{{r.isNav}}" hint-placeholder-val="{{ true }}">
+              <button class="oc-row" onClick="{{r.tap}}">
+                <span style="min-width: 0">
+                  <span style="display: block; font-size: 15px; font-weight: 600; color: {{r.color}}">{{r.label}}</span>
+                  <sc-if value="{{r.hasCap}}" hint-placeholder-val="{{ false }}"><span style="display: block; font-size: 12px; color: var(--text2); margin-top: 2px">{{r.cap}}</span></sc-if>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px; color: var(--text2); font-size: 14px; flex-shrink: 0">
+                  <sc-if value="{{r.hasValue}}" hint-placeholder-val="{{ false }}"><span>{{r.value}}</span></sc-if>
+                  <sc-if value="{{r.chevron}}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></sc-if>
+                </span>
+              </button>
+            </sc-if>
+
+            <sc-if value="{{r.isInfo}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-row">
+                <span style="font-size: 15px; font-weight: 600">{{r.label}}</span>
+                <span style="font-size: 14px; color: var(--text2); text-align: right">{{r.value}}</span>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{r.isToggle}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-row" style="padding-top: 12px; padding-bottom: 12px; align-items: flex-start">
+                <span style="min-width: 0">
+                  <span style="display: block; font-size: 15px; font-weight: 600">{{r.label}}</span>
+                  <span style="display: block; font-size: 12px; line-height: 1.4; color: var(--text2); margin-top: 2px">{{r.cap}}</span>
+                </span>
+                <button class="oc-sw {{r.cls}}" role="switch" aria-checked="{{r.checked}}" aria-label="{{r.label}}" onClick="{{r.tap}}"><span></span></button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{r.isSeg}}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 12px 14px">
+                <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px">{{r.label}}</div>
+                <div style="display: flex; gap: 8px">
+                  <sc-for list="{{r.segs}}" as="g" hint-placeholder-count="3">
+                    <button class="oc-seg {{g.cls}}" onClick="{{g.tap}}">{{g.label}}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{r.isNote}}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 14px; display: flex; gap: 12px; color: var(--text2)">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+                <span style="font-size: 13px; line-height: 1.45">{{r.label}}</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tier":{"editor":"enum","default":"ble","options":["remote","ble"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"skin":{"editor":"enum","default":"default","options":["default","boxy","round"]},"$preview":{"width":390,"height":1280}}'>
+class Component extends DCLogic {
+  state = { themePick: 'system', btnPick: 'titled', can: false };
+
+  renderVals() {
+    const pr = this.props, s = this.state;
+    const ble = (pr.tier ?? 'ble') === 'ble';
+    const dark = (pr.theme ?? 'light') === 'dark';
+    const skin = pr.skin === 'boxy' || pr.skin === 'round' ? pr.skin : 'default';
+    const line = '1px solid var(--tileBorder)';
+    const seg = (key, label) => ({ label, cls: s[key.k] === key.v ? 'on' : '', tap: () => this.setState({ [key.k]: key.v }) });
+
+    const R = { isNav: false, isInfo: false, isToggle: false, isSeg: false, isNote: false, label: '', cap: '', hasCap: false, value: '', hasValue: false, chevron: false, color: 'var(--text)', segs: [], cls: '', checked: 'false', tap: () => {}, bt: 'none' };
+    const nav = (label, o) => ({ ...R, isNav: true, label, chevron: true, ...o });
+    const info = (label, value) => ({ ...R, isInfo: true, label, value });
+    const withLines = (rows) => rows.map((r, i) => ({ ...r, bt: i ? line : 'none' }));
+
+    const dashboard = withLines([
+      { ...R, isSeg: true, label: 'Theme', segs: [seg({ k: 'themePick', v: 'system' }, 'System'), seg({ k: 'themePick', v: 'light' }, 'Light'), seg({ k: 'themePick', v: 'dark' }, 'Dark')] },
+      { ...R, isSeg: true, label: 'Button style', segs: [seg({ k: 'btnPick', v: 'titled' }, 'Icon and title'), seg({ k: 'btnPick', v: 'icon' }, 'Icon only')] },
+      nav('Edit dashboard', { cap: 'Rearrange, resize, add or remove tiles' }),
+      nav('Reset dashboard layout', { chevron: false }),
+      info('Units', 'Follow the car')
+    ]);
+
+    const vehicle = withLines(ble
+      ? [nav('Paired phones', { value: '2' }), nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Also removes this phone from the vehicle' })]
+      : [nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Also removes this phone from the vehicle' })]);
+
+    const device = withLines([
+      info('Firmware', 'v1.4.2'),
+      info('Hardware', 'ESP32-S3'),
+      info('Running for', '3 d 4 h'),
+      info('Mobile signal', 'Good'),
+      nav('Update firmware', { cap: 'A newer version is available' }),
+      nav('Restart device', { chevron: false })
+    ]);
+
+    const advanced = withLines([
+      { ...R, isToggle: true, label: 'CAN logger', cap: s.can ? 'On. Vehicle features are paused while the logger runs. In SavvyCAN, connect to 192.168.4.1 port 23.' : 'Records the car’s data bus to SavvyCAN. Turning it on pauses vehicle features.', cls: s.can ? 'on' : '', checked: s.can ? 'true' : 'false', tap: () => this.setState({ can: !s.can }) }
+    ]);
+
+    const noteRows = withLines([{ ...R, isNote: true, label: 'Stand near the vehicle and connect over Bluetooth to see the device, its firmware and the developer options.' }]);
+
+    const about = withLines([nav('Open-source licenses', {}), info('App version', '0.9.0')]);
+
+    const sections = ble
+      ? [{ title: 'Dashboard', rows: dashboard }, { title: 'Vehicle', rows: vehicle }, { title: 'Device', rows: device }, { title: 'Advanced', rows: advanced }, { title: 'About', rows: about }]
+      : [{ title: 'Dashboard', rows: dashboard }, { title: 'Vehicle', rows: vehicle }, { title: 'Device', rows: noteRows }, { title: 'About', rows: about }];
+
+    return {
+      themeClass: (dark ? 'oc-dark' : 'oc-light') + ' oc-skin-' + skin,
+      h: ble ? 1500 : 1010,
+      connText: ble ? 'Connected over Bluetooth' : 'Connected remotely',
+      sections
+    };
+  }
+}
+</script>
+</body>
+</html>

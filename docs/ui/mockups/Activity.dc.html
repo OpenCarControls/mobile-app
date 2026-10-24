@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connection activity</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.ac-btn{height:44px;padding:0 16px;border-radius:var(--rS);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.ac-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.ac-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="oc-dark oc-skin-default" style="--danger: #FFB4AB; position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif">
+
+  <dc-import name="Phone" vehicle="ev" tier="ble" theme="dark" layout="phone" hint-size="390px,844px"></dc-import>
+
+  <!-- Scrim over the dashboard -->
+  <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.55)"></div>
+
+  <!-- Popover anchored to the connection pill -->
+  <div role="dialog" aria-label="Connection activity" style="position: absolute; left: 12px; right: 12px; top: 98px; bottom: 32px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border: 1px solid var(--tileBorder); border-radius: var(--rL); box-shadow: 0 18px 48px rgba(0,0,0,.5)">
+    <span style="position: absolute; top: -8px; right: 92px; width: 16px; height: 16px; background: var(--surface); border-left: 1px solid var(--tileBorder); border-top: 1px solid var(--tileBorder); transform: rotate(45deg)"></span>
+
+    <div style="padding: 16px 16px 12px; display: flex; align-items: center; justify-content: space-between">
+      <div>
+        <div style="font-size: 18px; font-weight: 800">Connection</div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 14px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span>Connected over Bluetooth</div>
+        <div style="font-size: 12px; color: var(--text2); margin-top: 2px">For 12 min · last update just now</div>
+      </div>
+      <button aria-label="Close" style="width: 44px; height: 44px; border-radius: var(--rRound); border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+    </div>
+
+    <div style="padding: 0 16px 12px; display: flex; gap: 8px">
+      <button class="ac-btn primary">Reconnect Bluetooth</button>
+      <button class="ac-btn">Share log</button>
+    </div>
+
+    <div style="padding: 4px 16px 0; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text2)">Today</div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 4px 16px 8px">
+      <sc-for list="{{events}}" as="e" hint-placeholder-count="8">
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-top: {{e.bt}}">
+          <span style="width: 28px; height: 28px; border-radius: var(--rRound); display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: {{e.bg}}; color: {{e.fg}}">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{e.icon}}"/></svg>
+          </span>
+          <span style="flex: 1; min-width: 0">
+            <span style="display: block; font-size: 14px; font-weight: 600">{{e.title}}</span>
+            <sc-if value="{{e.hasDetail}}" hint-placeholder-val="{{ false }}"><span style="display: block; font-size: 12px; color: {{e.detailColor}}; margin-top: 1px">{{e.detail}}</span></sc-if>
+          </span>
+          <span style="font-size: 12px; color: var(--text2); padding-top: 2px; flex-shrink: 0">{{e.time}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding: 10px 16px 14px; border-top: 1px solid var(--tileBorder); font-size: 12px; line-height: 1.4; color: var(--text2)">Shows connection changes and the commands you sent. Routine updates are not listed.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const I = {
+      link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      alert: 'M12 8v5 M12 16.5h.01'
+    };
+    const ok = { bg: 'var(--tileOn)', fg: 'var(--onAccentC)', detailColor: 'var(--text2)' };
+    const neutral = { bg: 'var(--tileBorder)', fg: 'var(--text2)', detailColor: 'var(--text2)' };
+    const bad = { bg: 'rgba(255,180,171,.16)', fg: 'var(--danger)', detailColor: 'var(--danger)' };
+    const list = [
+      { ...ok, icon: I.link, title: 'Bluetooth connected', detail: '', time: '14:52' },
+      { ...neutral, icon: I.link, title: 'Bluetooth link lost', detail: 'Switched to remote', time: '14:41' },
+      { ...ok, icon: I.check, title: 'Climate on', detail: 'Done', time: '14:24' },
+      { ...bad, icon: I.alert, title: 'Climate on', detail: 'No answer from the vehicle', time: '14:23' },
+      { ...ok, icon: I.check, title: 'Unlock doors', detail: 'Done', time: '14:21' },
+      { ...ok, icon: I.link, title: 'Bluetooth connected', detail: '', time: '14:20' },
+      { ...ok, icon: I.check, title: 'Lock doors', detail: 'Done · sent remotely', time: '14:02' },
+      { ...ok, icon: I.link, title: 'Remote connected', detail: '', time: '13:58' }
+    ];
+    return { events: list.map((e, i) => ({ ...e, hasDetail: e.detail !== '', bt: i ? '1px solid var(--tileBorder)' : 'none' })) };
+  }
+}
+</script>
+</body>
+</html>

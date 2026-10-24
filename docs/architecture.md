@@ -27,7 +27,7 @@ abstract class CarTransport {
 **Selection order (debug):** HTTP (if `transportPreference == http` in `pairedVehicleProvider`) → BLE (if `BleReady`) → MQTT. The HTTP branch is compiled away in release builds via `kDebugMode`. Android allows cleartext (plain HTTP) traffic only in debug builds: `android:usesCleartextTraffic` lives in `android/app/src/debug/AndroidManifest.xml`, not the main manifest. `vehicleStateProvider` uses `ref.watch(carTransportProvider)` to re-subscribe on transport switch.
 
 ## UI architecture
-This section describes the screens as they are today. A shared dashboard that replaces the per-vehicle screens is specified in [UI design](ui.md).
+This section describes the screens as they are today. A shared dashboard that replaces the per-vehicle screens is specified in [UI design](ui.md), and support for several paired vehicles (which changes the single-vehicle pairing state described here) in [Other screens](ui-screens.md#vehicles).
 
 Entry: `main.dart` loads `PairedVehicleConfig` and the device ID at startup, then `AppEntryRouter` routes to `PairingWizardScreen` (unpaired) or `vehicle.buildDashboard()` (paired). It reacts to `pairedVehicleProvider`, so unpairing returns to the wizard automatically. The wizard connects using the shared BLE service UUIDs, then picks the vehicle whose `platformId` matches the device's first message that carries one, so the stored `vehicleId` is always a supported `platformName`. If the stored `vehicleId` isn't supported by the build, `selectedVehicleProvider` is null and the wizard is shown.
 

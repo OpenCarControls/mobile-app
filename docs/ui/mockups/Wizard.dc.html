@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Setup wizard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--danger:#B3261E;--dangerC:rgba(179,38,30,.12)}
+.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--danger:#FFB4AB;--dangerC:rgba(255,180,171,.14)}
+.oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
+.oc-glass{border:1px solid var(--tileBorder);background:var(--tileBg)}
+.oc-btn{height:52px;border-radius:var(--rM);border:1px solid transparent;font:inherit;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+.oc-btn.primary{background:var(--accent);color:var(--surface)}
+.oc-btn.secondary{background:transparent;border-color:var(--outline);color:var(--text)}
+.oc-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.oc-ring{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:50%;border:2px solid var(--accent);opacity:0;animation:ocRing 2.4s ease-out infinite}
+@keyframes ocRing{0%{transform:scale(.62);opacity:.55}100%{transform:scale(1.08);opacity:0}}
+@media (prefers-reduced-motion: reduce){.oc-ring{animation:none;opacity:.25}}
+</style>
+</helmet>
+<div style="width: 2110px; height: 844px; display: flex; gap: 40px; font-family: 'Manrope', system-ui, sans-serif">
+  <sc-for list="{{screens}}" as="sc" hint-placeholder-count="5">
+    <div class="{{sc.themeClass}}" style="width: 390px; height: 844px; flex-shrink: 0; box-sizing: border-box; position: relative; overflow: hidden; background: var(--bg); color: var(--text); display: flex; flex-direction: column; padding: 24px 20px 32px">
+
+      <div style="display: flex; align-items: center; gap: 12px">
+        <sc-if value="{{sc.closable}}" hint-placeholder-val="{{ false }}">
+          <button aria-label="Close" style="width: 44px; height: 44px; margin: -6px 0 -6px -8px; border-radius: var(--rRound); border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+        </sc-if>
+        <div style="font-size: 20px; font-weight: 800">{{sc.heading}}</div>
+      </div>
+      <div style="display: flex; gap: 6px; margin-top: 12px">
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: {{sc.seg1}}"></span>
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: {{sc.seg2}}"></span>
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: {{sc.seg3}}"></span>
+      </div>
+      <div style="font-size: 12px; color: var(--text2); margin-top: 8px">{{sc.stepLabel}}</div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px">
+        <div style="position: relative; width: 176px; height: 176px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px">
+          <sc-if value="{{sc.rings}}" hint-placeholder-val="{{ false }}">
+            <span class="oc-ring" style="animation-delay: 0s"></span>
+            <span class="oc-ring" style="animation-delay: .8s"></span>
+            <span class="oc-ring" style="animation-delay: 1.6s"></span>
+          </sc-if>
+          <div style="width: 112px; height: 112px; border-radius: 50%; background: {{sc.medBg}}; color: {{sc.medFg}}; display: flex; align-items: center; justify-content: center">
+            <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sc.icon}}"/></svg>
+          </div>
+        </div>
+        <div style="font-size: 24px; font-weight: 800; line-height: 1.2">{{sc.title}}</div>
+        <div style="font-size: 15px; line-height: 1.45; color: var(--text2); max-width: 310px">{{sc.body}}</div>
+
+        <sc-if value="{{sc.hasDevice}}" hint-placeholder-val="{{ false }}">
+          <div class="oc-glass" style="width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: var(--rM); text-align: left; display: flex; align-items: center; gap: 12px">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent); flex-shrink: 0"><path d="{{sc.iBt}}"/></svg>
+            <div>
+              <div style="font-size: 16px; font-weight: 700">OpenCar-EV6</div>
+              <div style="font-size: 12px; color: var(--text2); font-family: ui-monospace, Menlo, monospace">AA:BB:CC:DD:EE:FF</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{sc.hasNote}}" hint-placeholder-val="{{ false }}">
+          <div style="width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: var(--rM); background: var(--tileOn); color: var(--onAccentC); text-align: left; display: flex; gap: 10px">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="{{sc.iInfo}}"/></svg>
+            <span style="font-size: 13px; line-height: 1.45">Your phone had paired with this vehicle before, and the vehicle still remembered it. The old pairing is cleared now. Tap Pair again to finish; you may see a second pairing prompt.</span>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; min-height: 114px; justify-content: flex-end">
+        <sc-if value="{{sc.hasPrimary}}" hint-placeholder-val="{{ true }}">
+          <button class="oc-btn primary">{{sc.primary}}</button>
+        </sc-if>
+        <sc-if value="{{sc.hasSecondary}}" hint-placeholder-val="{{ false }}">
+          <button class="oc-btn secondary">{{sc.secondary}}</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2110,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const I = {
+      btSearch: 'M7 7l10 10-5 5V2l5 5L7 17 M3 12h1 M20 12h1',
+      bt: 'M7 7l10 10-5 5V2l5 5L7 17',
+      btOk: 'M7 7l10 10-5 5V2l5 5L7 17',
+      alert: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 8v5 M12 16.5h.01',
+      info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 11v5 M12 7.5h.01'
+    };
+    const on = 'var(--accent)', off = 'var(--outline)';
+    const base = { heading: 'Pair your vehicle', closable: false, rings: false, hasDevice: false, hasNote: false, hasPrimary: true, hasSecondary: false, iBt: I.bt, iInfo: I.info, medBg: 'var(--tileOn)', medFg: 'var(--onAccentC)' };
+    const screens = [
+      { ...base, themeClass: 'oc-light', seg1: on, seg2: off, seg3: off, stepLabel: 'Step 1 of 3 · Find your vehicle', icon: I.btSearch,
+        title: 'Hold the pairing button on your vehicle', body: 'The device advertises for a short time. Tap Start when you are ready.', primary: 'Start' },
+      { ...base, themeClass: 'oc-light', seg1: on, seg2: off, seg3: off, stepLabel: 'Step 1 of 3 · Find your vehicle', icon: I.bt, rings: true,
+        title: 'Looking for your vehicle…', body: '24 s remaining', hasPrimary: false, hasSecondary: true, secondary: 'Cancel' },
+      { ...base, themeClass: 'oc-light', seg1: on, seg2: on, seg3: off, stepLabel: 'Step 2 of 3 · Pair', icon: I.btOk,
+        title: 'Vehicle found', body: 'Check that this is your vehicle, then pair.', hasDevice: true, hasNote: true, primary: 'Pair', hasSecondary: true, secondary: 'Cancel' },
+      { ...base, themeClass: 'oc-dark', seg1: on, seg2: on, seg3: off, stepLabel: 'Step 2 of 3 · Pair', icon: I.alert, medBg: 'var(--dangerC)', medFg: 'var(--danger)',
+        title: 'Pairing failed', body: 'The vehicle did not answer. Check that the pairing button is still held, then try again.', primary: 'Try again' },
+      // Adding a second vehicle: same wizard, but it can be closed because the app already has a vehicle
+      { ...base, themeClass: 'oc-light', heading: 'Add a vehicle', closable: true, seg1: on, seg2: off, seg3: off, stepLabel: 'Step 1 of 3 · Find your vehicle', icon: I.btSearch,
+        title: 'Hold the pairing button on your vehicle', body: 'The device advertises for a short time. Tap Start when you are ready.', primary: 'Start' }
+    ];
+    return { screens };
+  }
+}
+</script>
+</body>
+</html>

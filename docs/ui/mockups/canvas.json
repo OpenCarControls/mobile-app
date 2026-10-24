@@ -33,6 +33,72 @@
       "x": 0,
       "y": 2428
     },
+    "Switcher.dc.html": {
+      "h": 844,
+      "title": "Vehicles · switcher popover",
+      "w": 390,
+      "x": 0,
+      "y": 3856
+    },
+    "VehiclesList.dc.html": {
+      "h": 844,
+      "title": "Vehicles · manage (light)",
+      "w": 390,
+      "x": 470,
+      "y": 3856
+    },
+    "VehiclesUnpair.dc.html": {
+      "h": 844,
+      "title": "Vehicles · unpair confirmation (dark)",
+      "w": 390,
+      "x": 940,
+      "y": 3856
+    },
+    "Vehicles.dc.html": {
+      "h": 844,
+      "title": "Vehicles component",
+      "w": 390,
+      "x": 1410,
+      "y": 3856
+    },
+    "Wizard.dc.html": {
+      "h": 844,
+      "title": "Setup wizard · style and vibe (last: adding a second vehicle)",
+      "w": 2110,
+      "x": 0,
+      "y": 2892
+    },
+    "Activity.dc.html": {
+      "h": 844,
+      "title": "Connection pill · activity popover",
+      "w": 390,
+      "x": 2190,
+      "y": 2892
+    },
+    "SettingsBle.dc.html": {
+      "h": 1500,
+      "is_interactive": true,
+      "title": "Settings · Bluetooth (dark)",
+      "w": 390,
+      "x": 2660,
+      "y": 2892
+    },
+    "SettingsRemote.dc.html": {
+      "h": 1010,
+      "is_interactive": true,
+      "title": "Settings · Remote (light)",
+      "w": 390,
+      "x": 3130,
+      "y": 2892
+    },
+    "Settings.dc.html": {
+      "h": 1500,
+      "is_interactive": true,
+      "title": "Settings component",
+      "w": 390,
+      "x": 3600,
+      "y": 2892
+    },
     "SkinBoxy.dc.html": {
       "h": 844,
       "is_interactive": true,
@@ -145,7 +211,16 @@
     "LevelIdeas.dc.html",
     "ControlIdeas.dc.html",
     "SkinBoxy.dc.html",
-    "SkinRound.dc.html"
+    "SkinRound.dc.html",
+    "Wizard.dc.html",
+    "Activity.dc.html",
+    "SettingsBle.dc.html",
+    "SettingsRemote.dc.html",
+    "Settings.dc.html",
+    "Switcher.dc.html",
+    "VehiclesList.dc.html",
+    "VehiclesUnpair.dc.html",
+    "Vehicles.dc.html"
   ],
   "pages": [],
   "title": "Open Car App UI"

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vehicles</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--danger:#B3261E;--onDanger:#FFFFFF}
+.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--danger:#FFB4AB;--onDanger:#3B0A07}
+.oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
+.oc-card{border:1px solid var(--tileBorder);background:var(--tileBg);border-radius:var(--rM);overflow:hidden}
+.vh-act{flex:1;min-height:48px;border:0;border-top:1px solid var(--tileBorder);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.vh-act + .vh-act{border-left:1px solid var(--tileBorder)}
+.vh-btn{height:48px;padding:0 18px;border-radius:var(--rM);border:1px solid var(--outline);background:transparent;color:var(--text);font:inherit;font-size:15px;font-weight:700;cursor:pointer;flex:1}
+.vh-btn.danger{background:var(--danger);border-color:var(--danger);color:var(--onDanger)}
+.vh-act:focus-visible,.vh-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+</style>
+</helmet>
+<div class="{{themeClass}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Manrope', system-ui, sans-serif; padding: 24px 16px 32px">
+
+  <div style="display: flex; align-items: center; gap: 12px">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: var(--rRound); border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div style="font-size: 20px; font-weight: 800">Vehicles</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px">
+    <sc-for list="{{vehicles}}" as="v" hint-placeholder-count="3">
+      <div class="oc-card">
+        <button style="box-sizing: border-box; width: 100%; padding: 14px; display: flex; align-items: center; gap: 14px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer" aria-label="{{v.aria}}">
+          <span style="width: 48px; height: 48px; border-radius: var(--rRound); display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: {{v.bg}}; color: {{v.fg}}">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 16 M4 16h16v3H4z M7 19v1.5 M17 19v1.5 M7.5 13.5h.01 M16.5 13.5h.01"/></svg>
+          </span>
+          <span style="flex: 1; min-width: 0">
+            <span style="display: block; font-size: 17px; font-weight: 800">{{v.name}}</span>
+            <span style="display: block; font-size: 12px; color: var(--text2)">{{v.platform}}</span>
+            <span style="display: block; font-size: 12px; color: var(--text2); margin-top: 3px">{{v.sub}}</span>
+          </span>
+          <sc-if value="{{v.current}}" hint-placeholder-val="{{ false }}">
+            <span style="padding: 5px 10px; border-radius: var(--rP); background: var(--tileOn); color: var(--onAccentC); font-size: 12px; font-weight: 700; flex-shrink: 0">Current</span>
+          </sc-if>
+        </button>
+        <div style="display: flex">
+          <button class="vh-act" aria-label="Rename {{v.name}}">Rename</button>
+          <button class="vh-act" aria-label="Unpair {{v.name}}" style="color: var(--danger)">Unpair</button>
+        </div>
+      </div>
+    </sc-for>
+
+    <button style="min-height: 64px; border-radius: var(--rM); border: 1.5px dashed var(--outline); background: transparent; color: var(--text2); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg>
+      Add a vehicle
+    </button>
+  </div>
+
+  <div style="margin: 16px 4px 0; font-size: 12px; line-height: 1.45; color: var(--text2)">Only the current vehicle connects over Bluetooth. The others show their last known state.</div>
+
+  <sc-if value="{{dialog}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+      <div role="alertdialog" aria-label="Unpair EV6" style="width: 100%; box-sizing: border-box; padding: 22px 20px 20px; border-radius: var(--rL); background: var(--surface); border: 1px solid var(--tileBorder); box-shadow: 0 18px 48px rgba(0,0,0,.5)">
+        <div style="font-size: 20px; font-weight: 800">Unpair EV6?</div>
+        <div style="margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--text2)">EV6 will be removed from this app, and the vehicle will forget this phone. To use it again, you will need to pair it again.</div>
+        <div style="margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--text2)">Your other vehicles are not affected.</div>
+        <div style="display: flex; gap: 10px; margin-top: 20px">
+          <button class="vh-btn">Cancel</button>
+          <button class="vh-btn danger">Unpair</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","default":"light","options":["light","dark"]},"dialog":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = (this.props.theme ?? 'light') === 'dark';
+    const dialog = this.props.dialog === true || this.props.dialog === 'true';
+    const c = dark
+      ? { teal: { bg: 'rgba(15,63,57,.94)', fg: '#BDF2EA' }, steel: { bg: 'rgba(55,71,79,.94)', fg: '#ECEFF1' }, rose: { bg: 'rgba(94,26,52,.94)', fg: '#FFD9E5' } }
+      : { teal: { bg: 'rgba(203,234,228,.94)', fg: '#00302A' }, steel: { bg: 'rgba(207,216,220,.94)', fg: '#1C262B' }, rose: { bg: 'rgba(252,214,226,.94)', fg: '#5B0F2C' } };
+    const vehicles = [
+      { ...c.teal, name: 'EV6', platform: 'E-GMP', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
+      { ...c.steel, name: 'Weekend car', platform: 'Combustion', sub: '41% · 380 km · Updated 3 h ago', current: false, aria: 'Switch to Weekend car' },
+      { ...c.rose, name: 'City car', platform: 'Electric', sub: '88% · 214 km · Updated yesterday', current: false, aria: 'Switch to City car' }
+    ];
+    return { themeClass: (dark ? 'oc-dark' : 'oc-light') + ' oc-skin-default', vehicles, dialog };
+  }
+}
+</script>
+</body>
+</html>

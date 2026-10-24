@@ -1,6 +1,11 @@
 # 3D hero
 
-The vehicle picture at the centre of the [dashboard](ui.md). It is a separate widget with a small interface, so the dashboard can be built and tested before the 3D implementation is chosen. This page records what the hero must do, what is known about the options, and how to decide.
+The vehicle picture on the [dashboard](ui.md). It is a separate widget with a small interface, so the dashboard can be built and tested before the 3D implementation is chosen. This page records what the hero must do, what is known about the options, and how to decide.
+
+## Where it appears
+*   **Remote tier:** behind the tile grid, in a box between the header and the tiles. The dashboard gives it that box and resizes it as tiles are added (see [the hero box](ui.md#remote-tier)).
+*   **Bluetooth tier:** not shown by default, since you are in the car and the screen space is better used by tiles. It can come back as a **Car view** tile (2×2 or 4×2) from the "Add a tile" list. The tile gives the hero a box of the tile's size.
+*   It is the same widget in both places. It must work at any box size, not only the full-screen one, and should be cheap enough to run inside a scrolling grid.
 
 > **Status:** the current dashboard renders the car with a Three.js viewer in a WebView (see [Architecture](architecture.md#3d-viewer)). Replacing the WebView is planned; the options below are not yet evaluated on a device.
 
@@ -9,8 +14,8 @@ The vehicle picture at the centre of the [dashboard](ui.md). It is a separate wi
 *   **Orthographic camera**, looking at the car from the front-driver side and above by default.
 *   **State-driven camera moves.** The camera swings to a different view when the state calls for it. Today: it flips to the rear when the charge port is open, because on the EV6 the port is at the rear passenger side. Platforms define their own views.
 *   **State-driven parts.** Doors, windows, frunk and trunk, lights and hazards, the charge port and cable, and a charging glow animate to match the state.
-*   **Driving scene.** When driving, the car sits on a road that advances (the dashed lane line scrolls) at a rate tied to the speed. The speed itself is drawn by the header, not the hero.
-*   **Transparent background.** The hero draws over the page colour, with Flutter UI above it (the header and the frosted controls layer).
+*   **Driving scene.** When driving, the car sits on a road that advances (the dashed lane line scrolls) at a rate tied to the speed. The speed itself is drawn by the header (remote tier) or a Speed tile (Bluetooth tier), not the hero.
+*   **Transparent background.** The hero draws over the page colour (or a tile's surface), with Flutter UI above it (the header and the frosted tile layer).
 *   **Fits its box.** The dashboard gives the hero a box. The car is centred and scaled to fit the box's width and height, never clipped.
 *   **Plain fallback.** While the viewer boots, and when it fails, a still image of the car is shown. The current viewer already caches a snapshot per theme; keep that idea.
 *   **Stale state.** A hero for stale data looks stale (dimmed), like the rest of the screen.
@@ -20,7 +25,7 @@ The hero is a widget that takes state and a box, and nothing else:
 
 | Input | Notes |
 |---|---|
-| Box size | Given by the dashboard's layout; changes while controls unfold, animated |
+| Box size | Given by the dashboard (remote tier) or by the Car view tile; changes while tiles unfold or are added, animated |
 | Brightness | Light or dark |
 | Skin accent | For the charge glow and cable |
 | Vehicle snapshot (typed state) | Doors, windows, trunk and frunk, lights, hazards, charge port state, charge power, driving and speed, plus the advanced state when live |
@@ -55,9 +60,10 @@ Decide from a device test, not from documentation. One minimal Flutter app per c
 5.  Recolouring the paint material.
 6.  A transparent background, with Flutter widgets drawn over and under it.
 7.  Resizing the viewer's box while it animates (the dashboard does this).
-8.  Frame rate, memory and start-up time on a real mid-range phone, and what happens on pause and resume.
+8.  Running small inside a scrolling grid, as a Car view tile, without making the scroll janky.
+9.  Frame rate, memory and start-up time on a real mid-range phone, and what happens on pause and resume.
 
-The simulator cannot answer the last item, so this has to run on the maintainer's phone. Pick the candidate that passes 1–7 with acceptable numbers for 8. If none does, fix the WebView approach instead of living with it.
+The simulator cannot answer the last item, so this has to run on the maintainer's phone. Pick the candidate that passes 1–8 with acceptable numbers for 9. If none does, fix the WebView approach instead of living with it.
 
 ## Model
 The current model is a modified copy of a high-poly model from the web (see `assets_src/README.md` for the source and the licence terms). Its parts are separated for animation, but it is not otherwise optimised for mobile. Optimising it (triangle budget, merging static parts, texture sizes, draw calls) is separate work, planned after the viewer decision. Keep the node, material and animation names stable across any re-export, because the viewer looks them up by name. Update the attributions in `lib/cars/<platform>/licenses.dart` whenever the model changes.

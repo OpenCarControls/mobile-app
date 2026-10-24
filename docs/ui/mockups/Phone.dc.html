@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 body{margin:0}
-.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--car:#AEBBB8;--carTop:#C6D0CD;--glass:#6F878C;--wheel:#1E2628;--lamp:#E3E9E7;--lampOn:#FFC933;--ground:#E3E9E7;--seam:#8E9D9A;--tail:#C0392B;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--panelBg:rgba(231,236,235,.66);--road:#7C8B89;--roadLine:#F1F4F3;--headerBg:rgba(231,236,235,.82)}
-.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--car:#41535A;--carTop:#4E6269;--glass:#1B2A2E;--wheel:#0A0E0F;--lamp:#31424A;--lampOn:#FFD54A;--ground:#121A1C;--seam:#5A6F75;--tail:#E5584A;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--panelBg:rgba(12,17,18,.66);--road:#232E31;--roadLine:#8CA0A4;--headerBg:rgba(12,17,18,.8)}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--car:#AEBBB8;--carTop:#C6D0CD;--glass:#6F878C;--wheel:#1E2628;--lamp:#E3E9E7;--lampOn:#FFC933;--ground:#E3E9E7;--seam:#8E9D9A;--tail:#C0392B;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--panelBg:rgba(231,236,235,.66);--scrim:rgba(231,236,235,.6);--road:#7C8B89;--roadLine:#F1F4F3;--headerBg:rgba(231,236,235,.82)}
+.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--car:#41535A;--carTop:#4E6269;--glass:#1B2A2E;--wheel:#0A0E0F;--lamp:#31424A;--lampOn:#FFD54A;--ground:#121A1C;--seam:#5A6F75;--tail:#E5584A;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--panelBg:rgba(12,17,18,.66);--scrim:rgba(12,17,18,.6);--road:#232E31;--roadLine:#8CA0A4;--headerBg:rgba(12,17,18,.8)}
 .oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
 .oc-light.oc-skin-boxy,.oc-dark.oc-skin-boxy{--rS:2px;--rM:2px;--rL:2px;--rP:2px;--rRound:2px}
 .oc-light.oc-skin-round,.oc-dark.oc-skin-round{--rS:22px;--rM:28px;--rL:40px;--rP:999px;--rRound:50%}
@@ -25,10 +25,12 @@ body{margin:0}
 .oc-iconly{min-height:56px;align-items:center;justify-content:center}
 .oc-tile.on{background:var(--tileOn);color:var(--onAccentC)}
 .oc-tile.pending,.oc-round.pending{border-color:var(--accent);animation:ocPulse 1s ease-in-out infinite}
-.oc-tile.add{background:transparent;border:1.5px dashed var(--outline);color:var(--text2)}
+.oc-tile.oc-dashed{align-items:center;justify-content:center;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border:1.5px dashed var(--outline);color:var(--text2)}
 .oc-cap{font-size:12px;color:var(--text2)}
+.oc-tile.on .oc-cap{color:var(--onAccentC)}
 .oc-glass{border:1px solid var(--tileBorder);background:var(--tileBg);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .oc-chip{min-height:44px;padding:0 14px;border-radius:var(--rP);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.oc-chip.on{background:var(--tileOn);border-color:var(--accent);color:var(--onAccentC)}
 .oc-round{width:44px;height:44px;flex-shrink:0;border-radius:var(--rRound);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .oc-round.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .oc-xbtn{position:relative;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:var(--rS);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
@@ -36,19 +38,24 @@ body{margin:0}
 .oc-tag{position:absolute;left:6px;top:3px;font-size:11px;font-weight:800;opacity:.75}
 .oc-dots{display:flex;gap:3px;height:5px}
 .oc-dots span{width:5px;height:5px;border-radius:50%;background:currentColor}
-.oc-sec{display:inline-block;padding:6px 12px;border-radius:var(--rP);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text2)}
+.oc-x{position:absolute;top:-8px;right:-8px;width:28px;height:28px;border-radius:50%;border:2px solid var(--bg);background:var(--text);color:var(--bg);font:inherit;font-size:16px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.oc-size{padding:5px 9px;border-radius:8px;border:0;background:var(--accent);color:var(--surface);font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.oc-scrim{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:var(--rM);background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:1}
+.oc-dot{width:8px;height:8px;box-sizing:border-box;border-radius:50%;background:var(--dotc)}
+.oc-dot.spin{width:12px;height:12px;background:transparent;border:2px solid var(--dotc);border-top-color:transparent;animation:ocSpin .8s linear infinite}
 .oc-carbox{transition:top .25s ease,height .25s ease}
-.oc-tile:focus-visible,.oc-chip:focus-visible,.oc-round:focus-visible,.oc-xbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.oc-tile:focus-visible,.oc-chip:focus-visible,.oc-round:focus-visible,.oc-xbtn:focus-visible,.oc-x:focus-visible,.oc-size:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @keyframes ocPulse{50%{opacity:.55}}
+@keyframes ocSpin{to{transform:rotate(360deg)}}
 @keyframes ocRoad{to{stroke-dashoffset:60}}
 .oc-road{animation:ocRoad .6s linear infinite}
-@media (prefers-reduced-motion: reduce){.oc-tile.pending,.oc-round.pending,.oc-road{animation:none}.oc-carbox{transition:none}}
+@media (prefers-reduced-motion: reduce){.oc-tile.pending,.oc-round.pending,.oc-road,.oc-dot.spin{animation:none}.oc-carbox{transition:none}}
 </style>
 </helmet>
 <div class="{{themeClass}}" style="width: {{w}}px; height: {{h}}px; box-sizing: border-box; overflow: hidden; position: relative; background: var(--bg); color: var(--text); font-family: 'Manrope', system-ui, sans-serif">
 
-  <!-- Layer 0: 3D hero slot (placeholder). The real viewer fills this box; it sits centered between the header and the controls, and is scaled to fit its width -->
-  <div class="oc-carbox" style="position: absolute; left: 0; top: {{carTop}}px; width: {{heroW}}; height: {{carH}}px; box-sizing: border-box; padding: 0 16px">
+  <!-- Layer 0: 3D hero slot (remote tier only). Centered between the header and the controls, scaled to fit its width -->
+  <div class="oc-carbox" style="display: {{heroDisplay}}; position: absolute; left: 0; top: {{carTop}}px; width: {{heroW}}; height: {{carH}}px; box-sizing: border-box; padding: 0 16px">
     <svg viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Side view of the vehicle, placeholder for the 3D hero" style="width: 100%; height: 100%; display: block">
       <g opacity="{{roadOp}}">
         <rect x="0" y="0" width="420" height="200" style="fill: var(--road)"/>
@@ -78,100 +85,214 @@ body{margin:0}
     </svg>
   </div>
 
-  <!-- Layer 1: scrolling controls. They rest at the bottom when short and scroll over the car once there is no room left -->
+  <!-- Layer 1: the tile grid. Remote: rests at the bottom over the hero. Bluetooth: fills the screen below the header -->
   <div style="position: absolute; top: 0; bottom: 0; right: 0; left: {{ctlLeft}}; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; background: {{ctlBg}}; border-left: {{ctlBorder}}; padding: {{ctlPad}}">
     <div style="flex: {{spacerGrow}} 0 {{spacerH}}px"></div>
     <div ref="{{setPanel}}" style="flex-shrink: 0; box-sizing: border-box; padding: {{wrapPad}}; background: {{wrapBg}}; -webkit-backdrop-filter: {{wrapBlur}}; backdrop-filter: {{wrapBlur}}; border-radius: {{wrapRadius}}; border-top: {{wrapBorder}}">
 
-    <div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); gap: 8px">
-      <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
-        <button class="oc-tile {{tileMode}} {{t.cls}}" aria-label="{{t.aria}}" onClick="{{t.tap}}">
-          <svg viewBox="0 0 24 24" width="{{iconSize}}" height="{{iconSize}}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"/></svg>
-          <sc-if value="{{showTitle}}" hint-placeholder-val="{{ true }}">
-            <span style="font-size: 12px; font-weight: 700">{{t.label}}</span>
-          </sc-if>
-        </button>
-      </sc-for>
-    </div>
+      <div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); grid-auto-rows: minmax({{rowH}}px, auto); grid-auto-flow: row dense; align-items: {{gridAlign}}; gap: 8px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+          <div style="{{t.cell}}; display: flex; position: relative; outline: {{t.outline}}; outline-offset: 2px; border-radius: var(--rM)">
 
-    <!-- Climate: the bar always shows inside/outside temperature. Target and extras unfold under it when climate is on -->
-    <div class="oc-glass" style="margin-top: 8px; border-radius: var(--rM); overflow: hidden">
-      <div style="height: 64px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
-        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="{{iTemp}}"/></svg>
-          <div style="min-width: 0">
-            <div style="font-size: 14px; font-weight: 700">Climate</div>
-            <div class="oc-cap">{{climateCap}}</div>
-          </div>
-        </div>
-        <button class="oc-round {{climateCls}}" aria-label="{{climateAria}}" onClick="{{climateTap}}">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{iPower}}"/></svg>
-        </button>
-      </div>
-      <sc-if value="{{climateOn}}" hint-placeholder-val="{{ false }}">
-        <div style="border-top: 1px solid var(--tileBorder); padding: 12px; display: flex; flex-direction: column; gap: 10px">
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px; border-radius: var(--rP); background: var(--surface); border: 1px solid var(--outline)">
-            <button class="oc-round" aria-label="Lower temperature" onClick="{{tempDown}}" style="border-color: transparent">−</button>
-            <span style="font-size: 22px; font-weight: 800">{{tempLabel}}</span>
-            <button class="oc-round" aria-label="Raise temperature" onClick="{{tempUp}}" style="border-color: transparent">+</button>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px">
-            <sc-for list="{{extras}}" as="x" hint-placeholder-count="5">
-              <button class="oc-xbtn {{x.cls}}" aria-label="{{x.aria}}" onClick="{{x.tap}}">
-                <sc-if value="{{x.hasTag}}" hint-placeholder-val="{{ false }}">
-                  <span class="oc-tag" aria-hidden="true">{{x.tag}}</span>
-                </sc-if>
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: scaleX({{x.flip}})"><path d="{{x.icon}}"/></svg>
-                <sc-if value="{{x.hasDots}}" hint-placeholder-val="{{ false }}">
-                  <span class="oc-dots" aria-hidden="true"><span style="opacity: {{x.d1}}"></span><span style="opacity: {{x.d2}}"></span><span style="opacity: {{x.d3}}"></span></span>
+            <sc-if value="{{t.isCmd1}}" hint-placeholder-val="{{ true }}">
+              <button class="oc-tile {{tileMode}} {{t.cls}}" aria-label="{{t.aria}}" onClick="{{t.tap}}" style="flex: 1">
+                <svg viewBox="0 0 24 24" width="{{iconSize}}" height="{{iconSize}}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"/></svg>
+                <sc-if value="{{showTitle}}" hint-placeholder-val="{{ true }}">
+                  <span style="font-size: 12px; font-weight: 700">{{t.label}}</span>
                 </sc-if>
               </button>
+            </sc-if>
+
+            <sc-if value="{{t.isCmdW}}" hint-placeholder-val="{{ false }}">
+              <button class="oc-tile {{t.cls}}" aria-label="{{t.aria}}" onClick="{{t.tap}}" style="flex: 1; min-height: {{rowH}}px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="{{t.icon}}"/></svg>
+                <span>
+                  <span style="display: block; font-size: 14px; font-weight: 700">{{t.label}}</span>
+                  <span class="oc-cap" style="display: block">{{t.cap}}</span>
+                </span>
+              </button>
+            </sc-if>
+
+            <sc-if value="{{t.isStatS}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; box-sizing: border-box; padding: 10px; border-radius: var(--rM); display: flex; flex-direction: column; justify-content: space-between">
+                <span class="oc-cap">{{t.label}}</span>
+                <span><span style="font-size: 18px; font-weight: 800">{{t.value}}</span><span style="font-size: 12px; font-weight: 600; color: var(--text2)"> {{t.unit}}</span></span>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{t.isStatM}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; box-sizing: border-box; padding: 10px 12px; border-radius: var(--rM); display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                <div style="display: flex; flex-direction: column; justify-content: space-between; align-self: stretch">
+                  <span class="oc-cap">{{t.label}}</span>
+                  <span><span style="font-size: 20px; font-weight: 800">{{t.value}}</span><span style="font-size: 12px; font-weight: 600; color: var(--text2)"> {{t.unit}}</span></span>
+                </div>
+                <sc-if value="{{t.hasSpark}}" hint-placeholder-val="{{ false }}">
+                  <svg viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true" style="width: 46%; height: 34px; flex-shrink: 0"><polyline points="{{t.spark}}" style="fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke"/></svg>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{t.isStatL}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; box-sizing: border-box; padding: 12px; border-radius: var(--rM); display: flex; flex-direction: column; justify-content: space-between; gap: 6px">
+                <div>
+                  <div class="oc-cap">{{t.label}}</div>
+                  <div style="margin-top: 2px"><span style="font-size: 32px; line-height: 1.1; font-weight: 800">{{t.value}}</span><span style="font-size: 14px; font-weight: 600; color: var(--text2)"> {{t.unit}}</span></div>
+                  <div class="oc-cap">{{t.sub}}</div>
+                </div>
+                <sc-if value="{{t.hasSpark}}" hint-placeholder-val="{{ false }}">
+                  <svg viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true" style="width: 100%; height: 40px"><polyline points="{{t.spark}}" style="fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke"/></svg>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{t.isCar}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; box-sizing: border-box; padding: 8px; border-radius: var(--rM); min-height: 120px">
+                <svg viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Car view tile, placeholder for the 3D hero" style="width: 100%; height: 100%; display: block">
+                  <g transform="translate(420,0) rotate(90)">
+                    <rect x="39" y="84" width="13" height="42" rx="5" style="fill: var(--wheel)"/>
+                    <rect x="148" y="84" width="13" height="42" rx="5" style="fill: var(--wheel)"/>
+                    <rect x="39" y="300" width="13" height="46" rx="5" style="fill: var(--wheel)"/>
+                    <rect x="148" y="300" width="13" height="46" rx="5" style="fill: var(--wheel)"/>
+                    <path d="M62 52 C70 24 130 24 138 52 L146 120 C150 160 152 260 150 330 C148 380 132 398 100 398 C68 398 52 380 50 330 C48 260 50 160 54 120 Z" style="fill: var(--car); stroke: var(--seam); stroke-width: 1"/>
+                    <path d="M66 126 L134 126 L127 168 L73 168 Z" style="fill: var(--glass)"/>
+                    <rect x="73" y="168" width="54" height="94" rx="9" style="fill: var(--carTop)"/>
+                    <path d="M73 262 L127 262 L134 296 L66 296 Z" style="fill: var(--glass)"/>
+                    <rect x="70" y="388" width="60" height="4" rx="2" style="fill: var(--tail)"/>
+                    <circle cx="150" cy="352" r="24" style="fill: var(--accent)" opacity="{{portGlow}}"/>
+                    <circle cx="150" cy="352" r="6" style="fill: var(--accent)" opacity="{{portOp}}"/>
+                  </g>
+                </svg>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{t.isBattery}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; box-sizing: border-box; padding: 12px; border-radius: var(--rM); display: flex; flex-direction: column; justify-content: center; gap: 6px">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+                  <span class="oc-cap">{{t.stLabel}}</span>
+                  <span class="oc-cap">{{t.stSub}}</span>
+                </div>
+                <span style="font-size: {{t.stSize}}px; line-height: 1.15; font-weight: 800; color: {{t.stColor}}">{{t.stTitle}}</span>
+                <div style="position: relative; height: 6px; border-radius: 3px; background: var(--outline); margin-top: 2px">
+                  <div style="position: absolute; left: 0; top: 0; height: 6px; border-radius: 3px; background: var(--accent); width: {{t.barPct}}%"></div>
+                  <sc-if value="{{t.hasTick}}" hint-placeholder-val="{{ false }}">
+                    <div style="position: absolute; top: -3px; left: {{t.tickPct}}%; width: 2px; height: 12px; border-radius: 1px; background: var(--text2)"></div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{t.isEditBtn}}" hint-placeholder-val="{{ false }}">
+              <button class="oc-tile oc-dashed" aria-label="{{t.aria}}" onClick="{{t.tap}}" style="flex: 1; min-height: {{rowH}}px">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"/></svg>
+              </button>
+            </sc-if>
+
+            <sc-if value="{{t.isClimate}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-glass" style="flex: 1; min-width: 0; border-radius: var(--rM); overflow: hidden">
+                <div style="height: 64px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                  <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="{{iTemp}}"/></svg>
+                    <div style="min-width: 0">
+                      <div style="font-size: 14px; font-weight: 700">Climate</div>
+                      <div class="oc-cap">{{climateCap}}</div>
+                    </div>
+                  </div>
+                  <button class="oc-round {{climateCls}}" aria-label="{{climateAria}}" onClick="{{climateTap}}">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{iPower}}"/></svg>
+                  </button>
+                </div>
+                <sc-if value="{{climateOn}}" hint-placeholder-val="{{ false }}">
+                  <div style="border-top: 1px solid var(--tileBorder); padding: 12px; display: flex; flex-direction: column; gap: 10px">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px; border-radius: var(--rP); background: var(--surface); border: 1px solid var(--outline)">
+                      <button class="oc-round" aria-label="Lower temperature" onClick="{{tempDown}}" style="border-color: transparent">−</button>
+                      <span style="font-size: 22px; font-weight: 800">{{tempLabel}}</span>
+                      <button class="oc-round" aria-label="Raise temperature" onClick="{{tempUp}}" style="border-color: transparent">+</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px">
+                      <sc-for list="{{extras}}" as="x" hint-placeholder-count="5">
+                        <button class="oc-xbtn {{x.cls}}" aria-label="{{x.aria}}" onClick="{{x.tap}}">
+                          <sc-if value="{{x.hasTag}}" hint-placeholder-val="{{ false }}">
+                            <span class="oc-tag" aria-hidden="true">{{x.tag}}</span>
+                          </sc-if>
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: scaleX({{x.flip}})"><path d="{{x.icon}}"/></svg>
+                          <sc-if value="{{x.hasDots}}" hint-placeholder-val="{{ false }}">
+                            <span class="oc-dots" aria-hidden="true"><span style="opacity: {{x.d1}}"></span><span style="opacity: {{x.d2}}"></span><span style="opacity: {{x.d3}}"></span></span>
+                          </sc-if>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <!-- Edit mode: grip, remove and size controls on every tile -->
+            <sc-if value="{{t.editing}}" hint-placeholder-val="{{ false }}">
+              <div class="oc-scrim">
+                <button class="oc-x" aria-label="Remove {{t.label}}" onClick="{{t.remove}}">×</button>
+                <sc-if value="{{t.canResize}}" hint-placeholder-val="{{ false }}">
+                  <button class="oc-size" aria-label="Resize {{t.label}}, now {{t.sizeLabel}}" onClick="{{t.resize}}">{{t.sizeLabel}}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+        <div class="oc-cap" style="margin-top: 12px">Drag to move · tap a size to resize · × to remove</div>
+      </sc-if>
+
+      <sc-if value="{{showHidden}}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top: 16px">
+          <div class="cap oc-cap" style="margin-bottom: 8px; font-weight: 700">Add a tile</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{hidden}}" as="hd" hint-placeholder-count="3">
+              <button class="oc-chip oc-glass" onClick="{{hd.tap}}">+ {{hd.label}}</button>
             </sc-for>
           </div>
         </div>
       </sc-if>
     </div>
-
-    <sc-if value="{{isBle}}" hint-placeholder-val="{{ false }}">
-      <div>
-        <div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0 8px">
-          <span class="oc-sec oc-glass">Live data</span>
-          <button class="oc-chip oc-glass">Edit layout</button>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-          <sc-for list="{{stats}}" as="st" hint-placeholder-count="6">
-            <div class="oc-glass" style="padding: 12px; border-radius: var(--rM)">
-              <div class="oc-cap">{{st.label}}</div>
-              <div style="margin-top: 2px"><span style="font-size: 18px; font-weight: 800">{{st.value}}</span><span style="font-size: 12px; font-weight: 600; color: var(--text2)"> {{st.unit}}</span></div>
-            </div>
-          </sc-for>
-        </div>
-
-        <div class="oc-sec oc-glass" style="margin: 20px 0 8px">Advanced controls</div>
-        <div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); gap: 8px">
-          <sc-for list="{{advTiles}}" as="a" hint-placeholder-count="2">
-            <button class="oc-tile {{tileMode}} {{a.cls}}" aria-label="{{a.aria}}" onClick="{{a.tap}}">
-              <svg viewBox="0 0 24 24" width="{{iconSize}}" height="{{iconSize}}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"/></svg>
-              <sc-if value="{{showTitle}}" hint-placeholder-val="{{ true }}">
-                <span style="font-size: 12px; font-weight: 700">{{a.label}}</span>
-              </sc-if>
-            </button>
-          </sc-for>
-        </div>
-      </div>
-    </sc-if>
-    </div>
   </div>
 
-  <!-- Layer 2: pinned header. Translucent so scrolled controls blur out underneath -->
+  <!-- Layer 2: pinned header. Translucent so scrolled tiles blur out underneath -->
   <div ref="{{setHeader}}" style="position: absolute; left: 0; top: 0; width: {{heroW}}; box-sizing: border-box; padding: {{heroPad}}; background: {{headerBg}}; -webkit-backdrop-filter: {{headerBlur}}; backdrop-filter: {{headerBlur}}">
+    <sc-if value="{{isBle}}" hint-placeholder-val="{{ false }}">
+      <button aria-label="Switch vehicle, current {{vehicleName}}" style="display: flex; align-items: center; gap: 2px; min-height: 28px; margin-bottom: 4px; padding: 0; background: transparent; border: 0; color: var(--text2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer">{{vehicleName}}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    </sc-if>
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-      <div style="min-width: 0">
-        <div style="font-size: 20px; font-weight: 800; line-height: 1.2">{{vehicleName}}</div>
-      </div>
+      <sc-if value="{{isRemote}}" hint-placeholder-val="{{ true }}">
+        <button aria-label="Switch vehicle, current {{vehicleName}}" style="display: flex; align-items: center; gap: 4px; min-height: 44px; min-width: 0; padding: 0; background: transparent; border: 0; color: var(--text); font: inherit; cursor: pointer">
+          <span style="font-size: 20px; font-weight: 800; line-height: 1.2">{{vehicleName}}</span>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text2)"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </sc-if>
+      <sc-if value="{{isBle}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <sc-if value="{{isEv}}" hint-placeholder-val="{{ true }}">
+            <svg width="38" height="20" viewBox="0 0 46 24" role="img" aria-label="Battery level {{level}} percent" style="flex-shrink: 0">
+              <rect x="1" y="1" width="40" height="22" rx="6" style="fill: none; stroke: var(--text); stroke-width: 2.4"/>
+              <rect x="4.5" y="4.5" width="{{fillW}}" height="15" rx="3" style="fill: var(--accent)"/>
+              <rect x="43" y="8" width="3" height="8" rx="1.5" style="fill: var(--text)"/>
+            </svg>
+          </sc-if>
+          <sc-if value="{{isIce}}" hint-placeholder-val="{{ false }}">
+            <svg width="26" height="23" viewBox="0 0 34 30" role="img" aria-label="Fuel level {{level}} percent" style="flex-shrink: 0">
+              <rect x="2" y="2" width="16" height="26" rx="3" style="fill: none; stroke: var(--text); stroke-width: 2.4"/>
+              <rect x="5" y="{{tankY}}" width="10" height="{{tankH}}" rx="1.5" style="fill: var(--accent)"/>
+              <path d="M18 11h3a2 2 0 0 1 2 2v8a2.5 2.5 0 0 0 5 0V11l-4-4" style="fill: none; stroke: var(--text); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"/>
+            </svg>
+          </sc-if>
+          <span style="font-size: 22px; line-height: 1.1; font-weight: 800">{{level}}%</span>
+          <span style="font-size: 13px; font-weight: 600; color: var(--text2)">{{range}} {{rangeUnit}}</span>
+        </div>
+      </sc-if>
       <div style="display: flex; align-items: center; gap: 8px">
         <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--rP); background: var(--surface); border: 1px solid var(--outline); font-size: 13px; font-weight: 600">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{dotColor}}"></span>
+          <span style="width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+            <span class="oc-dot {{dotCls}}" style="--dotc: {{dotColor}}"></span>
+          </span>
           <span>{{connLabel}}</span>
         </div>
         <button aria-label="Settings" style="width: 44px; height: 44px; border-radius: var(--rRound); border: 1px solid var(--outline); background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer">
@@ -180,6 +301,7 @@ body{margin:0}
       </div>
     </div>
 
+    <sc-if value="{{isRemote}}" hint-placeholder-val="{{ true }}">
     <div style="display: flex; align-items: center; gap: 12px; margin-top: 14px">
       <sc-if value="{{isEv}}" hint-placeholder-val="{{ true }}">
         <svg width="46" height="24" viewBox="0 0 46 24" role="img" aria-label="Battery level {{level}} percent" style="flex-shrink: 0">
@@ -211,17 +333,19 @@ body{margin:0}
     <sc-if value="{{hasStatus}}" hint-placeholder-val="{{ true }}">
       <div style="margin-top: 10px; font-size: 14px; font-weight: 600; color: {{statusColor}}">{{statusLine}}</div>
     </sc-if>
+    </sc-if>
   </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"vehicle":{"editor":"enum","default":"ev","options":["ev","ice"]},"tier":{"editor":"enum","default":"ble","options":["remote","ble"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"layout":{"editor":"enum","default":"phone","options":["phone","wide"]},"buttons":{"editor":"enum","default":"titled","options":["titled","icon"]},"skin":{"editor":"enum","default":"default","options":["default","boxy","round"]},"driving":{"editor":"boolean","default":false},"connected":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  state = { locked: true, climate: false, port: true, precond: false, pending: null, temp: 21, defF: false, defR: false, wheel: false, seatD: 0, seatP: 0, win: 'closed', hdrH: 150, panelH: 240 };
+  // layout = null means "the platform's default layout"; the editor replaces it with the user's list
+  state = { locked: true, climate: false, port: true, precond: false, pending: null, temp: 21, defF: false, defR: false, wheel: false, seatD: 0, seatP: 0, win: 'closed', hdrH: 150, panelH: 240, edit: false, layout: null };
 
   setHeader = (n) => { this._hdr = n; };
   setPanel = (n) => { this._pnl = n; };
 
-  // The car is centered between the header and the controls, so both heights are measured
+  // On the remote tier the car is centered between the header and the controls, so both heights are measured
   measure() {
     const h = this._hdr ? this._hdr.offsetHeight : 0;
     const p = this._pnl ? this._pnl.offsetHeight : 0;
@@ -268,6 +392,9 @@ class Component extends DCLogic {
     const p = s.pending;
     const H = wide ? 720 : 844;
     const MINCAR = 280;
+    const dash = ble;                 // the Bluetooth tier has no hero layer: the tile grid is the screen
+    const sideCol = wide && !dash;    // remote tablet: hero left, tiles in a side column
+    const rowH = iconOnly ? 56 : 64;
 
     const I = {
       lock: 'M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z',
@@ -280,32 +407,135 @@ class Component extends DCLogic {
       winVent: 'M5 4h14v16H5z M5 15h14',
       heat: 'M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z',
       sliders: 'M4 7h9 M17 7h3 M4 17h3 M11 17h9 M13 4v6 M7 14v6',
-      plus: 'M12 5v14 M5 12h14',
       defFront: 'M4 19l3-12h10l3 12z M9.5 10c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5 M12 10c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5 M14.5 10c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5',
       defRear: 'M4 6h16v12H4z M9.5 9c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5 M12 9c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5 M14.5 9c.8.8.8 1.7 0 2.5s-.8 1.7 0 2.5',
       wheel: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 11h6l3 3 3-3h6',
-      seat: 'M8 3l1.5 9H18l1 6H8 M8 18v3 M19 18v3'
+      seat: 'M8 3l1.5 9H18l1 6H8 M8 18v3 M19 18v3',
+      pencil: 'M4 20h4L19 9l-4-4L4 16v4z M13.5 6.5l4 4',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      reset: 'M4 12a8 8 0 1 0 2.5-5.8 M4 5v4h4'
     };
 
-    // Status is carried by fill and icon state, so a button is just icon (+ title)
-    const mk = (key, label, icon, on, cap, apply, ms) => ({
-      key, label, icon,
-      aria: label + ', ' + cap,
-      cls: (on ? 'on ' : '') + (p === key ? 'pending' : ''),
-      tap: this.act(key, apply, ms)
+    // ---- Tile catalog: everything a platform offers. Each kind lists the sizes (columns x rows) it supports ----
+    const SPARK = '0,18 8,15 16,17 24,9 32,13 40,6 48,11 56,4 64,9 72,5 80,8';
+    const cmd = (key, label, icon, on, cap, apply, ms, adv) => ({ kind: 'cmd', key, label, icon, on, cap, apply, ms, adv: !!adv, sizes: [[1, 1], [2, 1]] });
+    const stat = (label, value, unit, sub, spark, adv) => ({ kind: 'stat', label, value, unit, sub, spark, adv: adv !== false, sizes: [[1, 1], [2, 1], [2, 2]] });
+    const cat = {};
+    cat.lock = cmd('lock', 'Doors', s.locked ? I.lock : I.unlock, s.locked, s.locked ? 'locked' : 'unlocked', (st) => ({ locked: !st.locked }), 700);
+    if (ev) cat.port = cmd('port', 'Port', I.plug, s.port, s.port ? 'open' : 'closed', (st) => ({ port: !st.port }), 900);
+    cat.flash = cmd('flash', 'Lights', I.bulb, false, 'flash once', () => ({}), 1000);
+    cat.win = cmd('win', 'Windows', s.win === 'vent' ? I.winVent : I.winClosed, s.win === 'vent', s.win === 'vent' ? 'vented' : 'closed', (st) => ({ win: st.win === 'vent' ? 'closed' : 'vent' }), 900);
+    cat.precond = cmd('precond', ev ? 'Preheat' : 'Pre-heat', I.heat, s.precond, s.precond ? 'heating' : 'off', (st) => ({ precond: !st.precond }), 900, true);
+    cat.climate = { kind: 'climate', label: 'Climate', adv: false, sizes: [[4, 1]] };
+    cat.car = { kind: 'car', label: 'Car view', adv: false, sizes: [[2, 2], [4, 2]] };
+    // Level, range and charging state in one tile (the header only keeps a slim level row)
+    cat.battery = { kind: 'battery', label: ev ? 'Battery' : 'Fuel', adv: false, sizes: [[4, 1]] };
+    cat.speed = stat('Speed', driving ? '62' : '0', 'km/h', '', '', false);
+    cat.odo = stat('Odometer', '22,916', 'km', 'total', '', false);
+    if (ev) {
+      cat.power = stat('Power', driving ? '−18.4' : '7.2', 'kW', driving ? 'regenerating' : 'charging', SPARK);
+      cat.voltage = stat('Pack voltage', '697', 'V', 'nominal 697 V', '');
+      cat.gear = stat('Gear', driving ? 'D' : 'P', '', '', '');
+      cat.temps = stat('Pack temp', '24–27', '°C', 'min 24 · max 27', SPARK);
+      cat.pstate = stat('Power state', driving ? 'Ready' : 'Off', '', '', '');
+      cat.v12 = stat('12 V battery', '12.6', 'V', 'rest', '');
+    } else {
+      cat.coolant = stat('Coolant', '90', '°C', 'normal', SPARK);
+      cat.oil = stat('Oil', '96', '°C', '', '');
+      cat.engine = stat('Engine', driving ? 'On' : 'Off', '', '', '');
+      cat.v12 = stat('12 V battery', '12.6', 'V', 'rest', '');
+      cat.gear = stat('Gear', driving ? 'D' : 'P', '', '', '');
+      cat.pstate = stat('Power state', driving ? 'Ready' : 'Off', '', '', '');
+    }
+
+    // ---- The platform's initial layout per tier, so nobody starts with an empty screen ----
+    const defaults = ble
+      ? (ev
+        ? [['battery', 4, 1], ['lock', 1, 1], ['port', 1, 1], ['flash', 1, 1], ['win', 1, 1], ['climate', 4, 1], ['power', 2, 2], ['voltage', 1, 1], ['gear', 1, 1], ['pstate', 1, 1], ['precond', 1, 1], ['temps', 2, 1], ['speed', 1, 1], ['odo', 1, 1]]
+        : [['battery', 4, 1], ['lock', 1, 1], ['flash', 1, 1], ['win', 1, 1], ['precond', 1, 1], ['climate', 4, 1], ['coolant', 2, 2], ['oil', 1, 1], ['engine', 1, 1], ['v12', 1, 1], ['gear', 1, 1], ['speed', 1, 1], ['pstate', 1, 1], ['odo', 2, 1]])
+      : (ev
+        ? [['lock', 1, 1], ['port', 1, 1], ['flash', 1, 1], ['win', 1, 1], ['climate', 4, 1]]
+        : [['lock', 1, 1], ['flash', 1, 1], ['win', 1, 1], ['climate', 4, 1]]);
+    const layout = s.layout || defaults.map((d) => ({ id: d[0], w: d[1], h: d[2] }));
+    const setLayout = (next) => this.setState({ layout: next });
+
+    // Advanced tiles never appear over the remote tier
+    const visible = layout.filter((e) => cat[e.id] && (ble || !cat[e.id].adv));
+    const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const tiles = visible.map((e) => {
+      const d = cat[e.id];
+      const idx = d.sizes.findIndex((z) => z[0] === e.w && z[1] === e.h);
+      const next = d.sizes[(idx + 1) % d.sizes.length];
+      const o = {
+        id: e.id, label: d.label, w: e.w, h: e.h,
+        cell: 'grid-column: span ' + e.w + '; grid-row: span ' + e.h,
+        isCmd1: false, isCmdW: false, isStatS: false, isStatM: false, isStatL: false, isClimate: false, isCar: false, isBattery: false, isEditBtn: false,
+        stLabel: '', stTitle: '', stSub: '', stSize: 16, stColor: 'var(--text)', barPct: 0, tickPct: 80, hasTick: false,
+        icon: '', cls: '', aria: '', cap: '', value: '', unit: '', sub: '', spark: '', hasSpark: false,
+        tap: () => {},
+        editing: s.edit,
+        outline: s.edit ? '2px dashed var(--accent)' : 'none',
+        canResize: d.sizes.length > 1,
+        sizeLabel: e.w + '×' + e.h,
+        remove: () => setLayout(layout.filter((x) => x.id !== e.id)),
+        resize: () => setLayout(layout.map((x) => (x.id === e.id ? { id: x.id, w: next[0], h: next[1] } : x)))
+      };
+      if (d.kind === 'cmd') {
+        o.isCmd1 = e.w === 1;
+        o.isCmdW = e.w > 1;
+        o.icon = d.icon;
+        o.cls = (d.on ? 'on ' : '') + (p === d.key ? 'pending' : '');
+        o.aria = d.label + ', ' + d.cap;
+        o.cap = cap1(d.cap);
+        o.tap = s.edit ? () => {} : this.act(d.key, d.apply, d.ms);
+      } else if (d.kind === 'stat') {
+        o.isStatS = e.w === 1 && e.h === 1;
+        o.isStatM = e.w >= 2 && e.h === 1;
+        o.isStatL = e.h >= 2;
+        o.value = d.value; o.unit = d.unit; o.sub = d.sub; o.spark = d.spark; o.hasSpark = !!d.spark;
+      } else if (d.kind === 'climate') {
+        o.isClimate = true;
+      } else if (d.kind === 'car') {
+        o.isCar = true;
+      } else if (d.kind === 'battery') {
+        o.isBattery = true;
+        o.stLabel = ev ? 'Battery' : 'Fuel';
+        o.barPct = ev ? 64 : 62;
+        o.hasTick = ev;
+        if (ev && s.port && !driving) {
+          o.stTitle = 'Charging · 7.2 kW'; o.stSub = '1 h 05 to 80%'; o.stColor = 'var(--accent)'; o.stSize = 16;
+        } else {
+          o.stTitle = (ev ? 64 : 62) + '%'; o.stSub = (ev ? '312' : '486') + ' km'; o.stSize = 22;
+        }
+      }
+      return o;
     });
 
-    const tiles = [];
-    tiles.push(mk('lock', 'Doors', s.locked ? I.lock : I.unlock, s.locked, s.locked ? 'locked' : 'unlocked', (st) => ({ locked: !st.locked }), 700));
-    if (ev) tiles.push(mk('port', 'Port', I.plug, s.port, s.port ? 'open' : 'closed', (st) => ({ port: !st.port }), 900));
-    tiles.push(mk('flash', 'Lights', I.bulb, false, 'flash once', () => ({}), 1000));
-    tiles.push(mk('win', 'Windows', s.win === 'vent' ? I.winVent : I.winClosed, s.win === 'vent', s.win === 'vent' ? 'vented' : 'closed', (st) => ({ win: st.win === 'vent' ? 'closed' : 'vent' }), 900));
+    // The edit control is a small dotted tile at the end of the grid (a pencil; in edit mode: done and reset)
+    if (ble) {
+      const proto = tiles[0] || {};
+      const editTile = (id, icon, aria, tap) => ({ ...proto, id, label: '', w: 1, h: 1, cell: 'grid-column: span 1; grid-row: span 1', isCmd1: false, isCmdW: false, isStatS: false, isStatM: false, isStatL: false, isClimate: false, isCar: false, isBattery: false, isEditBtn: true, icon, aria, tap, editing: false, outline: 'none', canResize: false });
+      if (s.edit) {
+        tiles.push(editTile('done', I.check, 'Done editing', () => this.setState({ edit: false })));
+        tiles.push(editTile('reset', I.reset, 'Reset to the default layout', () => this.setState({ layout: null })));
+      } else {
+        tiles.push(editTile('edit', I.pencil, 'Edit dashboard', () => this.setState({ edit: true })));
+      }
+    }
+
+    // Tiles that are not on the dashboard, offered while editing
+    const present = {};
+    layout.forEach((x) => { present[x.id] = true; });
+    const hidden = Object.keys(cat)
+      .filter((id) => !present[id] && (ble || !cat[id].adv))
+      .map((id) => ({ label: cat[id].label, tap: () => setLayout([...layout, { id, w: cat[id].sizes[0][0], h: cat[id].sizes[0][1] }]) }));
 
     const seatLabels = ['off', 'low', 'medium', 'high'];
     const seat = (key, tag, who, flip) => {
       const lvl = s[key];
       return {
-        icon: I.seat, flip, hasTag: true, tag, hasDots: true,
+        icon: I.seat, flip,
+        hasTag: true, tag, hasDots: true,
         d1: lvl >= 1 ? 1 : 0.25, d2: lvl >= 2 ? 1 : 0.25, d3: lvl >= 3 ? 1 : 0.25,
         aria: who + ' seat heating, ' + seatLabels[lvl],
         cls: lvl ? 'on' : '',
@@ -320,29 +550,6 @@ class Component extends DCLogic {
       seat('seatP', 'R', 'Right', -1)
     ].map((x) => ({ flip: 1, ...x }));
 
-    const stats = ev
-      ? [
-          { label: 'Pack voltage', value: '697', unit: 'V' },
-          { label: 'Power', value: driving ? '−18.4' : '7.2', unit: 'kW' },
-          { label: 'Gear', value: driving ? 'D' : 'P', unit: '' },
-          { label: 'Pack min', value: '24', unit: '°C' },
-          { label: 'Pack max', value: '27', unit: '°C' },
-          { label: 'Power state', value: driving ? 'Ready' : 'Off', unit: '' }
-        ]
-      : [
-          { label: 'Coolant', value: '90', unit: '°C' },
-          { label: 'Oil', value: '96', unit: '°C' },
-          { label: 'Engine', value: driving ? 'On' : 'Off', unit: '' },
-          { label: '12 V battery', value: '12.6', unit: 'V' },
-          { label: 'Gear', value: driving ? 'D' : 'P', unit: '' },
-          { label: 'Power state', value: driving ? 'Ready' : 'Off', unit: '' }
-        ];
-
-    const advTiles = [
-      mk('precond', ev ? 'Preheat' : 'Pre-heat', I.heat, s.precond, s.precond ? 'heating' : 'off', (st) => ({ precond: !st.precond }), 900),
-      { key: 'add', label: 'Add', icon: I.plus, aria: 'Add a control', cls: 'add', tap: () => {} }
-    ];
-
     const charging = ev && s.port && !driving;
     const statusLine = driving ? 'Driving' : (charging ? 'Charging · 7.2 kW · 1 h 05 to 80%' : '');
 
@@ -350,8 +557,9 @@ class Component extends DCLogic {
     const climatePending = p === 'climate';
     const level = ev ? 64 : 62;
     const tankH = Math.round(20 * level) / 100;
+    const side = wide ? 24 : 16;
 
-    // Car box: centered between header and controls; never smaller than MINCAR (then the controls scroll over it)
+    // Remote hero box: centered between the header and the controls; never smaller than MINCAR (then the controls scroll over it)
     const carTop = s.hdrH;
     const carH = wide ? H - s.hdrH - 16 : Math.max(MINCAR, H - s.panelH - s.hdrH);
 
@@ -359,32 +567,36 @@ class Component extends DCLogic {
       themeClass: (dark ? 'oc-dark' : 'oc-light') + ' oc-skin-' + (pr.skin === 'boxy' || pr.skin === 'round' ? pr.skin : 'default'),
       w: wide ? 1024 : 390,
       h: H,
-      heroW: wide ? 'calc(100% - 440px)' : '100%',
-      heroPad: wide ? '32px 32px 12px' : '24px 16px 14px',
-      headerBg: wide ? 'transparent' : 'var(--headerBg)',
-      headerBlur: wide ? 'none' : 'blur(16px)',
+      heroDisplay: dash ? 'none' : 'block',
+      heroW: sideCol ? 'calc(100% - 440px)' : '100%',
+      heroPad: sideCol ? '32px 32px 12px' : (dash ? '14px ' + side + 'px 10px' : (wide ? '24px 24px 14px' : '24px 16px 14px')),
+      headerBg: sideCol ? 'transparent' : 'var(--headerBg)',
+      headerBlur: sideCol ? 'none' : 'blur(16px)',
       carTop,
       carH,
       setHeader: this.setHeader,
       setPanel: this.setPanel,
-      ctlLeft: wide ? 'calc(100% - 440px)' : '0',
-      ctlBg: wide ? 'var(--surface)' : 'transparent',
-      ctlBorder: wide ? '1px solid var(--outline)' : '0',
-      ctlPad: wide ? '28px 24px 32px' : '0',
-      spacerH: wide ? 0 : s.hdrH + MINCAR,
-      spacerGrow: wide ? 0 : 1,
-      wrapPad: wide ? '0' : '16px 16px 34px',
-      wrapBg: wide ? 'transparent' : 'var(--panelBg)',
-      wrapBlur: wide ? 'none' : 'blur(18px)',
-      wrapRadius: wide ? '0' : 'var(--rL) var(--rL) 0 0',
-      wrapBorder: wide ? '0' : '1px solid var(--tileBorder)',
-      cols: 4,
+      ctlLeft: sideCol ? 'calc(100% - 440px)' : '0',
+      ctlBg: sideCol ? 'var(--surface)' : 'transparent',
+      ctlBorder: sideCol ? '1px solid var(--outline)' : '0',
+      ctlPad: dash ? s.hdrH + 'px ' + side + 'px 28px' : (wide ? '28px 24px 32px' : '0'),
+      spacerH: dash || wide ? 0 : s.hdrH + MINCAR,
+      spacerGrow: dash || wide ? 0 : 1,
+      wrapPad: dash ? '8px 0 0' : (wide ? '0' : '16px 16px 34px'),
+      wrapBg: dash || wide ? 'transparent' : 'var(--panelBg)',
+      wrapBlur: dash || wide ? 'none' : 'blur(18px)',
+      wrapRadius: dash || wide ? '0' : 'var(--rL) var(--rL) 0 0',
+      wrapBorder: dash || wide ? '0' : '1px solid var(--tileBorder)',
+      cols: wide && ble ? 8 : 4,
+      rowH,
+      gridAlign: wide ? 'start' : 'stretch',
       tileMode: iconOnly ? 'oc-iconly' : 'oc-titled',
       showTitle: !iconOnly,
       iconSize: iconOnly ? 26 : 22,
       vehicleName: ev ? 'EV6' : 'Example ICE',
       connLabel: connected ? (ble ? 'Bluetooth' : 'Remote') : 'Offline · Updated 12 min ago',
       dotColor: connected ? 'var(--accent)' : 'var(--text2)',
+      dotCls: p ? 'spin' : '',
       range: ev ? '312' : '486',
       rangeUnit: 'km',
       level,
@@ -400,9 +612,14 @@ class Component extends DCLogic {
       portGlow: charging ? 0.28 : 0,
       portOp: ev && s.port ? 1 : 0,
       tiles,
+      hidden,
+      showHidden: ble && s.edit && hidden.length > 0,
+      editing: s.edit,
+      editLabel: s.edit ? 'Done' : 'Edit',
+      editCls: s.edit ? 'on' : '',
+      toggleEdit: () => this.setState({ edit: !s.edit }),
+      resetLayout: () => this.setState({ layout: null }),
       extras,
-      stats,
-      advTiles,
       climateOn: s.climate,
       climateCap: 'Inside 19.5° · Outside 12°',
       climateCls: (s.climate ? 'on ' : '') + (climatePending ? 'pending' : ''),
@@ -412,6 +629,7 @@ class Component extends DCLogic {
       tempDown: () => this.setState({ temp: clamp(s.temp - 0.5) }),
       tempUp: () => this.setState({ temp: clamp(s.temp + 0.5) }),
       isBle: ble,
+      isRemote: !ble,
       isDriving: driving,
       speed: 62,
       speedUnit: 'km/h',
