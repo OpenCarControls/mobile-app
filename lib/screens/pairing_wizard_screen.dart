@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/providers/ble_pairing_connect.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
 import 'package:open_car_app/config/mqtt_broker_config.g.dart';
@@ -162,12 +163,12 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       // longer in its bond table.
       final disconnectCompleter = Completer<void>();
 
-      connSub = ble
-          .connectToDevice(
+      connSub =
+          connectForPairing(
+            ble,
             id: deviceId,
-            connectionTimeout: Duration(seconds: kBlePairingWindowSeconds),
-          )
-          .listen(
+            window: Duration(seconds: kBlePairingWindowSeconds),
+          ).listen(
             (update) {
               switch (update.connectionState) {
                 case DeviceConnectionState.connected:
@@ -182,8 +183,8 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
                       Exception('Connection dropped before pairing'),
                     );
                   }
-                // If not yet connected: connectToDevice auto-retries;
-                // do nothing and let it keep trying until timeout.
+                // Not yet connected: connectForPairing swallows these and
+                // retries the attempt itself.
                 default:
                   break;
               }
@@ -197,9 +198,9 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
             },
           );
 
-      // connectToDevice's own timeout doesn't always fire: Android has been
-      // seen abandoning the attempt (client registered, then closed at once)
-      // with no further update, which would leave the wizard on "Pairing…".
+      // connectForPairing restarts attempts that end or go quiet (Android has
+      // been seen abandoning one: client registered, then closed at once, with
+      // no further update); this timeout is the backstop for the whole window.
       await connectedCompleter.future.timeout(
         Duration(seconds: kBlePairingWindowSeconds),
       );
