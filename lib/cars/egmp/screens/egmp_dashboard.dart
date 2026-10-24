@@ -172,13 +172,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
 
   Widget _buildNarrowLayout() {
     return RefreshIndicator(
-      onRefresh: () async {
-        final transportType = ref.read(transportTypeProvider);
-        if (transportType == TransportType.ble) {
-          ref.read(bleConnectionProvider.notifier).forceReconnect();
-          await Future<void>.delayed(const Duration(milliseconds: 500));
-        }
-      },
+      onRefresh: () => ref.read(bleConnectionProvider.notifier).pullToRefresh(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(

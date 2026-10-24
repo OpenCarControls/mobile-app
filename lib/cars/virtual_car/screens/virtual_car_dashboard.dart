@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
@@ -116,13 +114,8 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
           const PlatformMismatchBanner(),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () async {
-                if (transportType == TransportType.ble) {
-                  ref.read(bleConnectionProvider.notifier).forceReconnect();
-                  // Add a small delay so the refresh animation shows.
-                  await Future<void>.delayed(const Duration(milliseconds: 500));
-                }
-              },
+              onRefresh: () =>
+                  ref.read(bleConnectionProvider.notifier).pullToRefresh(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
