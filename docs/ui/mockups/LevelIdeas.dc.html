@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Level indicator ideas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.lv{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--outline:#C3CECC}
+.lv-col{width:390px;display:flex;flex-direction:column;gap:10px}
+.lv-lab{font-size:14px;font-weight:700;color:#11181A}
+.lv-card{box-sizing:border-box;height:310px;padding:20px 16px;border-radius:24px;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+.lv-pill{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--outline);font-size:13px;font-weight:600}
+.lv-big{font-size:28px;line-height:1.1;font-weight:800}
+.lv-sub{font-size:16px;font-weight:600;color:var(--text2)}
+.lv-row{display:flex;align-items:center;gap:12px}
+.lv-status{font-size:14px;font-weight:600;color:var(--accent)}
+.lv-div{height:1px;background:var(--outline);margin:14px 0}
+.lv-track{height:4px;border-radius:2px;background:var(--outline);position:relative}
+.lv-fill{position:absolute;left:0;top:0;height:4px;border-radius:2px;background:var(--accent)}
+.lv-tick{position:absolute;top:-4px;width:2px;height:12px;border-radius:1px;background:var(--text2)}
+</style>
+</helmet>
+<div class="lv" style="width: 1250px; height: 380px; box-sizing: border-box; padding: 24px; background: #F7F9F8; font-family: 'Manrope', system-ui, sans-serif; display: flex; gap: 20px">
+
+  <div class="lv-col">
+    <div class="lv-lab">A · Battery glyph, same size as the number</div>
+    <div class="lv-card">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <div style="font-size: 20px; font-weight: 800">EV6</div>
+        <div class="lv-pill"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span><span>Remote</span></div>
+      </div>
+      <div class="lv-row" style="margin-top: 16px">
+        <svg width="46" height="24" viewBox="0 0 46 24" aria-hidden="true"><rect x="1" y="1" width="40" height="22" rx="6" fill="none" stroke="#11181A" stroke-width="2"/><rect x="4.5" y="4.5" width="21.1" height="15" rx="3" fill="#00695C"/><rect x="43" y="8" width="3" height="8" rx="1.5" fill="#11181A"/></svg>
+        <span class="lv-big">64%</span>
+        <span class="lv-sub">312 km</span>
+      </div>
+      <div class="lv-status" style="margin-top: 8px">Charging · 7.2 kW · 1 h 05 to 80%</div>
+      <div class="lv-div"></div>
+      <div class="lv-row">
+        <svg width="46" height="24" viewBox="0 0 46 24" aria-hidden="true"><rect x="1" y="1" width="40" height="22" rx="6" fill="none" stroke="#11181A" stroke-width="2"/><rect x="4.5" y="4.5" width="20.5" height="15" rx="3" fill="#00695C"/><path d="M43 12 h3" stroke="#11181A" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="lv-big">62%</span>
+        <span class="lv-sub">486 km</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="lv-col">
+    <div class="lv-lab">B · Level line along the bottom of the header</div>
+    <div class="lv-card">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <div style="font-size: 20px; font-weight: 800">EV6</div>
+        <div class="lv-pill"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span><span>Remote</span></div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 16px">
+        <span class="lv-big">64%</span>
+        <span class="lv-sub">312 km</span>
+      </div>
+      <div class="lv-track" style="margin-top: 10px"><div class="lv-fill" style="width: 64%"></div><div class="lv-tick" style="left: 80%"></div></div>
+      <div class="lv-status" style="margin-top: 12px">Charging · 7.2 kW · 1 h 05 to 80%</div>
+      <div class="lv-div"></div>
+      <div style="display: flex; align-items: baseline; gap: 10px">
+        <span class="lv-big">62%</span>
+        <span class="lv-sub">486 km</span>
+      </div>
+      <div class="lv-track" style="margin-top: 10px"><div class="lv-fill" style="width: 62%"></div></div>
+    </div>
+  </div>
+
+  <div class="lv-col">
+    <div class="lv-lab">C · Small ring with the energy icon inside</div>
+    <div class="lv-card">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <div style="font-size: 20px; font-weight: 800">EV6</div>
+        <div class="lv-pill"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent)"></span><span>Remote</span></div>
+      </div>
+      <div class="lv-row" style="margin-top: 14px">
+        <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="21" fill="none" stroke="#C3CECC" stroke-width="5"/><circle cx="26" cy="26" r="21" fill="none" stroke="#00695C" stroke-width="5" stroke-linecap="round" stroke-dasharray="84.4 131.9" transform="rotate(-90 26 26)"/><path d="M27 15 L19 28 h6 l-1 9 8-13 h-6z" fill="none" stroke="#11181A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <div>
+          <div class="lv-big">64%</div>
+          <div class="lv-sub" style="font-size: 14px">312 km</div>
+        </div>
+      </div>
+      <div class="lv-status" style="margin-top: 8px">Charging · 7.2 kW · 1 h 05 to 80%</div>
+      <div class="lv-div"></div>
+      <div class="lv-row">
+        <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="21" fill="none" stroke="#C3CECC" stroke-width="5"/><circle cx="26" cy="26" r="21" fill="none" stroke="#00695C" stroke-width="5" stroke-linecap="round" stroke-dasharray="81.8 131.9" transform="rotate(-90 26 26)"/><g transform="translate(15 15) scale(.92)" fill="none" stroke="#11181A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17 M3 21h12 M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M6 8h6"/></g></svg>
+        <div>
+          <div class="lv-big">62%</div>
+          <div class="lv-sub" style="font-size: 14px">486 km</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1250,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "BleDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Bluetooth · Dark",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "BleLight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Bluetooth · Light",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Driving.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Remote · Driving",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "ControlIdeas.dc.html": {
+      "h": 380,
+      "title": "Ideas · Control buttons",
+      "w": 850,
+      "x": 0,
+      "y": 2428
+    },
+    "SkinBoxy.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Skin · Boxy (dark, icon-only)",
+      "w": 390,
+      "x": 1330,
+      "y": 1928
+    },
+    "SkinRound.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Skin · Rounded (light)",
+      "w": 390,
+      "x": 1800,
+      "y": 1928
+    },
+    "LevelIdeas.dc.html": {
+      "h": 380,
+      "title": "Ideas · Battery / fuel level",
+      "w": 1250,
+      "x": 0,
+      "y": 1928
+    },
+    "Offline.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Remote · Offline",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "IceBle.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "ICE · Bluetooth · Dark",
+      "w": 390,
+      "x": 470,
+      "y": 964
+    },
+    "IceRemote.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "ICE · Remote · Light",
+      "w": 390,
+      "x": 0,
+      "y": 964
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Remote · Light",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Phone.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Shared screen component",
+      "w": 390,
+      "x": 2044,
+      "y": 964
+    },
+    "RemoteDark.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "EV · Remote · Dark",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Tablet.dc.html": {
+      "h": 720,
+      "is_interactive": true,
+      "title": "Tablet / landscape · Bluetooth · Dark",
+      "w": 1024,
+      "x": 940,
+      "y": 964
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-24T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 1800,
+      "text": "One dashboard, two tiers: remote (basic) and Bluetooth (basic + advanced)",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "RemoteDark.dc.html",
+    "BleLight.dc.html",
+    "BleDark.dc.html",
+    "Driving.dc.html",
+    "Offline.dc.html",
+    "IceRemote.dc.html",
+    "IceBle.dc.html",
+    "Tablet.dc.html",
+    "Phone.dc.html",
+    "LevelIdeas.dc.html",
+    "ControlIdeas.dc.html",
+    "SkinBoxy.dc.html",
+    "SkinRound.dc.html"
+  ],
+  "pages": [],
+  "title": "Open Car App UI"
+}

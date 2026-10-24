@@ -48,6 +48,7 @@ flutter test
 The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToApp`) carrying vehicle-specific bytes, decoded by `platform_id`; the same wire format runs over BLE and MQTT. Each supported vehicle is a `VehicleDefinition` under `lib/cars/<vehicle>/`.
 
 *   [Architecture](docs/architecture.md) — vehicles, transports, providers, UI
+*   [UI design](docs/ui.md) — the planned shared dashboard: layout, [theming and skins](docs/ui-theming.md), [3D hero](docs/ui-hero.md), mockups
 *   [BLE & pairing](docs/ble.md)
 *   [Code generation](docs/code-generation.md)
 *   [Development setup](docs/development-setup.md)

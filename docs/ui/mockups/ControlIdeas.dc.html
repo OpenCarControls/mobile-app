@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Controls ideas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.cx{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--outline:#C3CECC;--on:#CBEAE4;--onText:#00302A;--border:rgba(17,24,26,.12)}
+.cx-col{width:390px;display:flex;flex-direction:column;gap:10px}
+.cx-lab{font-size:14px;font-weight:700;color:#11181A}
+.cx-card{box-sizing:border-box;padding:16px;border-radius:24px;background:var(--bg);color:var(--text);display:flex;flex-direction:column;gap:8px}
+.cx-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cx-btn{display:flex;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.cx-btn.on{background:var(--on);color:var(--onText)}
+.cx-iconly{height:56px;align-items:center;justify-content:center}
+.cx-titled{height:64px;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:10px;text-align:left}
+.cx-titled span{font-size:12px;font-weight:700}
+.cx-bar{height:64px;box-sizing:border-box;padding:0 12px;border:1px solid var(--border);border-radius:16px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cx-round{width:44px;height:44px;flex-shrink:0;border-radius:50%;border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cx-round.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cx-more{height:44px;box-sizing:border-box;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text2);border:0;background:transparent;font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div class="cx" style="width: 850px; height: 380px; box-sizing: border-box; padding: 24px; background: #F7F9F8; font-family: 'Manrope', system-ui, sans-serif; display: flex; gap: 20px">
+
+  <div class="cx-col">
+    <div class="cx-lab">A · Icon-only buttons, compact climate bar</div>
+    <div class="cx-card">
+      <div class="cx-grid">
+        <button class="cx-btn cx-iconly on" aria-label="Doors, locked"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z"/></svg></button>
+        <button class="cx-btn cx-iconly on" aria-label="Charge port, open"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6 M15 2v6 M6 8h12v4a6 6 0 0 1-12 0z M12 18v4"/></svg></button>
+        <button class="cx-btn cx-iconly" aria-label="Flash lights"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6 M10 21h4 M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg></button>
+        <button class="cx-btn cx-iconly" aria-label="Windows, closed"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z M5 10h14"/></svg></button>
+      </div>
+      <div class="cx-bar">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>
+          <span style="font-size: 14px; font-weight: 700">Climate</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px">
+          <button class="cx-round" aria-label="Lower temperature">−</button>
+          <span style="font-size: 18px; font-weight: 800; min-width: 52px; text-align: center">21.0°</span>
+          <button class="cx-round" aria-label="Raise temperature">+</button>
+          <button class="cx-round" aria-label="Turn climate on" style="margin-left: 4px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10 M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></button>
+        </div>
+      </div>
+      <button class="cx-more"><span>Defrost and seat heating</span><span aria-hidden="true">›</span></button>
+    </div>
+  </div>
+
+  <div class="cx-col">
+    <div class="cx-lab">B · Icon + title, state shown by fill and icon</div>
+    <div class="cx-card">
+      <div class="cx-grid">
+        <button class="cx-btn cx-titled on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z"/></svg><span>Doors</span></button>
+        <button class="cx-btn cx-titled on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6 M15 2v6 M6 8h12v4a6 6 0 0 1-12 0z M12 18v4"/></svg><span>Port</span></button>
+        <button class="cx-btn cx-titled"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6 M10 21h4 M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span>Lights</span></button>
+        <button class="cx-btn cx-titled"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z M5 10h14"/></svg><span>Windows</span></button>
+      </div>
+      <div class="cx-bar">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>
+          <span style="font-size: 14px; font-weight: 700">Climate</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px">
+          <button class="cx-round" aria-label="Lower temperature">−</button>
+          <span style="font-size: 18px; font-weight: 800; min-width: 52px; text-align: center">21.0°</span>
+          <button class="cx-round" aria-label="Raise temperature">+</button>
+          <button class="cx-round" aria-label="Turn climate on" style="margin-left: 4px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10 M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></button>
+        </div>
+      </div>
+      <button class="cx-more"><span>Defrost and seat heating</span><span aria-hidden="true">›</span></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":850,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
