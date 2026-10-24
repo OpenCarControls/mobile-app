@@ -71,6 +71,42 @@ class _BleLinkException implements Exception {
   String toString() => message;
 }
 
+// ── Lost bond detection ───────────────────────────────────────────────────────
+
+/// A link that drops this soon after connecting counts as an early drop.
+const _kEarlyDropWindow = Duration(seconds: 10);
+
+/// An attempt that fails this soon, without Android ever reporting
+/// `connected`, also counts: with its pairing window closed the firmware hangs
+/// up on an unknown phone within milliseconds. An out-of-range attempt only
+/// fails at the 30 s connection timeout.
+const _kRefusedConnectWindow = Duration(seconds: 5);
+
+/// Early drops in a row after which the device probably no longer has this
+/// phone's bond.
+const _kEarlyDropsForLostBond = 2;
+
+/// Whether the device keeps dropping the link right after connecting, which
+/// means it most likely no longer knows this phone (its bond was removed, or
+/// its flash erased) while Android still has the old keys. Android shows no
+/// pairing prompt then, so the app has to tell the user. Cleared by a link
+/// that stays up, and on unpair.
+class BleBondLostNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.watch(pairedVehicleProvider);
+    return false;
+  }
+
+  void report(bool lost) {
+    if (state != lost) state = lost;
+  }
+}
+
+final bleBondLostProvider = NotifierProvider<BleBondLostNotifier, bool>(
+  BleBondLostNotifier.new,
+);
+
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class BleConnectionNotifier extends Notifier<BleConnectionState> {
@@ -85,6 +121,9 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   // stream end, cancel). Post-connect setup belongs to the link that was up
   // when it started, and gives up as soon as this moves on.
   int _linkGeneration = 0;
+  // Running while a drop of the current attempt or link counts as early.
+  Timer? _earlyDropTimer;
+  int _earlyDrops = 0;
 
   @override
   BleConnectionState build() {
@@ -143,7 +182,43 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     return statuses.values.every((s) => s.isGranted);
   }
 
+  /// Starts the window in which a drop counts as early: [_kRefusedConnectWindow]
+  /// from the start of an attempt, then [_kEarlyDropWindow] once the link is
+  /// up. A link that outlives its window resets the count; an attempt that is
+  /// still connecting (out of range) doesn't.
+  void _startEarlyDropWindow({required bool linkUp}) {
+    _earlyDropTimer?.cancel();
+    _earlyDropTimer = Timer(
+      linkUp ? _kEarlyDropWindow : _kRefusedConnectWindow,
+      () {
+        _earlyDropTimer = null;
+        if (!linkUp) return;
+        _earlyDrops = 0;
+        ref.read(bleBondLostProvider.notifier).report(false);
+      },
+    );
+  }
+
+  /// The attempt failed or the link went down (or post-connect setup failed
+  /// because it did). Counted once per attempt or link.
+  void _onLinkDropped() {
+    if (_earlyDropTimer?.isActive != true) return;
+    _earlyDropTimer!.cancel();
+    _earlyDropTimer = null;
+    _earlyDrops++;
+    dev.log(
+      'Link dropped right after connecting ($_earlyDrops in a row)',
+      name: 'BleConnection',
+    );
+    if (_earlyDrops >= _kEarlyDropsForLostBond) {
+      ref.read(bleBondLostProvider.notifier).report(true);
+    }
+  }
+
   void _cancelConnection() {
+    // A drop we cause ourselves says nothing about the bond.
+    _earlyDropTimer?.cancel();
+    _earlyDropTimer = null;
     _linkGeneration++;
     _retryTimer?.cancel();
     _retryTimer = null;
@@ -160,6 +235,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     // Drop any previous connection stream so it can't leak or emit into this one.
     _connectionSubscription?.cancel();
     state = BleConnecting(remoteId);
+    _startEarlyDropWindow(linkUp: false);
 
     final ble = ref.read(bleProvider);
     dev.log('Connecting to $remoteId', name: 'BleConnection');
@@ -176,6 +252,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
           (update) => _onConnectionUpdate(update, remoteId),
           onError: (Object e) {
             dev.log('Connection stream error: $e', name: 'BleConnection');
+            _onLinkDropped();
             _linkGeneration++;
             _connecting = false;
             state = BleConnecting(remoteId);
@@ -183,6 +260,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
           },
           onDone: () {
             dev.log('Connection stream done', name: 'BleConnection');
+            _onLinkDropped();
             _linkGeneration++;
             _connecting = false;
             state = BleConnecting(remoteId);
@@ -241,9 +319,11 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     );
     switch (update.connectionState) {
       case DeviceConnectionState.connected:
+        _startEarlyDropWindow(linkUp: true);
         await _onConnected(remoteId, ++_linkGeneration);
       case DeviceConnectionState.disconnected:
         dev.log('Disconnected from $remoteId', name: 'BleConnection');
+        _onLinkDropped();
         _linkGeneration++;
         _connecting = false;
         // connectToDevice will reconnect automatically while the subscription
@@ -353,8 +433,12 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       _connecting = false;
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');
-      // Usually the link dropping under the setup; then it's already handled.
+      // Usually the link dropping under the setup; then it's already handled
+      // (and counted).
       if (stale()) return;
+      // An unusable MTU usually means the device dropped the link; a missing
+      // service is a wrong device, not a lost bond.
+      if (e is! _BleSetupException) _onLinkDropped();
       // The link is still up, so connectToDevice won't emit `connected` again
       // and nothing else would retry. Drop the connection (cancelling the
       // stream disconnects) and start over after the usual delay.
@@ -366,6 +450,8 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   void _cleanup() {
     _disposed = true;
+    _earlyDropTimer?.cancel();
+    _earlyDropTimer = null;
     _linkGeneration++;
     _retryTimer?.cancel();
     _retryTimer = null;
