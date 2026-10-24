@@ -61,6 +61,16 @@ class _BleSetupException implements Exception {
   String toString() => message;
 }
 
+/// The link can't be used: the MTU exchange failed or gave less than the
+/// contract needs (Android reports 0 when the link dropped meanwhile).
+class _BleLinkException implements Exception {
+  final String message;
+  const _BleLinkException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class BleConnectionNotifier extends Notifier<BleConnectionState> {
@@ -71,6 +81,10 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   // Pending retry after the connection stream ends. Only one may be scheduled,
   // and any new connection attempt cancels it.
   Timer? _retryTimer;
+  // Bumped whenever a link comes up or goes away (connected, disconnected,
+  // stream end, cancel). Post-connect setup belongs to the link that was up
+  // when it started, and gives up as soon as this moves on.
+  int _linkGeneration = 0;
 
   @override
   BleConnectionState build() {
@@ -130,6 +144,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   }
 
   void _cancelConnection() {
+    _linkGeneration++;
     _retryTimer?.cancel();
     _retryTimer = null;
     _connectionSubscription?.cancel();
@@ -161,12 +176,14 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
           (update) => _onConnectionUpdate(update, remoteId),
           onError: (Object e) {
             dev.log('Connection stream error: $e', name: 'BleConnection');
+            _linkGeneration++;
             _connecting = false;
             state = BleConnecting(remoteId);
             _scheduleRetry(remoteId);
           },
           onDone: () {
             dev.log('Connection stream done', name: 'BleConnection');
+            _linkGeneration++;
             _connecting = false;
             state = BleConnecting(remoteId);
             _scheduleRetry(remoteId);
@@ -224,9 +241,10 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     );
     switch (update.connectionState) {
       case DeviceConnectionState.connected:
-        await _onConnected(remoteId);
+        await _onConnected(remoteId, ++_linkGeneration);
       case DeviceConnectionState.disconnected:
         dev.log('Disconnected from $remoteId', name: 'BleConnection');
+        _linkGeneration++;
         _connecting = false;
         // connectToDevice will reconnect automatically while the subscription
         // lives — just reset to connecting state.
@@ -236,20 +254,35 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     }
   }
 
-  Future<void> _onConnected(String remoteId) async {
+  Future<void> _onConnected(String remoteId, int generation) async {
     final ble = ref.read(bleProvider);
+
+    // True once the link this setup started on has dropped, been cancelled
+    // (including by pull-to-refresh) or been replaced. The handler that moved
+    // the generation on already set the state and scheduled what comes next,
+    // so a stale setup just stops: going on would call `discoverAllServices`
+    // on a dead link, which makes Android reconnect outside the
+    // `connectToDevice` stream, and then report `BleReady` over that state.
+    bool stale() {
+      if (ref.mounted && generation == _linkGeneration) return false;
+      dev.log(
+        'Link to $remoteId changed during setup; abandoning it',
+        name: 'BleConnection',
+      );
+      return true;
+    }
 
     try {
       // Negotiate MTU before emitting BleReady. Messages are split into
       // chunks sized from it, so a smaller MTU only means more chunks, down to
       // kBleMinAttMtu: below that the device can't send its largest messages
-      // and drops them.
+      // and drops them, so the link is no use.
       final mtu = await ble.requestMtu(deviceId: remoteId, mtu: kBleAttMtu);
+      if (stale()) return;
       if (mtu < kBleMinAttMtu) {
-        dev.log(
+        throw _BleLinkException(
           'MTU $mtu negotiated for $remoteId, below the $kBleMinAttMtu BLE '
-          'needs; the device will drop its messages and commands will fail',
-          name: 'BleConnection',
+          'needs',
         );
       } else if (mtu < kBleAttMtu) {
         dev.log(
@@ -277,11 +310,12 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
         // API. Log and continue — notifications may not work on those devices.
         dev.log('clearGattCache failed (non-fatal): $e', name: 'BleConnection');
       }
+      if (stale()) return;
 
       // Discover services and characteristics.
       await ble.discoverAllServices(remoteId);
+      if (stale()) return;
       dev.log('Services discovered for $remoteId', name: 'BleConnection');
-      if (!ref.mounted) return;
 
       // Verify the required characteristics are present.
       final vehicle = ref.read(selectedVehicleProvider);
@@ -293,7 +327,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       }
 
       final services = await ble.getDiscoveredServices(remoteId);
-      if (!ref.mounted) return;
+      if (stale()) return;
       final serviceUuid = Uuid.parse(vehicle.bleServiceUuid);
       final serviceMatch = services.where((s) => s.id == serviceUuid);
       if (serviceMatch.isEmpty) {
@@ -319,7 +353,8 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
       _connecting = false;
     } on Exception catch (e) {
       dev.log('Post-connect init failed: $e', name: 'BleConnection');
-      if (!ref.mounted) return;
+      // Usually the link dropping under the setup; then it's already handled.
+      if (stale()) return;
       // The link is still up, so connectToDevice won't emit `connected` again
       // and nothing else would retry. Drop the connection (cancelling the
       // stream disconnects) and start over after the usual delay.
@@ -331,6 +366,7 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   void _cleanup() {
     _disposed = true;
+    _linkGeneration++;
     _retryTimer?.cancel();
     _retryTimer = null;
     _statusSubscription?.cancel();

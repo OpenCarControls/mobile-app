@@ -14,16 +14,42 @@ import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 
 const _remoteId = '00:11:22:33:44:55';
 
-/// A BLE stack whose link comes up instantly but never exposes the car's
-/// service, so post-connect setup always fails ([mtuFails] makes it fail
-/// earlier). Each call to [connectToDevice] counts as one attempt and
-/// cancelling its stream counts as a disconnect.
+/// A BLE stack whose link comes up instantly. By default it never exposes the
+/// car's service, so post-connect setup always fails ([mtuFails] makes it fail
+/// earlier, [mtu] sets what the MTU request returns). With [hasCarService] the
+/// setup succeeds. [mtuGate] holds the MTU request until the test completes
+/// it, so the test can drop the link mid-setup with [dropLink]. Each call to
+/// [connectToDevice] counts as one attempt and cancelling its stream counts as
+/// a disconnect.
 class _FakeBle implements FlutterReactiveBle {
-  _FakeBle({this.mtuFails = false});
+  _FakeBle({
+    this.mtuFails = false,
+    this.mtu = egmp.kBleAttMtu,
+    this.hasCarService = false,
+    this.mtuGate,
+  });
 
   final bool mtuFails;
+  final int mtu;
+  final bool hasCarService;
+  final Completer<void>? mtuGate;
   int connectCalls = 0;
   int disconnects = 0;
+  int discoverCalls = 0;
+  StreamController<ConnectionStateUpdate>? _link;
+
+  /// The device hangs up: `disconnected`, then the stream ends.
+  void dropLink() {
+    final link = _link!;
+    link.add(
+      const ConnectionStateUpdate(
+        deviceId: _remoteId,
+        connectionState: DeviceConnectionState.disconnected,
+        failure: null,
+      ),
+    );
+    unawaited(link.close());
+  }
 
   @override
   Stream<BleStatus> get statusStream => Stream.value(BleStatus.ready);
@@ -46,24 +72,62 @@ class _FakeBle implements FlutterReactiveBle {
       ),
       onCancel: () => disconnects++,
     );
+    _link = controller;
     return controller.stream;
   }
 
   @override
-  Future<int> requestMtu({required String deviceId, required int mtu}) async =>
-      mtuFails ? throw Exception('MTU request failed') : mtu;
+  Future<int> requestMtu({required String deviceId, required int mtu}) async {
+    await mtuGate?.future;
+    if (mtuFails) throw Exception('MTU request failed');
+    return this.mtu;
+  }
 
   @override
   Future<void> clearGattCache(String deviceId) async {}
 
   @override
-  Future<void> discoverAllServices(String deviceId) async {}
+  Future<void> discoverAllServices(String deviceId) async => discoverCalls++;
 
   @override
   Future<List<Service>> getDiscoveredServices(
     String deviceId, {
     Duration timeout = const Duration(seconds: 10),
-  }) async => const [];
+  }) async => hasCarService
+      ? [
+          _FakeService(Uuid.parse(egmp.kBleServiceUuid), [
+            Uuid.parse(egmp.kBleAppToDeviceCharacteristicUuid),
+            Uuid.parse(egmp.kBleDeviceToAppCharacteristicUuid),
+          ]),
+        ]
+      : const [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// [Service] and [Characteristic] have private constructors; the provider
+/// only reads their ids.
+class _FakeService implements Service {
+  _FakeService(this.id, List<Uuid> characteristicIds)
+    : characteristics = [
+        for (final id in characteristicIds) _FakeCharacteristic(id),
+      ];
+
+  @override
+  final Uuid id;
+  @override
+  final List<Characteristic> characteristics;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeCharacteristic implements Characteristic {
+  _FakeCharacteristic(this.id);
+
+  @override
+  final Uuid id;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -128,6 +192,68 @@ void main() {
       container.dispose();
     });
   }
+
+  testWidgets('a link with the car\'s service becomes ready', (tester) async {
+    final ble = _FakeBle(hasCarService: true);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    final state = container.read(bleConnectionProvider);
+    expect(state, isA<BleReady>());
+    expect((state as BleReady).attMtu, egmp.kBleAttMtu);
+    container.dispose();
+  });
+
+  testWidgets('an MTU below the contract minimum fails the setup', (
+    tester,
+  ) async {
+    // Android reports MTU 0 when the link dropped during the exchange.
+    final ble = _FakeBle(hasCarService: true, mtu: 0);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(bleConnectionProvider), isA<BleConnecting>());
+    expect(ble.discoverCalls, 0);
+    expect(ble.disconnects, 1, reason: 'the unusable link is dropped');
+
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2, reason: 'and retried');
+    container.dispose();
+  });
+
+  testWidgets('a link that drops during setup is abandoned, then retried', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    final ble = _FakeBle(hasCarService: true, mtuGate: gate);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+    await tester.pump(const Duration(seconds: 1));
+
+    // The device hangs up while the MTU request is still pending, and the
+    // request then completes as if nothing happened.
+    ble.dropLink();
+    await tester.pump();
+    gate.complete();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      container.read(bleConnectionProvider),
+      isA<BleConnecting>(),
+      reason: 'the stale setup must not report BleReady',
+    );
+    expect(ble.discoverCalls, 0, reason: 'no discovery on the dead link');
+
+    // The retry the stream's end scheduled still runs, and that link works.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2);
+    expect(container.read(bleConnectionProvider), isA<BleReady>());
+    container.dispose();
+  });
 
   testWidgets('pull-to-refresh reconnects at once while BLE is not ready', (
     tester,
