@@ -18,21 +18,24 @@ const _remoteId = '00:11:22:33:44:55';
 /// car's service, so post-connect setup always fails ([mtuFails] makes it fail
 /// earlier, [mtu] sets what the MTU request returns). With [hasCarService] the
 /// setup succeeds. [mtuGate] holds the MTU request until the test completes
-/// it, so the test can drop the link mid-setup with [dropLink]. Each call to
-/// [connectToDevice] counts as one attempt and cancelling its stream counts as
-/// a disconnect.
+/// it, so the test can drop the link mid-setup with [dropLink]. With
+/// [refuseAfter] the link never comes up: the attempt goes `connecting`, then
+/// `disconnected` after that long. Each call to [connectToDevice] counts as one
+/// attempt and cancelling its stream counts as a disconnect.
 class _FakeBle implements FlutterReactiveBle {
   _FakeBle({
     this.mtuFails = false,
     this.mtu = egmp.kBleAttMtu,
     this.hasCarService = false,
     this.mtuGate,
+    this.refuseAfter,
   });
 
   final bool mtuFails;
   final int mtu;
   final bool hasCarService;
   final Completer<void>? mtuGate;
+  final Duration? refuseAfter;
   int connectCalls = 0;
   int disconnects = 0;
   int discoverCalls = 0;
@@ -62,15 +65,31 @@ class _FakeBle implements FlutterReactiveBle {
   }) {
     connectCalls++;
     late final StreamController<ConnectionStateUpdate> controller;
-    controller = StreamController<ConnectionStateUpdate>(
-      onListen: () => controller.add(
-        ConnectionStateUpdate(
-          deviceId: id,
-          connectionState: DeviceConnectionState.connected,
-          failure: null,
-        ),
+    void emit(DeviceConnectionState connectionState) => controller.add(
+      ConnectionStateUpdate(
+        deviceId: id,
+        connectionState: connectionState,
+        failure: null,
       ),
-      onCancel: () => disconnects++,
+    );
+    Timer? refusal;
+    controller = StreamController<ConnectionStateUpdate>(
+      onListen: () {
+        final refuseAfter = this.refuseAfter;
+        if (refuseAfter == null) {
+          emit(DeviceConnectionState.connected);
+          return;
+        }
+        emit(DeviceConnectionState.connecting);
+        refusal = Timer(refuseAfter, () {
+          emit(DeviceConnectionState.disconnected);
+          unawaited(controller.close());
+        });
+      },
+      onCancel: () {
+        refusal?.cancel();
+        disconnects++;
+      },
     );
     _link = controller;
     return controller.stream;
@@ -252,6 +271,103 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(ble.connectCalls, 2);
     expect(container.read(bleConnectionProvider), isA<BleReady>());
+    container.dispose();
+  });
+
+  testWidgets('repeated drops right after connecting report a lost bond', (
+    tester,
+  ) async {
+    // The MTU request failing stands in for the device dropping the link.
+    final ble = _FakeBle(mtuFails: true);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(bleBondLostProvider), isFalse, reason: 'one drop');
+
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2);
+    expect(container.read(bleBondLostProvider), isTrue);
+
+    // Unpairing clears it.
+    await container.read(pairedVehicleProvider.notifier).unpair();
+    expect(container.read(bleBondLostProvider), isFalse);
+    container.dispose();
+  });
+
+  testWidgets('drops during setup with the pairing window open count', (
+    tester,
+  ) async {
+    // As seen on a Pixel with the window open: the device drops the link
+    // during the MTU exchange (Authentication Failure), and Android then
+    // reports MTU 0 instead of failing the request.
+    final gate = Completer<void>();
+    final ble = _FakeBle(hasCarService: true, mtu: 0, mtuGate: gate);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+    await tester.pump(const Duration(seconds: 1));
+
+    ble.dropLink();
+    await tester.pump();
+    gate.complete();
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(bleBondLostProvider), isFalse, reason: 'one drop');
+
+    // The retry makes a second link, whose MTU of 0 fails the setup.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2);
+    expect(container.read(bleBondLostProvider), isTrue);
+    container.dispose();
+  });
+
+  testWidgets('connections refused before connecting count', (tester) async {
+    // With the pairing window closed the firmware hangs up on an unknown
+    // phone before Android reports `connected`.
+    final ble = _FakeBle(refuseAfter: const Duration(milliseconds: 100));
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(bleBondLostProvider), isFalse, reason: 'one drop');
+
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2);
+    expect(container.read(bleBondLostProvider), isTrue);
+    container.dispose();
+  });
+
+  testWidgets('attempts that time out out of range do not count', (
+    tester,
+  ) async {
+    final ble = _FakeBle(refuseAfter: const Duration(seconds: 30));
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    // Three attempts (at 0, 60 and 120 s), each 30 s connecting.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 30));
+    }
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 3);
+    expect(container.read(bleBondLostProvider), isFalse);
+    container.dispose();
+  });
+
+  testWidgets('a missing service is not reported as a lost bond', (
+    tester,
+  ) async {
+    final ble = _FakeBle();
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ble.connectCalls, 2);
+    expect(container.read(bleBondLostProvider), isFalse);
     container.dispose();
   });
 

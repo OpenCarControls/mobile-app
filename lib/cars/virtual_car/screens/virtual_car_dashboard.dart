@@ -8,6 +8,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
@@ -112,6 +113,7 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
       body: Column(
         children: [
           const PlatformMismatchBanner(),
+          const BleBondLostBanner(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () =>

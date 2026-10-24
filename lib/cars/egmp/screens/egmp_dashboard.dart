@@ -9,6 +9,7 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
+import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
@@ -162,6 +163,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       body: Column(
         children: [
           const PlatformMismatchBanner(),
+          const BleBondLostBanner(),
           Expanded(
             child: isWideScreen ? _buildWideLayout() : _buildNarrowLayout(),
           ),
