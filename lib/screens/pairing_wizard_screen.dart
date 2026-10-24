@@ -197,7 +197,12 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
             },
           );
 
-      await connectedCompleter.future;
+      // connectToDevice's own timeout doesn't always fire: Android has been
+      // seen abandoning the attempt (client registered, then closed at once)
+      // with no further update, which would leave the wizard on "Pairing…".
+      await connectedCompleter.future.timeout(
+        Duration(seconds: kBlePairingWindowSeconds),
+      );
       await ble.requestMtu(deviceId: deviceId, mtu: kBleAttMtu);
       await ble.discoverAllServices(deviceId);
 
