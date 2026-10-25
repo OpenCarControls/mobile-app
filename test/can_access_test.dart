@@ -222,7 +222,12 @@ void main() {
 
       final allow = find.widgetWithText(FilledButton, 'Allow control');
       expect(tester.widget<FilledButton>(allow).onPressed, isNull);
-      await tester.tap(find.text('I understand the risks'));
+      // The warning is long: on the test screen the checkbox starts below
+      // the visible part of the dialog's scroll view.
+      final acknowledge = find.byType(CheckboxListTile);
+      await tester.ensureVisible(acknowledge);
+      await tester.pumpAndSettle();
+      await tester.tap(acknowledge);
       await tester.pump();
       expect(tester.widget<FilledButton>(allow).onPressed, isNotNull);
 
