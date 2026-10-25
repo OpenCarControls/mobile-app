@@ -4,6 +4,10 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
+final _approved = CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_APPROVED;
+final _notApproved = CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_NOT_APPROVED;
+final _otherCar = CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_OTHER_CAR;
+
 /// The device's CAN access state: whether it may transmit on the car's bus and
 /// which conditions hold (see the firmware's docs/can.md, "Read-write policy").
 ///
@@ -31,12 +35,10 @@ String canAccessSummary(CanAccessState state) {
   if (!state.carIdentityConfirmed) {
     return 'Read-only: the car is not identified yet';
   }
-  if (state.approval ==
-      CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_OTHER_CAR) {
+  if (state.approval == _otherCar) {
     return 'Read-only: control was approved for a different car';
   }
-  if (state.approval !=
-      CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_APPROVED) {
+  if (state.approval != _approved) {
     return 'Read-only: control is not approved for this car';
   }
   if (state.devLockAvailable && !state.devUnlocked) {
@@ -47,12 +49,10 @@ String canAccessSummary(CanAccessState state) {
 
 /// True when the owner can approve control now: the car is identified and the
 /// approval is missing or was given for another car.
-bool canAccessNeedsApproval(CanAccessState state) =>
-    state.carIdentityConfirmed &&
-    (state.approval ==
-            CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_NOT_APPROVED ||
-        state.approval ==
-            CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_OTHER_CAR);
+bool canAccessNeedsApproval(CanAccessState state) {
+  if (!state.carIdentityConfirmed) return false;
+  return state.approval == _notApproved || state.approval == _otherCar;
+}
 
 /// Sends the CAN read-write policy commands. BLE only; they fail with the
 /// device's reason (e.g. the car is not identified, or this phone isn't
@@ -63,25 +63,22 @@ class CanAccessActions {
 
   /// Approves (`true`) or revokes (`false`) CAN read-write mode for the car the
   /// device is plugged into. Show the risk warning before approving.
-  Future<void> setApproval(bool approved) => _ref
-      .read(vehicleStateProvider.notifier)
-      .sendSystemCommand(
-        SystemCommand(
-          setCanReadWriteApproval: SetCanReadWriteApprovalCommand(
-            approved: approved,
-          ),
-        ),
-      );
+  Future<void> setApproval(bool approved) async {
+    final approval = SetCanReadWriteApprovalCommand(approved: approved);
+    await _send(SystemCommand(setCanReadWriteApproval: approval));
+  }
 
   /// Unlocks (`true`) or locks (`false`) the developer write lock. Only in
   /// development firmware builds ([CanAccessState.devLockAvailable]).
-  Future<void> setDevWriteUnlocked(bool unlocked) => _ref
-      .read(vehicleStateProvider.notifier)
-      .sendSystemCommand(
-        SystemCommand(
-          setCanDevWriteUnlock: SetCanDevWriteUnlockCommand(unlocked: unlocked),
-        ),
-      );
+  Future<void> setDevWriteUnlocked(bool unlocked) async {
+    final unlock = SetCanDevWriteUnlockCommand(unlocked: unlocked);
+    await _send(SystemCommand(setCanDevWriteUnlock: unlock));
+  }
+
+  Future<void> _send(SystemCommand command) async {
+    final notifier = _ref.read(vehicleStateProvider.notifier);
+    await notifier.sendSystemCommand(command);
+  }
 }
 
 final canAccessActionsProvider = Provider<CanAccessActions>(
