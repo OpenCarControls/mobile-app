@@ -348,66 +348,33 @@ void main() {
       expect(container.read(commandAvailabilityProvider), isNull);
     });
 
-    testWidgets('is cleared when the device goes quiet', (tester) async {
-      final transport = _FakeTransport(TransportType.ble);
-      final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
-      await tester.pump();
-      expect(container.read(commandAvailabilityProvider), isNotNull);
+    for (final type in [TransportType.ble, TransportType.mqtt]) {
+      testWidgets('over $type it expires with the vehicle state', (
+        tester,
+      ) async {
+        final transport = _FakeTransport(type);
+        final container = _container(transport);
+        transport.emit(_update(CommandAvailability(basic: {1: _available})));
+        await tester.pump();
+        expect(container.read(commandAvailabilityProvider), isNotNull);
 
-      await tester.pump(
-        kCommandAvailabilityStaleAfter - const Duration(seconds: 1),
-      );
-      expect(container.read(commandAvailabilityProvider), isNotNull);
+        await tester.pump(kStateLivenessTimeout - const Duration(seconds: 1));
+        expect(container.read(commandAvailabilityProvider), isNotNull);
+        expect(
+          container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
+          CommandUiState.enabled,
+        );
 
-      await tester.pump(const Duration(seconds: 2));
-      expect(container.read(commandAvailabilityProvider), isNull);
-      expect(
-        container.read(commandUiStateProvider(virtual_car.kDoorLockCommand)),
-        CommandUiState.disabled,
-      );
-      // Let vehicleStateProvider's own liveness timer run out.
-      await tester.pump(const Duration(seconds: 31));
-    });
-
-    testWidgets('over MQTT it expires with the vehicle state, not sooner', (
-      tester,
-    ) async {
-      final transport = _FakeTransport(TransportType.mqtt);
-      final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
-      await tester.pump();
-      expect(
-        commandAvailabilityStaleAfter(TransportType.mqtt),
-        kStateLivenessTimeout,
-      );
-
-      // Past the BLE window: MQTT is slower, so it is still trusted.
-      await tester.pump(
-        kCommandAvailabilityStaleAfter + const Duration(seconds: 5),
-      );
-      expect(container.read(commandAvailabilityProvider), isNotNull);
-      expect(
-        container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
-        CommandUiState.enabled,
-      );
-
-      await tester.pump(kStateLivenessTimeout - kCommandAvailabilityStaleAfter);
-      expect(container.read(commandAvailabilityProvider), isNull);
-      expect(
-        container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
-        CommandUiState.disabled,
-      );
-      await tester.pump(const Duration(seconds: 31));
-    });
-
-    test('BLE keeps the shorter window', () {
-      expect(
-        commandAvailabilityStaleAfter(TransportType.ble),
-        kCommandAvailabilityStaleAfter,
-      );
-      expect(kCommandAvailabilityStaleAfter < kStateLivenessTimeout, isTrue);
-    });
+        await tester.pump(const Duration(seconds: 2));
+        expect(container.read(commandAvailabilityProvider), isNull);
+        expect(
+          container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
+          CommandUiState.disabled,
+        );
+        // Let vehicleStateProvider's own liveness timer run out.
+        await tester.pump(const Duration(seconds: 31));
+      });
+    }
 
     testWidgets('each report keeps it alive', (tester) async {
       final transport = _FakeTransport(TransportType.ble);
@@ -466,7 +433,7 @@ void main() {
       transport.emit(_update(CommandAvailability(basic: {1: _available})));
       await tester.pump();
       expect(doorButton(tester), isNotNull);
-      await tester.pump(kCommandAvailabilityStaleAfter);
+      await tester.pump(kStateLivenessTimeout);
       await tester.pump();
       expect(doorButton(tester), isNull);
 

@@ -82,7 +82,7 @@ class VehicleSnapshot {
 }
 
 /// How long the vehicle state stays live without an update from the device. The command
-/// availability over MQTT expires with it ([commandAvailabilityStaleAfter]).
+/// availability expires with it, over BLE and MQTT alike.
 const kStateLivenessTimeout = Duration(seconds: 30);
 
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
