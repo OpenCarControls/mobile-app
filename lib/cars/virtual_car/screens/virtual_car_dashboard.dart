@@ -9,7 +9,10 @@ import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
+import 'package:open_car_app/widgets/can_access_banner.dart';
+import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
+import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -114,6 +117,7 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
         children: [
           const PlatformMismatchBanner(),
           const BleBondLostBanner(),
+          const CanAccessBanner(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () =>
@@ -188,10 +192,14 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _SectionHeader(title: 'Controls'),
                   const SizedBox(height: 8),
+                  const CanAccessSection(),
+                  const SizedBox(height: 8),
                   _DoorLockCard(
                     locked: basic.areDoorsLocked,
-                    onToggle: () {
-                      ref
+                    onToggle: () => sendVehicleCommand(
+                      context,
+                      ref,
+                      () => ref
                           .read(vehicleStateProvider.notifier)
                           .sendBasicCommand(
                             BasicCommand(
@@ -199,8 +207,8 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                                 lock: !basic.areDoorsLocked,
                               ),
                             ).writeToBuffer(),
-                          );
-                    },
+                          ),
+                    ),
                   ),
 
                   // ── Advanced controls (BLE only, shown once live data arrives) ────
@@ -210,15 +218,17 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     _CustomState1Card(
                       enabled: advanced.customState1,
-                      onToggle: () {
-                        ref
+                      onToggle: () => sendVehicleCommand(
+                        context,
+                        ref,
+                        () => ref
                             .read(vehicleStateProvider.notifier)
                             .sendAdvancedCommand(
                               AdvancedCommand(
                                 toggleCustomState1: ToggleCustomState1Command(),
                               ).writeToBuffer(),
-                            );
-                      },
+                            ),
+                      ),
                     ),
                   ],
 

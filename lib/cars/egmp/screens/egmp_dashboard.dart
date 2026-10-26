@@ -10,7 +10,10 @@ import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
+import 'package:open_car_app/widgets/can_access_banner.dart';
+import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
+import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
 
@@ -28,6 +31,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   String? _currentSubMenu;
   String? _pendingAction;
   Timer? _timeUpdateTimer;
+
+  /// Sends a basic command and shows why it failed, if it does.
+  Future<void> _sendBasicCommand(List<int> commandBytes) => sendVehicleCommand(
+    context,
+    ref,
+    () =>
+        ref.read(vehicleStateProvider.notifier).sendBasicCommand(commandBytes),
+  );
 
   @override
   void initState() {
@@ -164,6 +175,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         children: [
           const PlatformMismatchBanner(),
           const BleBondLostBanner(),
+          const CanAccessBanner(),
           Expanded(
             child: isWideScreen ? _buildWideLayout() : _buildNarrowLayout(),
           ),
@@ -388,9 +400,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       final cmd = BasicCommand(
                         doorLockCommand: DoorLockCommand(lock: !isLocked),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -406,9 +416,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           open: !isChargePortOpen,
                         ),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -421,9 +429,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       final cmd = BasicCommand(
                         flashLightsCommand: FlashLightsCommand(),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -437,9 +443,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           climateOn: !isClimateOn,
                         ),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                 ],
@@ -600,9 +604,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       climateOn: !isClimateOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               Row(
@@ -634,9 +636,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                                   targetTemperature: targetTemp - 0.5,
                                 ),
                               );
-                              await ref
-                                  .read(vehicleStateProvider.notifier)
-                                  .sendBasicCommand(cmd.writeToBuffer());
+                              await _sendBasicCommand(cmd.writeToBuffer());
                             });
                           },
                   ),
@@ -672,9 +672,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                                   targetTemperature: targetTemp + 0.5,
                                 ),
                               );
-                              await ref
-                                  .read(vehicleStateProvider.notifier)
-                                  .sendBasicCommand(cmd.writeToBuffer());
+                              await _sendBasicCommand(cmd.writeToBuffer());
                             });
                           },
                   ),
@@ -690,9 +688,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   final cmd = BasicCommand(
                     windowCommand: WindowCommand(action: action),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -714,9 +710,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       windshieldDefrostOn: !isWindshieldDefrostOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -731,9 +725,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       rearWindowDefrostOn: !isRearDefrostOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -748,9 +740,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       steeringWheelHeaterOn: !isSteeringHeaterOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -772,9 +762,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       driverSeatClimate: _nextSeatClimate(driverSeat),
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -789,9 +777,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       passengerSeatClimate: _nextSeatClimate(passengerSeat),
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -969,6 +955,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
+          const Divider(),
+          const CanAccessSection(),
           const Divider(),
           ListTile(
             title: Text(

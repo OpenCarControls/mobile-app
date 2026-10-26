@@ -44,13 +44,28 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `bleSourceDeviceIdProvider` | Stable per-device BLE ID (overridden at startup) |
 | `carTransportProvider` | Active transport instance |
 | `transportTypeProvider` | Cheap `TransportType` watch for UI gating |
-| `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` |
+| `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` / `sendSystemCommand()` (BLE only) |
+| `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), from the current connection only: null until reported on it, cleared on every transport or connection change, never cached |
+| `canAccessActionsProvider` | Approves or withdraws vehicle control and toggles the developer write lock |
 
 `VehicleSnapshot` fields (`basicState`, `advancedState`) are typed as `GeneratedMessage`; cast in the vehicle's own screen. They are decoded once per message and merged via `mergeFromMessage`.
 
 Commands complete when a `CommandResponse` with the same `message_id` arrives (15 s timeout). Command IDs start at a random value below 2^32 on each launch; MQTT heartbeats use IDs from 2^32 up so a response can never match a heartbeat. `CarTransport.send` throws `CarTransportException` when it can't send (e.g. MQTT offline, or an advanced command over MQTT), so the UI shows the error at once instead of waiting for the timeout.
 
 `debugOverrideBasicState()` (debug builds only) replaces the basic state locally; the E-GMP debug drawer uses it to exercise the UI and 3D animations.
+
+### Vehicle control (CAN read-write)
+The device only listens to the car until three things hold (firmware `docs/can.md`, "Read-write policy"): it has identified the car, the owner has approved control of that car, and, in development firmware builds, the developer write lock is unlocked (it locks again at every restart). The app reads why from `canAccessStateProvider` and changes it with `canAccessActionsProvider`, both over BLE only:
+
+*   `CanAccessBanner` (`lib/widgets/`) appears when the car is identified but control isn't approved, or was approved for a different car, and opens the approval dialog. Both dashboards show it under `BleBondLostBanner`.
+*   `showCanReadWriteApprovalDialog` shows the risks and only sends the approval once the owner ticks "I understand the risks". The approval belongs to the car the device is plugged into; the device keeps it across restarts and phone changes.
+*   `CanAccessSection` shows the state and the reason in words (`canAccessSummary`), approving and withdrawing the approval, and the developer write lock switch when the firmware reports `dev_lock_available`. The E-GMP dashboard shows it in "About & Settings", the virtual-car dashboard above its controls.
+
+`canAccessStateProvider` listens to the transport itself rather than reading `VehicleSnapshot.system`: the snapshot is restored across transport switches and cached across restarts, so its `can_access` could show "Control enabled" for a device that has since restarted read-only. The device repeats the access state every few seconds, so a new connection gets it quickly.
+
+While the device is read-only it refuses basic and advanced commands with a failed `CommandResponse` whose message gives the reason (e.g. "command rejected: the device is read-only: the developer write lock is locked"); the command's future fails with that message. The dashboards send commands through `sendVehicleCommand` (`lib/widgets/vehicle_command_feedback.dart`), which shows the reason in a SnackBar, with a "Review" action opening the approval dialog when control still needs approving.
+
+The device never sends the car's VIN or fingerprint, so the dialog can't name the car.
 
 ### Per-vehicle screens (`lib/cars/<vehicle>/screens/`)
 Transport gating pattern:
