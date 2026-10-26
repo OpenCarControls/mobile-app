@@ -57,13 +57,13 @@ Commands complete when a `CommandResponse` with the same `message_id` arrives (1
 ### Vehicle control (CAN read-write)
 The device only listens to the car until three things hold (firmware `docs/can.md`, "Read-write policy"): it has identified the car, the owner has approved control of that car, and, in development firmware builds, the developer write lock is unlocked (it locks again at every restart). The app reads why from `canAccessStateProvider` and changes it with `canAccessActionsProvider`, both over BLE only:
 
-*   `CanAccessBanner` (`lib/widgets/`) appears when the car is identified but control isn't approved, or was approved for a different car, and opens the approval dialog.
+*   `CanAccessBanner` (`lib/widgets/`) appears when the car is identified but control isn't approved, or was approved for a different car, and opens the approval dialog. Both dashboards show it under `BleBondLostBanner`.
 *   `showCanReadWriteApprovalDialog` shows the risks and only sends the approval once the owner ticks "I understand the risks". The approval belongs to the car the device is plugged into; the device keeps it across restarts and phone changes.
-*   `CanAccessSection` shows the state and the reason in words (`canAccessSummary`), approving and withdrawing the approval, and the developer write lock switch when the firmware reports `dev_lock_available`. It is meant for a settings or developer section.
+*   `CanAccessSection` shows the state and the reason in words (`canAccessSummary`), approving and withdrawing the approval, and the developer write lock switch when the firmware reports `dev_lock_available`. The E-GMP dashboard shows it in "About & Settings", the virtual-car dashboard above its controls.
 
 `canAccessStateProvider` listens to the transport itself rather than reading `VehicleSnapshot.system`: the snapshot is restored across transport switches and cached across restarts, so its `can_access` could show "Control enabled" for a device that has since restarted read-only. The device repeats the access state every few seconds, so a new connection gets it quickly.
 
-While the device is read-only it refuses basic and advanced commands with a failed `CommandResponse` whose message gives the reason (e.g. "command rejected: the device is read-only: the developer write lock is locked"); the command's future fails with that message. Dashboards should show it rather than a generic error.
+While the device is read-only it refuses basic and advanced commands with a failed `CommandResponse` whose message gives the reason (e.g. "command rejected: the device is read-only: the developer write lock is locked"); the command's future fails with that message. The dashboards send commands through `sendVehicleCommand` (`lib/widgets/vehicle_command_feedback.dart`), which shows the reason in a SnackBar, with a "Review" action opening the approval dialog when control still needs approving.
 
 The device never sends the car's VIN or fingerprint, so the dialog can't name the car.
 

@@ -18,6 +18,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/can_access_banner.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
+import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 
 class _FakeTransport implements CarTransport {
   _FakeTransport(this.transportType);
@@ -309,6 +310,86 @@ void main() {
       expect(find.byType(SwitchListTile), findsNothing);
 
       await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  group('sendVehicleCommand', () {
+    testWidgets('shows the device\'s refusal with a way to approve', (
+      tester,
+    ) async {
+      final transport = _FakeTransport(TransportType.ble);
+      addTearDown(transport.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
+            initialPairedVehicleConfigProvider.overrideWithValue(_config),
+            carTransportProvider.overrideWithValue(transport),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) {
+                  // Keep the access state alive, as the dashboards do.
+                  ref.watch(canAccessStateProvider);
+                  return TextButton(
+                    onPressed: () => sendVehicleCommand(
+                      context,
+                      ref,
+                      () => ref
+                          .read(vehicleStateProvider.notifier)
+                          .sendBasicCommand(const [1]),
+                    ),
+                    child: const Text('Lock'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      transport.emit(_accessUpdate(_identifiedNotApproved()));
+      await tester.pump();
+
+      await tester.tap(find.text('Lock'));
+      await tester.pump();
+      transport.emit(
+        DeviceToApp(
+          commandResponse: CommandResponse(
+            messageId: transport.sent.single.messageId,
+            success: false,
+            errorMessage:
+                'command rejected: the device is read-only: control is not '
+                'approved for this car',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Command rejected: the device is read-only: control is not '
+          'approved for this car',
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(SnackBarAction, 'Review'), findsOneWidget);
+
+      // Dispose the providers, which cancels the state liveness timer.
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    test('names timeouts and transport errors', () {
+      expect(
+        vehicleCommandErrorText(TimeoutException('Command timed out')),
+        'The vehicle did not answer the command.',
+      );
+      expect(
+        vehicleCommandErrorText(
+          const CarTransportException('This needs a Bluetooth connection.'),
+        ),
+        'This needs a Bluetooth connection.',
+      );
     });
   });
 }
