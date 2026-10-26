@@ -47,7 +47,7 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` / `sendSystemCommand()` (BLE only) |
 | `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), from the current connection only: null until reported on it, cleared on every transport or connection change, never cached |
 | `canAccessActionsProvider` | Approves or withdraws vehicle control and toggles the developer write lock |
-| `commandAvailabilityProvider` | Which commands the device accepts now (`SystemState.command_availability`), from the current connection only: null until reported on it, cleared on every transport or connection change and when the device goes quiet, never cached |
+| `commandAvailabilityProvider` | Which commands the device accepts now (`SystemState.command_availability`), from the current connection only: null until reported on it, cleared on every transport or connection change and when the device goes quiet, never cached. Over MQTT it covers the basic commands |
 | `commandUiStateProvider` | `enabled`, `disabled` (greyed out) or `hidden` for one command, from the availability |
 
 `VehicleSnapshot` fields (`basicState`, `advancedState`) are typed as `GeneratedMessage`; cast in the vehicle's own screen. They are decoded once per message and merged via `mergeFromMessage`.
@@ -70,11 +70,11 @@ While the device is read-only it refuses basic and advanced commands with a fail
 The device never sends the car's VIN or fingerprint, so the dialog can't name the car.
 
 ### Command availability
-The device decides which commands it accepts right now and reports it (firmware `docs/commands.md`, "Command availability"): `SystemState.command_availability`, BLE only, repeated every few seconds. The app greys out the buttons of commands the device doesn't accept, with no reason shown, and hides the ones reported `UNSUPPORTED` (not on this car; nothing sends that yet). The device rejects an unavailable command with `COMMAND_STATUS_CODE_REJECTED_UNAVAILABLE` even if the app sends it anyway, and `sendVehicleCommand` shows its reason.
+The device decides which commands it accepts right now and reports it (firmware `docs/commands.md`, "Command availability"): `SystemState.command_availability`, over BLE and over MQTT (basic commands only), repeated every few seconds. The app greys out the buttons of commands the device doesn't accept, with no reason shown, and hides the ones reported `UNSUPPORTED` (not on this car; nothing sends that yet). The device rejects an unavailable command with `COMMAND_STATUS_CODE_REJECTED_UNAVAILABLE` even if the app sends it anyway, and `sendVehicleCommand` shows its reason.
 
 *   Commands are identified by their field number in the vehicle's `BasicCommand` / `AdvancedCommand` oneof. Each vehicle keeps them in `lib/cars/<vehicle>/command_ids.dart`, read from the generated messages with `commandId` so they can't drift from the contracts. Every vehicle button needs an entry there and a `commandUiStateProvider` check; a new command is greyed out over BLE until the device lists it.
 *   Like `canAccessStateProvider`, `commandAvailabilityProvider` listens to the transport itself and never reads the cached snapshot, so a cached "available" can't enable a button. It is cleared when the device goes quiet for `kCommandAvailabilityStaleAfter` (15 s, three missed repeats).
-*   Over BLE a command is enabled only while the device says it accepts it, so the buttons are greyed out right after connecting until the first report. Over MQTT (no system state) and the stub and HTTP debug transports, nothing is reported, so the buttons stay enabled and the device rejects what it can't do.
+*   Over BLE and MQTT a command is enabled only while the device says it accepts it, so the buttons are greyed out right after connecting until the first report. While MQTT commands are not authenticated the device reports every command unavailable over MQTT. The stub and HTTP debug transports may not report anything, so there the buttons stay enabled and the device rejects what it can't do.
 
 ### Per-vehicle screens (`lib/cars/<vehicle>/screens/`)
 Transport gating pattern:

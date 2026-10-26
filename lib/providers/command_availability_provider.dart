@@ -35,7 +35,7 @@ enum CommandUiState {
 /// connection, cleared whenever the transport or connection changes, and
 /// cleared again if the device goes quiet for [kCommandAvailabilityStaleAfter].
 /// A command shown as available must be one the device just said it accepts.
-/// Always null over MQTT, which carries no system state.
+/// Over MQTT the device reports the basic commands only.
 class CommandAvailabilityNotifier extends Notifier<CommandAvailability?> {
   Timer? _staleTimer;
 
@@ -43,7 +43,6 @@ class CommandAvailabilityNotifier extends Notifier<CommandAvailability?> {
   CommandAvailability? build() {
     final transport = ref.watch(carTransportProvider);
     ref.onDispose(() => _staleTimer?.cancel());
-    if (transport.transportType == TransportType.mqtt) return null;
     final platformId = ref.read(selectedVehicleProvider)?.platformId;
     final subscription = transport.messages.listen(
       (msg) => _onMessage(msg, platformId),
@@ -79,12 +78,11 @@ final commandAvailabilityProvider =
 /// What to do with the button of command [id] in [set], given what the device
 /// [reported] on the current connection (null if nothing yet).
 ///
-/// Over BLE the app waits for the device: a command is enabled only while the
-/// device says it accepts it, so right after connecting, or when the device
-/// goes quiet, the buttons are greyed out. An unspecified state counts as not
-/// available. Other transports have no availability to wait for (MQTT carries no
-/// system state; the stub and HTTP debug transports may not send it), so the
-/// device decides and rejects what it can't do.
+/// Over BLE and MQTT the app waits for the device: a command is enabled only
+/// while the device says it accepts it, so right after connecting, or when the
+/// device goes quiet, the buttons are greyed out. An unspecified state counts as
+/// not available. The stub and HTTP debug transports may not send availability,
+/// so there the device decides and rejects what it can't do.
 CommandUiState commandUiState(
   CommandAvailability? reported,
   TransportType transport,
@@ -97,7 +95,7 @@ CommandUiState commandUiState(
   };
   // Nothing reported for this command (yet): not known to be available.
   if (state == null) {
-    return transport == TransportType.ble
+    return transport.waitsForAvailability
         ? CommandUiState.disabled
         : CommandUiState.enabled;
   }
@@ -134,3 +132,9 @@ final commandUiStateProvider = Provider.family<CommandUiState, CommandKey>((
   final transport = ref.watch(carTransportProvider).transportType;
   return commandUiState(reported, transport, key.set, key.id);
 });
+
+extension on TransportType {
+  /// Whether the device reports command availability over this transport.
+  bool get waitsForAvailability =>
+      this == TransportType.ble || this == TransportType.mqtt;
+}

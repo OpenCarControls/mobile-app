@@ -189,14 +189,15 @@ void main() {
       );
     });
 
-    test('over BLE, anything not reported is greyed out', () {
-      const ble = TransportType.ble;
-      expect(state(null, ble, CommandSet.basic, 1), CommandUiState.disabled);
-      // A command the device did not list.
-      expect(
-        state(reported, ble, CommandSet.basic, 99),
-        CommandUiState.disabled,
-      );
+    test('over BLE and MQTT, anything not reported is greyed out', () {
+      for (final t in [TransportType.ble, TransportType.mqtt]) {
+        expect(state(null, t, CommandSet.basic, 1), CommandUiState.disabled);
+        // A command the device did not list.
+        expect(
+          state(reported, t, CommandSet.basic, 99),
+          CommandUiState.disabled,
+        );
+      }
     });
 
     test('an unspecified state is not available', () {
@@ -211,12 +212,8 @@ void main() {
       );
     });
 
-    test('without availability to wait for, the device decides', () {
-      for (final t in [
-        TransportType.mqtt,
-        TransportType.stub,
-        TransportType.http,
-      ]) {
+    test('on the debug transports, the device decides', () {
+      for (final t in [TransportType.stub, TransportType.http]) {
         expect(state(null, t, CommandSet.basic, 1), CommandUiState.enabled);
       }
     });
@@ -292,15 +289,24 @@ void main() {
       expect(container.read(commandAvailabilityProvider), isNull);
     });
 
-    test('is always null over MQTT, so the device decides', () async {
+    test('is reported over MQTT too, for the basic commands', () async {
       final transport = _FakeTransport(TransportType.mqtt);
       final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {1: _unavailable})));
+      expect(
+        container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
+        CommandUiState.disabled,
+      );
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _available, 2: _unavailable})),
+      );
       await pumpEventQueue();
-      expect(container.read(commandAvailabilityProvider), isNull);
       expect(
         container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
         CommandUiState.enabled,
+      );
+      expect(
+        container.read(commandUiStateProvider(egmp.kChargePortCommand)),
+        CommandUiState.disabled,
       );
     });
 
