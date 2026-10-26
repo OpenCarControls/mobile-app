@@ -370,6 +370,45 @@ void main() {
       await tester.pump(const Duration(seconds: 31));
     });
 
+    testWidgets('over MQTT it expires with the vehicle state, not sooner', (
+      tester,
+    ) async {
+      final transport = _FakeTransport(TransportType.mqtt);
+      final container = _container(transport);
+      transport.emit(_update(CommandAvailability(basic: {1: _available})));
+      await tester.pump();
+      expect(
+        commandAvailabilityStaleAfter(TransportType.mqtt),
+        kStateLivenessTimeout,
+      );
+
+      // Past the BLE window: MQTT is slower, so it is still trusted.
+      await tester.pump(
+        kCommandAvailabilityStaleAfter + const Duration(seconds: 5),
+      );
+      expect(container.read(commandAvailabilityProvider), isNotNull);
+      expect(
+        container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
+        CommandUiState.enabled,
+      );
+
+      await tester.pump(kStateLivenessTimeout - kCommandAvailabilityStaleAfter);
+      expect(container.read(commandAvailabilityProvider), isNull);
+      expect(
+        container.read(commandUiStateProvider(egmp.kDoorLockCommand)),
+        CommandUiState.disabled,
+      );
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    test('BLE keeps the shorter window', () {
+      expect(
+        commandAvailabilityStaleAfter(TransportType.ble),
+        kCommandAvailabilityStaleAfter,
+      );
+      expect(kCommandAvailabilityStaleAfter < kStateLivenessTimeout, isTrue);
+    });
+
     testWidgets('each report keeps it alive', (tester) async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);

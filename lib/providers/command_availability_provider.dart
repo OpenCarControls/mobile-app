@@ -5,12 +5,22 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:protobuf/protobuf.dart';
 
-/// How long an availability report is trusted. The device repeats it every few
-/// seconds (5 s), so this is three missed repeats.
+/// How long an availability report is trusted over BLE, which is synced quickly:
+/// the device repeats it every 5 s, so this is three missed repeats.
 const kCommandAvailabilityStaleAfter = Duration(seconds: 15);
+
+/// How long an availability report is trusted over [transport]. MQTT isn't synced
+/// as fast or as often as BLE (the device sends at a lower rate while the app is
+/// in the background, and the link is slower), so there it expires with the
+/// vehicle state: [kStateLivenessTimeout].
+Duration commandAvailabilityStaleAfter(TransportType transport) =>
+    transport == TransportType.mqtt
+    ? kStateLivenessTimeout
+    : kCommandAvailabilityStaleAfter;
 
 /// The two command sets of a vehicle, as the device reports them.
 enum CommandSet { basic, advanced }
@@ -33,16 +43,18 @@ enum CommandUiState {
 /// Like [canAccessStateProvider] it is kept apart from the cached snapshot and
 /// never cached: it is null until the device reports it on the current
 /// connection, cleared whenever the transport or connection changes, and
-/// cleared again if the device goes quiet for [kCommandAvailabilityStaleAfter].
+/// cleared again if the device goes quiet for [commandAvailabilityStaleAfter].
 /// A command shown as available must be one the device just said it accepts.
 /// Over MQTT the device reports the basic commands only.
 class CommandAvailabilityNotifier extends Notifier<CommandAvailability?> {
   Timer? _staleTimer;
+  Duration _staleAfter = kCommandAvailabilityStaleAfter;
 
   @override
   CommandAvailability? build() {
     final transport = ref.watch(carTransportProvider);
     ref.onDispose(() => _staleTimer?.cancel());
+    _staleAfter = commandAvailabilityStaleAfter(transport.transportType);
     final platformId = ref.read(selectedVehicleProvider)?.platformId;
     final subscription = transport.messages.listen(
       (msg) => _onMessage(msg, platformId),
@@ -66,7 +78,7 @@ class CommandAvailabilityNotifier extends Notifier<CommandAvailability?> {
       ..mergeFromMessage(state ?? CommandAvailability())
       ..mergeFromMessage(system.commandAvailability);
     _staleTimer?.cancel();
-    _staleTimer = Timer(kCommandAvailabilityStaleAfter, () => state = null);
+    _staleTimer = Timer(_staleAfter, () => state = null);
   }
 }
 
