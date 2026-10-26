@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
@@ -11,19 +13,46 @@ final _otherCar = CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_OTHER_CAR;
 /// The device's CAN access state: whether it may transmit on the car's bus and
 /// which conditions hold (see the firmware's docs/can.md, "Read-write policy").
 ///
-/// Null unless the device reported it in this live session over a transport
-/// that carries system state (BLE, or the debug HTTP and stub transports): a
-/// cached value could claim control is enabled when it no longer is.
-final canAccessStateProvider = Provider<CanAccessState?>((ref) {
-  final transportType = ref.watch(transportTypeProvider);
-  if (transportType == TransportType.mqtt) return null;
-  final snapshot = ref.watch(vehicleStateProvider);
-  final system = snapshot.system;
-  if (!snapshot.isStateLive || system == null || !system.hasCanAccess()) {
+/// Kept apart from [vehicleStateProvider]'s snapshot and never cached: it is
+/// null until the device reports it on the current connection, and cleared
+/// whenever the transport or connection changes. A cached or earlier value
+/// could claim control is enabled when the device has since restarted
+/// read-only. Always null over MQTT, which carries no system state. The device
+/// repeats it every few seconds.
+class CanAccessStateNotifier extends Notifier<CanAccessState?> {
+  @override
+  CanAccessState? build() {
+    final transport = ref.watch(carTransportProvider);
+    if (transport.transportType == TransportType.mqtt) return null;
+    final platformId = ref.read(selectedVehicleProvider)?.platformId;
+    final subscription = transport.messages.listen(
+      (msg) => _onMessage(msg, platformId),
+    );
+    ref.onDispose(subscription.cancel);
     return null;
   }
-  return system.canAccess;
-});
+
+  void _onMessage(DeviceToApp msg, int? platformId) {
+    // Like vehicleStateProvider, ignore a device reporting another platform.
+    if (platformId != null &&
+        msg.platformId != 0 &&
+        msg.platformId != platformId) {
+      return;
+    }
+    if (!msg.hasStateUpdate() || !msg.stateUpdate.hasSystemState()) return;
+    final system = msg.stateUpdate.systemState;
+    if (!system.hasCanAccess()) return;
+    // Fields are optional: merge into what this connection reported so far.
+    state = CanAccessState()
+      ..mergeFromMessage(state ?? CanAccessState())
+      ..mergeFromMessage(system.canAccess);
+  }
+}
+
+final canAccessStateProvider =
+    NotifierProvider<CanAccessStateNotifier, CanAccessState?>(
+      CanAccessStateNotifier.new,
+    );
 
 /// Why the device is read-only, or that control is enabled, in a few words.
 String canAccessSummary(CanAccessState state) {

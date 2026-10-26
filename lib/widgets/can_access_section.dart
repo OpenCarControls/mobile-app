@@ -77,6 +77,7 @@ class _CanAccessSectionState extends ConsumerState<CanAccessSection> {
         state.approval ==
             CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_AWAITING_CAR;
 
+    final danger = Theme.of(context).colorScheme.error;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -87,14 +88,22 @@ class _CanAccessSectionState extends ConsumerState<CanAccessSection> {
         ),
         if (canAccessNeedsApproval(state))
           ListTile(
+            leading: const Icon(Icons.verified_user_outlined),
             title: const Text('Approve control of this car'),
             trailing: const Icon(Icons.chevron_right),
             enabled: !_sending,
             onTap: () => showCanReadWriteApprovalDialog(context),
           ),
+        // Styled as an action, so it isn't read as a heading.
         if (hasApproval)
           ListTile(
-            title: const Text('Withdraw control approval'),
+            leading: Icon(Icons.remove_moderator_outlined, color: danger),
+            title: Text(
+              'Withdraw control approval',
+              style: TextStyle(color: danger),
+            ),
+            subtitle: const Text('The device goes back to only listening.'),
+            trailing: const Icon(Icons.chevron_right),
             enabled: !_sending,
             onTap: _confirmWithdraw,
           ),

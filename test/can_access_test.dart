@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +101,49 @@ void main() {
       final state = container.read(canAccessStateProvider)!;
       expect(state.devUnlocked, isTrue);
       expect(state.carIdentityConfirmed, isTrue);
+    });
+
+    test('ignores a cached access state', () async {
+      // Cached before a restart, when control was enabled. The device has
+      // since restarted read-only.
+      final cached = SystemState(canAccess: CanAccessState(readOnly: false));
+      SharedPreferences.setMockInitialValues({
+        'vehicle_state_${virtual_car.kPlatformName}': jsonEncode({
+          'basicStateBytes': '',
+          'advancedStateBytes': '',
+          'systemStateBytes': base64Encode(cached.writeToBuffer()),
+        }),
+      });
+      final transport = _FakeTransport(TransportType.ble);
+      final container = _container(transport);
+      await pumpEventQueue();
+      final system = container.read(vehicleStateProvider).system;
+      expect(system?.hasCanAccess(), isTrue);
+      expect(container.read(canAccessStateProvider), isNull);
+
+      // A live vehicle state update doesn't make the cached one current.
+      transport.emit(
+        DeviceToApp(
+          platformId: virtual_car.kPlatformId,
+          stateUpdate: StateUpdate(vehicleState: VehicleState()),
+        ),
+      );
+      await pumpEventQueue();
+      expect(container.read(vehicleStateProvider).isStateLive, isTrue);
+      expect(container.read(canAccessStateProvider), isNull);
+
+      transport.emit(_accessUpdate(_identifiedNotApproved()));
+      await pumpEventQueue();
+      expect(container.read(canAccessStateProvider)!.readOnly, isTrue);
+    });
+
+    test('ignores a device reporting another platform', () async {
+      final transport = _FakeTransport(TransportType.ble);
+      final container = _container(transport);
+      final update = _accessUpdate(_identifiedNotApproved())..platformId = 7;
+      transport.emit(update);
+      await pumpEventQueue();
+      expect(container.read(canAccessStateProvider), isNull);
     });
 
     test('is null over MQTT, which carries no system state', () async {

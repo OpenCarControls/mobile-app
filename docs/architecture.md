@@ -45,7 +45,7 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `carTransportProvider` | Active transport instance |
 | `transportTypeProvider` | Cheap `TransportType` watch for UI gating |
 | `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` / `sendSystemCommand()` (BLE only) |
-| `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), null unless reported live over a transport that carries system state |
+| `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), from the current connection only: null until reported on it, cleared on every transport or connection change, never cached |
 | `canAccessActionsProvider` | Approves or withdraws vehicle control and toggles the developer write lock |
 
 `VehicleSnapshot` fields (`basicState`, `advancedState`) are typed as `GeneratedMessage`; cast in the vehicle's own screen. They are decoded once per message and merged via `mergeFromMessage`.
@@ -60,6 +60,10 @@ The device only listens to the car until three things hold (firmware `docs/can.m
 *   `CanAccessBanner` (`lib/widgets/`) appears when the car is identified but control isn't approved, or was approved for a different car, and opens the approval dialog.
 *   `showCanReadWriteApprovalDialog` shows the risks and only sends the approval once the owner ticks "I understand the risks". The approval belongs to the car the device is plugged into; the device keeps it across restarts and phone changes.
 *   `CanAccessSection` shows the state and the reason in words (`canAccessSummary`), approving and withdrawing the approval, and the developer write lock switch when the firmware reports `dev_lock_available`. It is meant for a settings or developer section.
+
+`canAccessStateProvider` listens to the transport itself rather than reading `VehicleSnapshot.system`: the snapshot is restored across transport switches and cached across restarts, so its `can_access` could show "Control enabled" for a device that has since restarted read-only. The device repeats the access state every few seconds, so a new connection gets it quickly.
+
+While the device is read-only it refuses basic and advanced commands with a failed `CommandResponse` whose message gives the reason (e.g. "command rejected: the device is read-only: the developer write lock is locked"); the command's future fails with that message. Dashboards should show it rather than a generic error.
 
 The device never sends the car's VIN or fingerprint, so the dialog can't name the car.
 
