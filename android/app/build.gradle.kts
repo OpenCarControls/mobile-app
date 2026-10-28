@@ -44,8 +44,10 @@ flutter {
 }
 
 dependencies {
-    // RxJava 2 is a transitive dependency of reactive_ble_mobile (via RxAndroidBle),
-    // but must be declared explicitly so OpenCarApplication.kt can import it directly
-    // to install the global UndeliverableException handler.
+    // RxJava 2 and RxAndroidBle are dependencies of reactive_ble_mobile, but
+    // the plugin doesn't expose them to this module, so OpenCarApplication.kt
+    // can only import them if they are declared here. Keep the RxAndroidBle
+    // version in line with the plugin's; Gradle resolves to the higher one.
     implementation("io.reactivex.rxjava2:rxjava:2.2.17")
+    implementation("com.polidea.rxandroidble2:rxandroidble:1.16.0")
 }
