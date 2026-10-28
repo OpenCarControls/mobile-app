@@ -81,6 +81,10 @@ class VehicleSnapshot {
   }
 }
 
+/// How long the vehicle state stays live without an update from the device. The command
+/// availability expires with it, over BLE and MQTT alike.
+const kStateLivenessTimeout = Duration(seconds: 30);
+
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
   Timer? _livenessTimer;
@@ -179,7 +183,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     if (!msg.hasStateUpdate()) return;
 
     _livenessTimer?.cancel();
-    _livenessTimer = Timer(const Duration(seconds: 30), () {
+    _livenessTimer = Timer(kStateLivenessTimeout, () {
       if (state.isStateLive || state.isAdvancedStateLive) {
         state = state.copyWith(isStateLive: false, isAdvancedStateLive: false);
       }

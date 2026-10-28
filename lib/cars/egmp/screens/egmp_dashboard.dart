@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/cars/egmp/command_ids.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:flutter/foundation.dart';
+import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
@@ -39,6 +41,11 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     () =>
         ref.read(vehicleStateProvider.notifier).sendBasicCommand(commandBytes),
   );
+
+  /// What the device says about the command behind a button: greyed out unless it
+  /// accepts it now.
+  CommandUiState _uiState(String actionId) =>
+      ref.watch(commandUiStateProvider(egmpActionCommand(actionId)));
 
   @override
   void initState() {
@@ -461,35 +468,43 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     required Future<void> Function() onPressed,
   }) {
     final isLoading = _pendingAction == actionId;
-    return InkWell(
-      onTap: isLoading ? null : () => _executeCommand(actionId, onPressed),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
+    final ui = _uiState(actionId);
+    if (ui == CommandUiState.hidden) return const SizedBox.shrink();
+    final enabled = ui == CommandUiState.enabled;
+    return Opacity(
+      opacity: enabled ? 1 : 0.38,
+      child: InkWell(
+        onTap: isLoading || !enabled
+            ? null
+            : () => _executeCommand(actionId, onPressed),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.onPrimaryContainer
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : Icon(
+                  icon,
                   color: isActive
                       ? Theme.of(context).colorScheme.onPrimaryContainer
                       : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 32,
                 ),
-              )
-            : Icon(
-                icon,
-                color: isActive
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 32,
-              ),
+        ),
       ),
     );
   }
@@ -626,7 +641,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                               context,
                             ).colorScheme.onSurfaceVariant,
                           ),
-                    onPressed: _pendingAction == 'temp_down'
+                    onPressed:
+                        _pendingAction == 'temp_down' ||
+                            _uiState('temp_down') != CommandUiState.enabled
                         ? null
                         : () {
                             _executeCommand('temp_down', () async {
@@ -662,7 +679,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                               context,
                             ).colorScheme.onSurfaceVariant,
                           ),
-                    onPressed: _pendingAction == 'temp_up'
+                    onPressed:
+                        _pendingAction == 'temp_up' ||
+                            _uiState('temp_up') != CommandUiState.enabled
                         ? null
                         : () {
                             _executeCommand('temp_up', () async {
@@ -832,38 +851,46 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     double iconSize = 26,
   }) {
     final isLoading = _pendingAction == actionId;
-    return InkWell(
-      onTap: isLoading ? null : () => _executeCommand(actionId, onTap),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: isLoading
-            ? Center(
-                child: SizedBox(
-                  width: iconSize,
-                  height: iconSize,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: isActive
-                        ? Theme.of(context).colorScheme.onPrimaryContainer
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+    final ui = _uiState(actionId);
+    if (ui == CommandUiState.hidden) return const SizedBox.shrink();
+    final enabled = ui == CommandUiState.enabled;
+    return Opacity(
+      opacity: enabled ? 1 : 0.38,
+      child: InkWell(
+        onTap: isLoading || !enabled
+            ? null
+            : () => _executeCommand(actionId, onTap),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: isLoading
+              ? Center(
+                  child: SizedBox(
+                    width: iconSize,
+                    height: iconSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: isActive
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
+                )
+              : Icon(
+                  icon,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onPrimaryContainer
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: iconSize,
                 ),
-              )
-            : Icon(
-                icon,
-                color: isActive
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: iconSize,
-              ),
+        ),
       ),
     );
   }
