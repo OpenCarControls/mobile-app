@@ -4,7 +4,6 @@ import android.app.Application
 import android.util.Log
 import com.polidea.rxandroidble2.exceptions.BleDisconnectedException
 import com.polidea.rxandroidble2.exceptions.BleGattException
-import io.reactivex.exceptions.UndeliverableException
 import io.reactivex.plugins.RxJavaPlugins
 
 class OpenCarApplication : Application() {
