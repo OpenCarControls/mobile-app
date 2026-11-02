@@ -20,11 +20,29 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: OpenCarApp()));
 
     expect(find.text('Pair Your Vehicle'), findsOneWidget);
+    expect(find.text('Put your device in pairing mode'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+  });
+
+  testWidgets('the wizard links to the recovery steps', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: OpenCarApp()));
+
+    await tester.tap(find.byTooltip('Help'));
+    await tester.pumpAndSettle();
+    final steps = find.text(
+      'Do this ${virtual_car.kBlePowerCycleResetShortBoots} times in a row.',
+    );
+    await tester.scrollUntilVisible(steps, 200);
+
+    expect(find.text('Resetting the paired phones'), findsOneWidget);
+    // The gesture's numbers come from the contract, as in the firmware.
+    expect(steps, findsOneWidget);
     expect(
-      find.text('Hold the pairing button on your vehicle'),
+      find.textContaining(
+        'less than ${virtual_car.kBlePowerCycleResetUptimeSeconds} seconds',
+      ),
       findsOneWidget,
     );
-    expect(find.text('Start'), findsOneWidget);
   });
 
   testWidgets('shows the dashboard when a vehicle is paired', (tester) async {

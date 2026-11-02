@@ -15,6 +15,7 @@ import 'package:open_car_app/widgets/can_access_banner.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
+import 'package:open_car_app/screens/help_screen.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -70,15 +71,17 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     }
                   }
                 }
+              } else if (value == 'help') {
+                await HelpScreen.open(context);
               } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Unpair vehicle?'),
                     content: const Text(
-                      'This will remove the pairing and return you to the '
-                      'setup wizard. The vehicle will also forget this phone '
-                      '(factory reset required to re-pair).',
+                      'This will remove the vehicle from the app and return '
+                      'you to the setup wizard. To pair again, the device has '
+                      'to be in pairing mode (see Help).',
                     ),
                     actions: [
                       TextButton(
@@ -108,6 +111,14 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
+              const PopupMenuItem(
+                value: 'help',
+                child: ListTile(
+                  leading: Icon(Icons.help_outline),
+                  title: Text('Help'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(

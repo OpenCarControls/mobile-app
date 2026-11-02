@@ -13,6 +13,7 @@ import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/screens/help_screen.dart';
 import 'package:open_car_app/transport/ble_fragmentation.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
@@ -121,9 +122,12 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     _scanTimeoutTimer = Timer(Duration(seconds: kBleScanTimeoutSeconds), () {
       if (_step == _Step.scanning) {
         _stopScan();
+        // A device that already has a paired phone hides from phones it
+        // doesn't know (reinstalled app, new phone): point to the recovery.
         _setError(
-          'No device found. Make sure you are holding the pairing button and '
-          'try again.',
+          'No device found. Make sure the device is in pairing mode and try '
+          'again. If this phone or app was paired with it before, the device '
+          'may no longer recognise it: see Help to reset its paired phones.',
         );
       }
     });
@@ -458,7 +462,16 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pair Your Vehicle')),
+      appBar: AppBar(
+        title: const Text('Pair Your Vehicle'),
+        actions: [
+          IconButton(
+            onPressed: () => HelpScreen.open(context),
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Help',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -484,14 +497,16 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         const Icon(Icons.bluetooth_searching, size: 64),
         const SizedBox(height: 24),
         Text(
-          'Hold the pairing button on your vehicle',
+          'Put your device in pairing mode',
           style: Theme.of(context).textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
         Text(
-          'The device will advertise for $kBleScanTimeoutSeconds seconds. '
-          'Tap Start when ready.',
+          'A device with no paired phone yet is in pairing mode for '
+          '${HelpScreen.duration(kBleFirstSetupPairingWindowSeconds)} after it is '
+          'powered on. If yours has a pairing button, hold it. Then tap Start: '
+          'the app searches for $kBleScanTimeoutSeconds seconds.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
@@ -657,6 +672,12 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           onPressed: _retry,
           icon: const Icon(Icons.refresh),
           label: const Text('Try again'),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: () => HelpScreen.open(context),
+          icon: const Icon(Icons.help_outline),
+          label: const Text('Help'),
         ),
       ],
     );

@@ -85,6 +85,18 @@ class ConstantsBuilder implements Builder {
       blePairing['scan_timeout_seconds'],
       'ble.pairing.scan_timeout_seconds',
     );
+    final bleFirstSetupPairingWindowSeconds = _int(
+      blePairing['first_setup_pairing_window_seconds'],
+      'ble.pairing.first_setup_pairing_window_seconds',
+    );
+    final blePowerCycleResetShortBoots = _int(
+      blePairing['power_cycle_reset_short_boots'],
+      'ble.pairing.power_cycle_reset_short_boots',
+    );
+    final blePowerCycleResetUptimeSeconds = _int(
+      blePairing['power_cycle_reset_uptime_seconds'],
+      'ble.pairing.power_cycle_reset_uptime_seconds',
+    );
     final bleAttMtu = _int(blePayload['att_mtu'], 'ble.payload.att_mtu');
     final bleMaxChunkBytes = _int(
       blePayload['max_chunk_bytes'],
@@ -139,6 +151,15 @@ class ConstantsBuilder implements Builder {
         'const int kBlePairingWindowSeconds = $blePairingWindowSeconds;',
       )
       ..writeln('const int kBleScanTimeoutSeconds = $bleScanTimeoutSeconds;')
+      ..writeln(
+        'const int kBleFirstSetupPairingWindowSeconds = $bleFirstSetupPairingWindowSeconds;',
+      )
+      ..writeln(
+        'const int kBlePowerCycleResetShortBoots = $blePowerCycleResetShortBoots;',
+      )
+      ..writeln(
+        'const int kBlePowerCycleResetUptimeSeconds = $blePowerCycleResetUptimeSeconds;',
+      )
       ..writeln()
       ..writeln('const int kBleAttMtu = $bleAttMtu;')
       ..writeln('const int kBleMaxChunkBytes = $bleMaxChunkBytes;')
