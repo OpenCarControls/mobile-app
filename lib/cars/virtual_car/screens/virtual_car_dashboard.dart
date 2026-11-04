@@ -80,8 +80,9 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     title: const Text('Unpair vehicle?'),
                     content: const Text(
                       'This will remove the vehicle from the app and return '
-                      'you to the setup wizard. To pair again, the device has '
-                      'to be in pairing mode (see Help).',
+                      'you to the setup wizard.\n\n'
+                      'To pair again, the device has to be in pairing mode '
+                      '(see Help).',
                     ),
                     actions: [
                       TextButton(
