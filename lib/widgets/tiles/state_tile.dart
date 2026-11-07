@@ -82,13 +82,9 @@ class StateTile extends StatelessWidget {
 
     final Widget content;
     if (large) {
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Align(alignment: Alignment.centerLeft, child: text),
-          const SizedBox(height: 8),
-          Expanded(child: HistoryChart(lines: [samples])),
-        ],
+      content = TextOverChart(
+        text: text,
+        chart: HistoryChart(lines: [samples]),
       );
     } else if (wide && tile.history != null) {
       content = Row(
@@ -107,6 +103,34 @@ class StateTile extends StatelessWidget {
       label: '${tile.accessibleLabel}, ${value ?? 'unknown'}',
       excludeSemantics: true,
       child: TileSurface(child: content),
+    );
+  }
+}
+
+/// A value over its chart, for 2×2 tiles: the text keeps its size unless it
+/// would take more than two thirds of the height, then it shrinks.
+class TextOverChart extends StatelessWidget {
+  const TextOverChart({super.key, required this.text, required this.chart});
+
+  final Widget text;
+  final Widget chart;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: constraints.maxHeight * 2 / 3,
+            ),
+            child: Align(alignment: Alignment.topLeft, child: text),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: chart),
+        ],
+      ),
     );
   }
 }

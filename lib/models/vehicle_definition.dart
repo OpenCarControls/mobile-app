@@ -58,6 +58,9 @@ abstract class VehicleDefinition {
   /// The climate control, or null when the vehicle has none.
   ClimateDescription? get climate;
 
+  /// Made-up states for the debug gallery, named for what they show.
+  List<({String name, VehicleSnapshot snapshot})> get sampleSnapshots;
+
   String get mqttCommandTopicTemplate;
   String get mqttDataTopicTemplate;
 

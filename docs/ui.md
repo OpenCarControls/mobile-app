@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid and the command behaviour exist (`lib/widgets/tiles`), but only the debug gallery uses them, with fake tiles. Remove this note once the dashboard is rebuilt.
+> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid, the command behaviour and the tile widgets exist (`lib/widgets/tiles`), and each platform describes its tiles and default layouts, but only the debug gallery uses them: with fake tiles, and with each vehicle's default layouts drawn from sample states. Remove this note once the dashboard is rebuilt.
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 

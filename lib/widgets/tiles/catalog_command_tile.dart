@@ -55,8 +55,14 @@ class CatalogCommandTile extends ConsumerWidget {
                     if (!data.iconOnly) Flexible(child: title),
                     if (wide) ...[
                       const SizedBox(width: 8),
-                      const Spacer(),
-                      Text(state.caption, maxLines: 1),
+                      Expanded(
+                        child: Text(
+                          state.caption,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
                     ],
                   ],
                 ),

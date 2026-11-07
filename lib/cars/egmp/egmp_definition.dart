@@ -4,6 +4,7 @@ import 'package:protobuf/protobuf.dart';
 import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/cars/egmp/constants.g.dart';
 import 'package:open_car_app/cars/egmp/screens/egmp_dashboard.dart';
+import 'package:open_car_app/cars/egmp/samples.dart';
 import 'package:open_car_app/cars/egmp/stub_transport.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
@@ -94,4 +95,8 @@ class EgmpDefinition implements VehicleDefinition {
 
   @override
   ClimateDescription? get climate => egmpClimate;
+
+  @override
+  List<({String name, VehicleSnapshot snapshot})> get sampleSnapshots =>
+      egmpSamples();
 }

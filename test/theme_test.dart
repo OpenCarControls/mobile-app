@@ -334,16 +334,21 @@ void main() {
       addTearDown(tester.view.reset);
       await pumpGallery(tester);
 
-      expect(find.text('Doors'), findsOneWidget);
-      expect(find.text('Climate'), findsOneWidget);
-      expect(find.text('Odometer'), findsOneWidget);
+      // The vehicle layouts section below has real tiles of the same names.
+      Finder inSandbox(Finder finder) => find.descendant(
+        of: find.byType(TileGallerySection),
+        matching: finder,
+      );
+      expect(inSandbox(find.text('Doors')), findsOneWidget);
+      expect(inSandbox(find.text('Climate')), findsOneWidget);
+      expect(inSandbox(find.text('Odometer')), findsOneWidget);
 
-      await tester.tap(find.bySemanticsLabel('Climate, off'));
+      await tester.tap(inSandbox(find.bySemanticsLabel('Climate, off')));
       await tester.pump();
       await tester.pump(fakeCommandDelay);
       await tester.pumpAndSettle();
 
-      expect(find.text('21°C'), findsOneWidget);
+      expect(inSandbox(find.text('21°C')), findsOneWidget);
     });
 
     testWidgets('previews both brightnesses', (tester) async {

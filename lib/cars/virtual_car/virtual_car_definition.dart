@@ -5,6 +5,7 @@ import 'package:open_car_app/cars/virtual_car/catalog.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
 import 'package:open_car_app/cars/virtual_car/screens/virtual_car_dashboard.dart';
 import 'package:open_car_app/cars/virtual_car/skin.dart';
+import 'package:open_car_app/cars/virtual_car/samples.dart';
 import 'package:open_car_app/cars/virtual_car/stub_transport.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
@@ -98,4 +99,8 @@ class VirtualCarDefinition implements VehicleDefinition {
 
   @override
   ClimateDescription? get climate => null;
+
+  @override
+  List<({String name, VehicleSnapshot snapshot})> get sampleSnapshots =>
+      virtualCarSamples();
 }

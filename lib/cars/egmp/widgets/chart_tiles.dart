@@ -63,14 +63,7 @@ class EgmpChartTile extends StatelessWidget {
       ),
     );
     if (large) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Align(alignment: Alignment.centerLeft, child: text),
-          const SizedBox(height: 8),
-          Expanded(child: chart),
-        ],
-      );
+      return TextOverChart(text: text, chart: chart);
     }
     return Row(
       children: [

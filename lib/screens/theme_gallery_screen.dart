@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/screens/tile_gallery_section.dart';
+import 'package:open_car_app/screens/vehicle_layouts_gallery_section.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
@@ -76,6 +77,7 @@ class _ThemeGalleryScreenState extends ConsumerState<ThemeGalleryScreen> {
                   setState(() => _pickedBrightness = picked.single),
             ),
             const _Section('Tiles', TileGallerySection()),
+            const _Section('Vehicle layouts', VehicleLayoutsGallerySection()),
             const _Section('Colours', _ColoursSection()),
             const _Section('Glass', _GlassSection()),
             const _Section('Shapes', _ShapesSection()),
