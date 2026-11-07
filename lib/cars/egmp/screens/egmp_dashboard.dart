@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/egmp/command_ids.dart';
+import 'package:open_car_app/cars/egmp/units.dart';
+import 'package:open_car_app/formatting/units.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:flutter/foundation.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
@@ -291,12 +293,12 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
         ? [
             'Charging',
             if (basicState.timeRemainingMinutes > 0)
-              '${_formatMinutes(basicState.timeRemainingMinutes)} to '
+              '${formatMinutes(basicState.timeRemainingMinutes)} to '
                   '${hasLimit ? '$limit%' : 'limit'}',
             if (isDcCharging &&
                 basicState.timeTo80PercentMinutes > 0 &&
                 !(hasLimit && limit == 80))
-              '${_formatMinutes(basicState.timeTo80PercentMinutes)} to 80%',
+              '${formatMinutes(basicState.timeTo80PercentMinutes)} to 80%',
           ].join(' • ')
         : (isV2L ? 'V2L Active' : '');
 
@@ -365,7 +367,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_formatRange(batteryRange, basicState)} - $batterySoc% 🔋$powerFlowStr',
+                      '${formatRange(batteryRange, basicState.displayDistanceUnit)} - $batterySoc% 🔋$powerFlowStr',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -396,7 +398,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 ),
                 if (isDriving)
                   Text(
-                    _formatSpeed(speed, basicState),
+                    formatSpeed(speed, basicState.displayDistanceUnit),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -558,7 +560,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
             icon: Icons.ac_unit,
             title: 'Climate & Windows',
             subtitle:
-                'Indoor: ${_formatTemperature(basicState.indoorTemperature, basicState)}',
+                'Indoor: ${formatTemperature(basicState.indoorTemperature, basicState.displayTemperatureUnit)}',
             onTap: () => setState(() => _currentSubMenu = 'climate'),
           ),
           _buildMenuTile(
@@ -616,13 +618,13 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Outdoor: ${_formatTemperature(outdoorTemp, basicState)}',
+                  'Outdoor: ${formatTemperature(outdoorTemp, basicState.displayTemperatureUnit)}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Text(
-                  'Indoor: ${_formatTemperature(indoorTemp, basicState)}',
+                  'Indoor: ${formatTemperature(indoorTemp, basicState.displayTemperatureUnit)}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -683,7 +685,10 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           },
                   ),
                   Text(
-                    _formatTargetTemperature(targetTemp, basicState),
+                    formatEgmpClimateTarget(
+                      targetTemp,
+                      basicState.displayTemperatureUnit,
+                    ),
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                     ),
@@ -1003,7 +1008,10 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
             leading: const Icon(Icons.speed),
             title: const Text('Odometer'),
             trailing: Text(
-              _formatOdometer(basicState.odometer, basicState),
+              formatOdometer(
+                basicState.odometer,
+                basicState.displayDistanceUnit,
+              ),
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
@@ -1055,39 +1063,3 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     );
   }
 }
-
-String _formatMinutes(int minutes) =>
-    minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min';
-
-const double _kmPerMile = 1.609344;
-
-bool _isMiles(BasicState s) =>
-    s.distanceUnit == BasicState_DistanceUnit.DISTANCE_UNIT_MILES;
-
-/// Distances and speeds arrive in km and km/h; show them in the unit the car displays.
-/// The cluster rounds the range (336 km is 209 mi) but truncates the odometer (22916 km
-/// is 14239 mi).
-String _formatRange(int km, BasicState s) =>
-    _isMiles(s) ? '${(km / _kmPerMile).round()} mi' : '$km km';
-
-String _formatOdometer(int km, BasicState s) =>
-    _isMiles(s) ? '${(km / _kmPerMile).floor()} mi' : '$km km';
-
-/// The speed arrives in whole km/h, so it can be 1 mph off the cluster.
-String _formatSpeed(int kmh, BasicState s) =>
-    _isMiles(s) ? '${(kmh / _kmPerMile).round()} mph' : '$kmh km/h';
-
-bool _isFahrenheit(BasicState s) =>
-    s.temperatureUnit == BasicState_TemperatureUnit.TEMPERATURE_UNIT_FAHRENHEIT;
-
-/// Temperatures arrive in Celsius; show them in the unit the car displays.
-String _formatTemperature(double celsius, BasicState s) => _isFahrenheit(s)
-    ? '${(celsius * 9 / 5 + 32).round()}°F'
-    : '${celsius.toStringAsFixed(1)}°C';
-
-/// The climate target steps 1 °F per 0.5 °C (17 °C is 62 °F, 27 °C is 82 °F), so a plain
-/// conversion wouldn't match what the car shows.
-String _formatTargetTemperature(double celsius, BasicState s) =>
-    _isFahrenheit(s)
-    ? '${((celsius - 14) * 2 + 56).round()}°'
-    : '${celsius.toStringAsFixed(1)}°';
