@@ -198,7 +198,16 @@ void main() {
           ),
         ),
       );
-      await expectLater(future, throwsA(contains('release build')));
+      await expectLater(
+        future,
+        throwsA(
+          isA<CommandRejectedException>().having(
+            (e) => e.message,
+            'message',
+            contains('release build'),
+          ),
+        ),
+      );
     });
 
     test('never sends over MQTT', () async {

@@ -81,6 +81,35 @@ class VehicleSnapshot {
   }
 }
 
+/// The device answered a command with a failure. `toString` gives its reason,
+/// so this can be shown as it is.
+class CommandRejectedException implements Exception {
+  final CommandResponse response;
+  const CommandRejectedException(this.response);
+
+  /// The device's reason.
+  String get message => response.errorMessage.isNotEmpty
+      ? response.errorMessage
+      : 'Command failed';
+
+  /// The sending phone must be validated in the car first: a vehicle command,
+  /// or once a phone is validated for this car, the approval or removing a
+  /// validated phone.
+  bool get needsValidation =>
+      response.statusCode ==
+      CommandStatusCode.COMMAND_STATUS_CODE_REJECTED_NOT_VALIDATED;
+
+  /// The phone's session after a refused validation command, when it explains
+  /// the refusal (a wrong code, no attempts left, the cooldown).
+  PhoneValidationSession? get validationSession {
+    final result = response.systemResult;
+    return result.hasValidationSession() ? result.validationSession : null;
+  }
+
+  @override
+  String toString() => message;
+}
+
 /// How long the vehicle state stays live without an update from the device. The command
 /// availability expires with it, over BLE and MQTT alike.
 const kStateLivenessTimeout = Duration(seconds: 30);
@@ -156,11 +185,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       final completer = _pendingCommands.remove(response.messageId);
       if (completer != null && !completer.isCompleted) {
         if (!response.success) {
-          completer.completeError(
-            response.errorMessage.isNotEmpty
-                ? response.errorMessage
-                : 'Command failed',
-          );
+          completer.completeError(CommandRejectedException(response));
         } else {
           completer.complete(response);
         }

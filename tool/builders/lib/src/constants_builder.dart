@@ -55,6 +55,10 @@ class ConstantsBuilder implements Builder {
       'ble.characteristics.device_to_app',
     );
     final blePairing = _map(ble['pairing'], 'ble.pairing');
+    final blePhoneValidation = _map(
+      ble['phone_validation'],
+      'ble.phone_validation',
+    );
     final blePayload = _map(ble['payload'], 'ble.payload');
     final bleFragmentation = _map(ble['fragmentation'], 'ble.fragmentation');
 
@@ -96,6 +100,19 @@ class ConstantsBuilder implements Builder {
     final blePowerCycleResetUptimeSeconds = _int(
       blePairing['power_cycle_reset_uptime_seconds'],
       'ble.pairing.power_cycle_reset_uptime_seconds',
+    );
+    int phoneValidation(String key) =>
+        _int(blePhoneValidation[key], 'ble.phone_validation.$key');
+    final blePhoneValidationSessionSeconds = phoneValidation('session_seconds');
+    final blePhoneValidationCodeLength = phoneValidation('code_length');
+    final blePhoneValidationMaxCodeAttempts = phoneValidation(
+      'max_code_attempts',
+    );
+    final blePhoneValidationCooldownSeconds = phoneValidation(
+      'cooldown_seconds',
+    );
+    final blePhoneValidationResultKeepSeconds = phoneValidation(
+      'result_keep_seconds',
     );
     final bleAttMtu = _int(blePayload['att_mtu'], 'ble.payload.att_mtu');
     final bleMaxChunkBytes = _int(
@@ -159,6 +176,22 @@ class ConstantsBuilder implements Builder {
       )
       ..writeln(
         'const int kBlePowerCycleResetUptimeSeconds = $blePowerCycleResetUptimeSeconds;',
+      )
+      ..writeln()
+      ..writeln(
+        'const int kBlePhoneValidationSessionSeconds = $blePhoneValidationSessionSeconds;',
+      )
+      ..writeln(
+        'const int kBlePhoneValidationCodeLength = $blePhoneValidationCodeLength;',
+      )
+      ..writeln(
+        'const int kBlePhoneValidationMaxCodeAttempts = $blePhoneValidationMaxCodeAttempts;',
+      )
+      ..writeln(
+        'const int kBlePhoneValidationCooldownSeconds = $blePhoneValidationCooldownSeconds;',
+      )
+      ..writeln(
+        'const int kBlePhoneValidationResultKeepSeconds = $blePhoneValidationResultKeepSeconds;',
       )
       ..writeln()
       ..writeln('const int kBleAttMtu = $bleAttMtu;')

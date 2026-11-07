@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/virtual_car/command_ids.dart';
@@ -13,6 +14,7 @@ import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
 import 'package:open_car_app/widgets/can_access_banner.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
+import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 import 'package:open_car_app/screens/help_screen.dart';
@@ -212,6 +214,7 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                   _SectionHeader(title: 'Controls'),
                   const SizedBox(height: 8),
                   const CanAccessSection(),
+                  if (kDebugMode) const PhoneValidationDebugSection(),
                   const SizedBox(height: 8),
                   if (doorLockUi != CommandUiState.hidden)
                     _DoorLockCard(

@@ -14,6 +14,7 @@ import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
 import 'package:open_car_app/widgets/can_access_banner.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
+import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 import 'package:open_car_app/screens/help_screen.dart';
@@ -996,6 +997,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
           ),
           const Divider(),
           const CanAccessSection(),
+          if (kDebugMode) const PhoneValidationDebugSection(),
           const Divider(),
           ListTile(
             title: Text(

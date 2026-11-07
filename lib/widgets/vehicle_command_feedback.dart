@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
+import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
 
 /// Sends a vehicle command and, if it fails, says why in a SnackBar: the
 /// device's reason (e.g. it only listens to the car until control is
-/// approved), a timeout, or the transport's error. When control of the car
-/// still needs approving, the SnackBar opens the approval dialog.
+/// approved), that this phone needs validating in the car, a timeout, or the
+/// transport's error. When control of the car still needs approving, the
+/// SnackBar opens the approval dialog.
 Future<void> sendVehicleCommand(
   BuildContext context,
   WidgetRef ref,
@@ -38,6 +40,8 @@ Future<void> sendVehicleCommand(
 /// The text shown for a failed vehicle command.
 String vehicleCommandErrorText(Object error) {
   final text = switch (error) {
+    CommandRejectedException(needsValidation: true) =>
+      'This phone needs validating in the car before it can send commands.',
     TimeoutException() => 'The vehicle did not answer the command.',
     CarTransportException(:final message) => message,
     // The device's CommandResponse.error_message.

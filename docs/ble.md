@@ -16,6 +16,7 @@ The device advertises **only** while its pairing window is open: after its pairi
 *   **Unpair:** overflow menu on the dashboard → confirmation dialog → `pairedVehicleProvider.notifier.unpair()` → the router returns to the wizard. Unpairing only forgets the vehicle in the app; the device keeps its bond, so pairing again needs it in pairing mode.
 *   **`createBond()` is never called** — bonding is driven by the write-probe, not explicit bond requests.
 *   **Stale-bond recovery:** if the firmware drops the link after connecting (it had a stale bond, the phone forgot it), `disconnectCompleter` fires and the wizard returns to the "found" step with a warning banner. Firmware clears its entry on that drop; the next Pair tap succeeds normally (the user sees two OS pairing prompts in total).
+*   **Phone validation:** bonding doesn't make a phone trusted. Pairing is Just Works, so a newly paired phone (and one that paired again after a bond reset, or a device moved to another car) can send system commands, but no vehicle command until it is validated in the car. See [Phone validation](architecture.md#phone-validation). Trust is only read from `SystemState.phone_access` on the current connection, never cached.
 
 ## BLE specifics
 *   **Library:** `flutter_reactive_ble: ^5.4.1`. Singleton in `lib/providers/ble_provider.dart` (`bleProvider`).
