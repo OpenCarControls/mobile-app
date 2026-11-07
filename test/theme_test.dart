@@ -9,6 +9,7 @@ import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/screens/theme_gallery_screen.dart';
+import 'package:open_car_app/screens/tile_gallery_section.dart';
 import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/theme/radius_token.dart';
@@ -324,6 +325,25 @@ void main() {
       await tester.pump();
 
       expect(scaffold().tokens.radiusPill, const RadiusToken(2));
+    });
+
+    testWidgets('shows fake tiles that send nothing to the vehicle', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 3000);
+      addTearDown(tester.view.reset);
+      await pumpGallery(tester);
+
+      expect(find.text('Doors'), findsOneWidget);
+      expect(find.text('Climate'), findsOneWidget);
+      expect(find.text('Odometer'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Climate, off'));
+      await tester.pump();
+      await tester.pump(fakeCommandDelay);
+      await tester.pumpAndSettle();
+
+      expect(find.text('21°C'), findsOneWidget);
     });
 
     testWidgets('previews both brightnesses', (tester) async {

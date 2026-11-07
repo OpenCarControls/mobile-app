@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
+import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
@@ -17,7 +19,8 @@ enum CommandUiState {
   /// The device accepts the command now (or only the device can tell).
   enabled,
 
-  /// Shown greyed out, without a reason.
+  /// Shown greyed out. A tap says why, when the app knows
+  /// ([commandUnavailableReason]).
   disabled,
 
   /// Not available on this car: not shown.
@@ -129,6 +132,40 @@ final commandUiStateProvider = Provider.family<CommandUiState, CommandKey>((
   final reported = ref.watch(commandAvailabilityProvider);
   final transport = ref.watch(carTransportProvider).transportType;
   return commandUiState(reported, transport, key.set, key.id);
+});
+
+/// Why a greyed-out command in [set] can't be sent. The device doesn't report a
+/// reason, so this is what the app knows from the transport and the access
+/// states.
+String commandUnavailableReason({
+  required TransportType transport,
+  required CommandSet set,
+  required CanAccessState? canAccess,
+  required PhoneAccessState? phoneAccess,
+}) {
+  if (transport == TransportType.mqtt && set == CommandSet.advanced) {
+    return 'This needs a Bluetooth connection to the car.';
+  }
+  if (canAccess != null && canAccessNeedsApproval(canAccess)) {
+    return "Control of this car isn't approved yet.";
+  }
+  if (phoneAccess?.trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED) {
+    return "This phone isn't validated in this car yet.";
+  }
+  return 'Not available right now.';
+}
+
+/// The reason for [commandUnavailableReason], from the live state.
+final commandUnavailableReasonProvider = Provider.family<String, CommandKey>((
+  ref,
+  key,
+) {
+  return commandUnavailableReason(
+    transport: ref.watch(carTransportProvider).transportType,
+    set: key.set,
+    canAccess: ref.watch(canAccessStateProvider),
+    phoneAccess: ref.watch(phoneAccessStateProvider),
+  );
 });
 
 extension on TransportType {
