@@ -27,6 +27,7 @@ body{margin:0}
 .oc-tile.pending,.oc-round.pending{border-color:var(--accent);animation:ocPulse 1s ease-in-out infinite}
 .oc-tile.oc-dashed{align-items:center;justify-content:center;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border:1.5px dashed var(--outline);color:var(--text2)}
 .oc-cap{font-size:12px;color:var(--text2)}
+.oc-tile.off,.oc-round.off{opacity:.42;cursor:default}
 .oc-tile.on .oc-cap{color:var(--onAccentC)}
 .oc-glass{border:1px solid var(--tileBorder);background:var(--tileBg);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .oc-chip{min-height:44px;padding:0 14px;border-radius:var(--rP);border:1px solid var(--outline);background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
@@ -89,6 +90,18 @@ body{margin:0}
   <div style="position: absolute; top: 0; bottom: 0; right: 0; left: {{ctlLeft}}; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; background: {{ctlBg}}; border-left: {{ctlBorder}}; padding: {{ctlPad}}">
     <div style="flex: {{spacerGrow}} 0 {{spacerH}}px"></div>
     <div ref="{{setPanel}}" style="flex-shrink: 0; box-sizing: border-box; padding: {{wrapPad}}; background: {{wrapBg}}; -webkit-backdrop-filter: {{wrapBlur}}; backdrop-filter: {{wrapBlur}}; border-radius: {{wrapRadius}}; border-top: {{wrapBorder}}">
+
+      <!-- Car access banner: control not approved, or this phone not validated. Vehicle commands are greyed out meanwhile -->
+      <sc-if value="{{hasBanner}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; margin-bottom: 8px; border-radius: var(--rM); background: var(--tileOn); color: var(--onAccentC)">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="{{bannerIcon}}"/></svg>
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 14px; font-weight: 700">{{bannerTitle}}</div>
+            <div style="font-size: 13px; line-height: 1.4; margin-top: 2px">{{bannerBody}}</div>
+          </div>
+          <button class="oc-chip" style="flex-shrink: 0">{{bannerAction}}</button>
+        </div>
+      </sc-if>
 
       <div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); grid-auto-rows: minmax({{rowH}}px, auto); grid-auto-flow: row dense; align-items: {{gridAlign}}; gap: 8px">
         <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
@@ -337,7 +350,7 @@ body{margin:0}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"vehicle":{"editor":"enum","default":"ev","options":["ev","ice"]},"tier":{"editor":"enum","default":"ble","options":["remote","ble"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"layout":{"editor":"enum","default":"phone","options":["phone","wide"]},"buttons":{"editor":"enum","default":"titled","options":["titled","icon"]},"skin":{"editor":"enum","default":"default","options":["default","boxy","round"]},"driving":{"editor":"boolean","default":false},"connected":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+<script type="text/x-dc" data-dc-script data-props='{"vehicle":{"editor":"enum","default":"ev","options":["ev","ice"]},"tier":{"editor":"enum","default":"ble","options":["remote","ble"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"layout":{"editor":"enum","default":"phone","options":["phone","wide"]},"buttons":{"editor":"enum","default":"titled","options":["titled","icon"]},"skin":{"editor":"enum","default":"default","options":["default","boxy","round"]},"driving":{"editor":"boolean","default":false},"connected":{"editor":"boolean","default":true},"access":{"editor":"enum","default":"ok","options":["ok","approval","validate"]},"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   // layout = null means "the platform's default layout"; the editor replaces it with the user's list
   state = { locked: true, climate: false, port: true, precond: false, pending: null, temp: 21, defF: false, defR: false, wheel: false, seatD: 0, seatP: 0, win: 'closed', hdrH: 150, panelH: 240, edit: false, layout: null };
@@ -389,6 +402,9 @@ class Component extends DCLogic {
     const iconOnly = pr.buttons === 'icon';
     const driving = pr.driving === true || pr.driving === 'true';
     const connected = !(pr.connected === false || pr.connected === 'false');
+    // Vehicle commands need the approval and a validated phone; until then they are greyed out
+    const access = pr.access === 'approval' || pr.access === 'validate' ? pr.access : 'ok';
+    const blocked = access !== 'ok';
     const p = s.pending;
     const H = wide ? 720 : 844;
     const MINCAR = 280;
@@ -484,10 +500,10 @@ class Component extends DCLogic {
         o.isCmd1 = e.w === 1;
         o.isCmdW = e.w > 1;
         o.icon = d.icon;
-        o.cls = (d.on ? 'on ' : '') + (p === d.key ? 'pending' : '');
-        o.aria = d.label + ', ' + d.cap;
+        o.cls = (d.on ? 'on ' : '') + (p === d.key ? 'pending ' : '') + (blocked ? 'off' : '');
+        o.aria = d.label + ', ' + d.cap + (blocked ? ', unavailable' : '');
         o.cap = cap1(d.cap);
-        o.tap = s.edit ? () => {} : this.act(d.key, d.apply, d.ms);
+        o.tap = s.edit || blocked ? () => {} : this.act(d.key, d.apply, d.ms);
       } else if (d.kind === 'stat') {
         o.isStatS = e.w === 1 && e.h === 1;
         o.isStatM = e.w >= 2 && e.h === 1;
@@ -622,9 +638,14 @@ class Component extends DCLogic {
       extras,
       climateOn: s.climate,
       climateCap: 'Inside 19.5° · Outside 12°',
-      climateCls: (s.climate ? 'on ' : '') + (climatePending ? 'pending' : ''),
+      climateCls: (s.climate ? 'on ' : '') + (climatePending ? 'pending ' : '') + (blocked ? 'off' : ''),
       climateAria: s.climate ? 'Turn climate off' : 'Turn climate on',
-      climateTap: this.act('climate', (st) => ({ climate: !st.climate }), 900),
+      climateTap: blocked ? () => {} : this.act('climate', (st) => ({ climate: !st.climate }), 900),
+      hasBanner: blocked,
+      bannerIcon: access === 'validate' ? 'M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z M9 12l2 2 4-4' : 'M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z M12 9v4 M12 16h.01',
+      bannerTitle: access === 'validate' ? 'Validate this phone' : 'Control isn\u2019t approved',
+      bannerBody: access === 'validate' ? 'Commands need proof that you\u2019re in the car. It takes a minute.' : 'The device only listens to the car. Approve control to send commands.',
+      bannerAction: access === 'validate' ? 'Validate' : 'Review',
       tempLabel: s.temp.toFixed(1) + '°C',
       tempDown: () => this.setState({ temp: clamp(s.temp - 0.5) }),
       tempUp: () => this.setState({ temp: clamp(s.temp + 0.5) }),

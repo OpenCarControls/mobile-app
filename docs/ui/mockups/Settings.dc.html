@@ -116,7 +116,7 @@ button.oc-row{cursor:pointer}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"tier":{"editor":"enum","default":"ble","options":["remote","ble"]},"theme":{"editor":"enum","default":"light","options":["light","dark"]},"skin":{"editor":"enum","default":"default","options":["default","boxy","round"]},"$preview":{"width":390,"height":1280}}'>
 class Component extends DCLogic {
-  state = { themePick: 'system', btnPick: 'titled', can: false };
+  state = { themePick: 'system', btnPick: 'titled', can: false, dev: false };
 
   renderVals() {
     const pr = this.props, s = this.state;
@@ -127,7 +127,10 @@ class Component extends DCLogic {
     const seg = (key, label) => ({ label, cls: s[key.k] === key.v ? 'on' : '', tap: () => this.setState({ [key.k]: key.v }) });
 
     const R = { isNav: false, isInfo: false, isToggle: false, isSeg: false, isNote: false, label: '', cap: '', hasCap: false, value: '', hasValue: false, chevron: false, color: 'var(--text)', segs: [], cls: '', checked: 'false', tap: () => {}, bt: 'none' };
-    const nav = (label, o) => ({ ...R, isNav: true, label, chevron: true, ...o });
+    const nav = (label, o) => {
+      const r = { ...R, isNav: true, label, chevron: true, ...o };
+      return { ...r, hasValue: r.value !== '', hasCap: r.cap !== '' };
+    };
     const info = (label, value) => ({ ...R, isInfo: true, label, value });
     const withLines = (rows) => rows.map((r, i) => ({ ...r, bt: i ? line : 'none' }));
 
@@ -140,8 +143,16 @@ class Component extends DCLogic {
     ]);
 
     const vehicle = withLines(ble
-      ? [nav('Paired phones', { value: '2' }), nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Also removes this phone from the vehicle' })]
-      : [nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Also removes this phone from the vehicle' })]);
+      ? [nav('Paired phones', { value: '2 · 1 validated' }), nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Forgets it in this app' })]
+      : [nav('Unpair vehicle', { color: 'var(--danger)', chevron: false, cap: 'Forgets it in this app' })]);
+
+    // Car access (BLE only): the approval (#55) and this phone's validation (#60)
+    const carAccess = withLines([
+      nav('Vehicle control', { value: 'Approved', cap: 'The device may send commands to this car' }),
+      info('This phone', 'Not validated'),
+      nav('Validate this phone', { color: 'var(--accent)', cap: 'Commands need proof that you\u2019re in the car' }),
+      { ...R, isToggle: true, label: 'Developer write lock unlocked', cap: 'Development firmware only. Locks again at every restart.', cls: s.dev ? 'on' : '', checked: s.dev ? 'true' : 'false', tap: () => this.setState({ dev: !s.dev }) }
+    ]);
 
     const device = withLines([
       info('Firmware', 'v1.4.2'),
@@ -156,17 +167,17 @@ class Component extends DCLogic {
       { ...R, isToggle: true, label: 'CAN logger', cap: s.can ? 'On. Vehicle features are paused while the logger runs. In SavvyCAN, connect to 192.168.4.1 port 23.' : 'Records the car’s data bus to SavvyCAN. Turning it on pauses vehicle features.', cls: s.can ? 'on' : '', checked: s.can ? 'true' : 'false', tap: () => this.setState({ can: !s.can }) }
     ]);
 
-    const noteRows = withLines([{ ...R, isNote: true, label: 'Stand near the vehicle and connect over Bluetooth to see the device, its firmware and the developer options.' }]);
+    const noteRows = withLines([{ ...R, isNote: true, label: 'Stand near the vehicle and connect over Bluetooth to see the paired phones, car access, the device and the developer options.' }]);
 
-    const about = withLines([nav('Open-source licenses', {}), info('App version', '0.9.0')]);
+    const about = withLines([nav('Help', { cap: 'Pairing mode, and what to do when the app can\u2019t find the device' }), nav('Open-source licenses', {}), info('App version', '0.9.0')]);
 
     const sections = ble
-      ? [{ title: 'Dashboard', rows: dashboard }, { title: 'Vehicle', rows: vehicle }, { title: 'Device', rows: device }, { title: 'Advanced', rows: advanced }, { title: 'About', rows: about }]
+      ? [{ title: 'Dashboard', rows: dashboard }, { title: 'Vehicle', rows: vehicle }, { title: 'Car access', rows: carAccess }, { title: 'Device', rows: device }, { title: 'Advanced', rows: advanced }, { title: 'About', rows: about }]
       : [{ title: 'Dashboard', rows: dashboard }, { title: 'Vehicle', rows: vehicle }, { title: 'Device', rows: noteRows }, { title: 'About', rows: about }];
 
     return {
       themeClass: (dark ? 'oc-dark' : 'oc-light') + ' oc-skin-' + skin,
-      h: ble ? 1500 : 1010,
+      h: ble ? 1840 : 1080,
       connText: ble ? 'Connected over Bluetooth' : 'Connected remotely',
       sections
     };

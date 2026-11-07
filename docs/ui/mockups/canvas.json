@@ -63,8 +63,8 @@
     },
     "Wizard.dc.html": {
       "h": 844,
-      "title": "Setup wizard · style and vibe (last: adding a second vehicle)",
-      "w": 2110,
+      "title": "Setup wizard · style, the approval step, a timeout, adding a second vehicle",
+      "w": 2540,
       "x": 0,
       "y": 2892
     },
@@ -72,31 +72,31 @@
       "h": 844,
       "title": "Connection pill · activity popover",
       "w": 390,
-      "x": 2190,
+      "x": 2620,
       "y": 2892
     },
     "SettingsBle.dc.html": {
-      "h": 1500,
+      "h": 1840,
       "is_interactive": true,
       "title": "Settings · Bluetooth (dark)",
       "w": 390,
-      "x": 2660,
+      "x": 3090,
       "y": 2892
     },
     "SettingsRemote.dc.html": {
-      "h": 1010,
+      "h": 1080,
       "is_interactive": true,
       "title": "Settings · Remote (light)",
       "w": 390,
-      "x": 3130,
+      "x": 3560,
       "y": 2892
     },
     "Settings.dc.html": {
-      "h": 1500,
+      "h": 1840,
       "is_interactive": true,
       "title": "Settings component",
       "w": 390,
-      "x": 3600,
+      "x": 4030,
       "y": 2892
     },
     "SkinBoxy.dc.html": {
@@ -177,6 +177,36 @@
       "w": 1024,
       "x": 940,
       "y": 964
+    },
+    "Validation.dc.html": {
+      "h": 844,
+      "w": 2540,
+      "x": 0,
+      "y": 4820,
+      "title": "Phone validation · choose, code, in-car action, validated, cooldown, another phone"
+    },
+    "AccessApproval.dc.html": {
+      "h": 844,
+      "w": 390,
+      "x": 2620,
+      "y": 4820,
+      "is_interactive": true,
+      "title": "Car access · control not approved (light)"
+    },
+    "AccessValidate.dc.html": {
+      "h": 844,
+      "w": 390,
+      "x": 3090,
+      "y": 4820,
+      "is_interactive": true,
+      "title": "Car access · phone not validated (dark)"
+    },
+    "PairedPhones.dc.html": {
+      "h": 844,
+      "w": 390,
+      "x": 3560,
+      "y": 4820,
+      "title": "Paired phones · trust levels"
     }
   },
   "createdOnFiles": {
@@ -220,7 +250,11 @@
     "Switcher.dc.html",
     "VehiclesList.dc.html",
     "VehiclesUnpair.dc.html",
-    "Vehicles.dc.html"
+    "Vehicles.dc.html",
+    "Validation.dc.html",
+    "AccessApproval.dc.html",
+    "AccessValidate.dc.html",
+    "PairedPhones.dc.html"
   ],
   "pages": [],
   "title": "Open Car App UI"

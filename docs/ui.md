@@ -4,7 +4,7 @@ The target design for the dashboard: one shared look and structure for every veh
 
 > **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). Remove this note once the dashboard is rebuilt.
 
-Related: [Other screens](ui-screens.md) (setup wizard, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
+Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 
 ## Principles
 *   **One UI, many cars.** Layout, components, states and motion are shared. A platform provides its tiles, their default layout, its level type, its hero and its [skin](ui-theming.md).
@@ -138,7 +138,7 @@ A tile may show different content by state while keeping its place and size. The
 | Idle | Frosted surface |
 | On / active | Accent-container fill |
 | Pending | Border in the accent colour and a pulsing fade until the `CommandResponse` arrives (or the 15 s timeout). The connection pill spins too. |
-| Unavailable (over this transport, or the car can't do it now) | Dimmed, with an explanation on tap; see [States](#states-and-edge-cases) |
+| Unavailable | Greyed out and does nothing, while the device reports the command unavailable ([command availability](architecture.md)) or it can't be sent over this transport. A tap gives the reason when the app knows it: control isn't approved, this phone isn't validated, or it needs Bluetooth. Otherwise it says "Not available right now", since the device reports no reason. |
 | Error | Brief error feedback (a snackbar with the `CarTransportException` message); not yet mocked |
 
 *Titled* (default) and *icon-only* buttons are both supported, per platform with a user override in settings. Icon-only buttons still need an accessible label that includes the state (for example "Doors, locked").
@@ -175,8 +175,17 @@ Because dragging alone is not accessible, edit mode must also offer move actions
 ## States and edge cases
 *   **Not connected / stale.** The pill says Offline and when the state was last updated. Values from the last snapshot stay on screen but must not look live (dim them, or mark them). This overlaps with [Show stale or asleep vehicle state](https://github.com/OpenCarControls/mobile-app/issues/29).
 *   **Command pending.** The tile that sent the command pulses and the pill's dot spins. Other tiles stay usable unless the platform forbids concurrent commands.
-*   **Unavailable commands.** A tile for a command the current link or car state can't run is dimmed and says why on tap (for example "Needs Bluetooth"). This overlaps with [Gray out unavailable commands](https://github.com/OpenCarControls/mobile-app/issues/22).
-*   **Platform mismatch.** The existing mismatch banner appears above the header content and keeps its unpair action.
+*   **Unavailable commands.** The device reports which commands it accepts right now, and the app greys out the rest (done in [#56](https://github.com/OpenCarControls/mobile-app/pull/56)). See the Unavailable state in [Command tile states](#command-tile-states).
+*   **Banners.** One banner slot sits at the top of the tile area on both tiers, under the header, in the accent container colours with an icon, a title, one sentence and one action. Only the most important banner shows, in this order:
+
+    | Banner | When | Action |
+    |---|---|---|
+    | Wrong vehicle platform | The device reports a different platform (existing `PlatformMismatchBanner`) | Unpair |
+    | The device no longer knows this phone | Repeated early drops (existing `BleBondLostBanner`) | Help, or unpair and pair again |
+    | Control isn't approved | The car is identified but the CAN read-write approval is missing or for another car (existing `CanAccessBanner`) | Review: the approval dialog |
+    | Validate this phone | This phone is bonded but not validated in this car ([phone validation](ui-screens.md#phone-validation)) | Validate: the validation flow |
+
+    The approval and validation banners only show over Bluetooth, since both are BLE-only. While either shows, vehicle command tiles are greyed out.
 *   **Charging.** The charge-port tile is on, the Battery tile shows the charging state, and on the remote tier the hero shows the cable and the port glow and the status line shows the charging text.
 *   **Driving.** On the remote tier the hero shows the car on an advancing road, the speed is shown at the top right and the status line says Driving; charging text is hidden. On the Bluetooth tier a Speed tile shows the speed.
 *   **Units.** Distance, speed and temperature follow the car's units (km/miles, °C/°F). The climate target steps in the car's own steps (for example 1 °F). Keep the existing formatting helpers' behaviour.
@@ -185,6 +194,8 @@ Because dragging alone is not accessible, edit mode must also offer move actions
 
 ![Driving](ui/images/driving.png)
 ![Offline](ui/images/offline.png)
+![Control not approved](ui/images/ble-approval-needed.png)
+![Phone not validated](ui/images/ble-validation-needed.png)
 
 ## Vehicle description
 Each platform declares what the shared screen shows. This is a proposal for the shape, not a final API:
@@ -232,7 +243,7 @@ Control button options. Both were kept: A (icon-only) and B (icon + title) are a
 *   Where does pull-to-refresh live on the dashboard?
 *   Tap on the level to swap percent and range?
 *   Do the climate extras work with climate off on each car? (Assumed no.)
-*   The error and unavailable tile states, the drag gesture and per-tile configuration are not designed.
+*   The error tile state, the drag gesture and per-tile configuration are not designed.
 *   Should the screen animate when the link switches between Remote and Bluetooth, which reshapes it, or wait for the user?
 *   Does the remote tier get the same editor?
 *   The level and range appear in both the header and the Battery tile. Keep, or drop one?

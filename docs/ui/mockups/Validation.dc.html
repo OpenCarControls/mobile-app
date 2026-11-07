@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone validation</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--danger:#B3261E;--dangerC:rgba(179,38,30,.12)}
+.oc-dark{--bg:#0C1112;--surface:#151C1E;--text:#E6EEEC;--text2:#9DB0B3;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#2F3D40;--tileBg:rgba(31,42,45,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(230,238,236,.14);--danger:#FFB4AB;--dangerC:rgba(255,180,171,.14)}
+.oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
+.oc-glass{border:1px solid var(--tileBorder);background:var(--tileBg)}
+.oc-btn{height:52px;border-radius:var(--rM);border:1px solid transparent;font:inherit;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+.oc-btn.primary{background:var(--accent);color:var(--surface)}
+.oc-btn.secondary{background:transparent;border-color:var(--outline);color:var(--text)}
+.oc-btn.text{background:transparent;color:var(--text2);height:44px}
+.oc-key{height:52px;border-radius:var(--rS);border:0;background:var(--tileBg);color:var(--text);font:inherit;font-size:22px;font-weight:700;cursor:pointer}
+.oc-digit{height:56px;border-radius:var(--rS);border:2px solid var(--outline);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
+.oc-btn:focus-visible,.oc-key:focus-visible,.oc-method:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.oc-method{box-sizing:border-box;width:100%;padding:14px;display:flex;align-items:flex-start;gap:14px;border-radius:var(--rM);font:inherit;text-align:left;color:var(--text);cursor:pointer}
+.oc-ring{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:50%;border:2px solid var(--accent);opacity:0;animation:ocRing 2.4s ease-out infinite}
+@keyframes ocRing{0%{transform:scale(.62);opacity:.55}100%{transform:scale(1.08);opacity:0}}
+@media (prefers-reduced-motion: reduce){.oc-ring{animation:none;opacity:.25}}
+</style>
+</helmet>
+<div style="width: 2540px; height: 844px; display: flex; gap: 40px; font-family: 'Manrope', system-ui, sans-serif">
+  <sc-for list="{{screens}}" as="sc" hint-placeholder-count="6">
+    <div class="{{sc.themeClass}}" style="width: 390px; height: 844px; flex-shrink: 0; box-sizing: border-box; position: relative; overflow: hidden; background: var(--bg); color: var(--text); display: flex; flex-direction: column; padding: 20px 20px 28px">
+
+      <!-- Header: close, title, and the session's time left while it runs -->
+      <div style="display: flex; align-items: center; gap: 10px">
+        <button aria-label="Close" style="width: 44px; height: 44px; margin-left: -10px; border-radius: var(--rRound); border: 0; background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg></button>
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 18px; font-weight: 800">Validate this phone</div>
+          <div style="font-size: 12px; color: var(--text2)">EV6 · Bluetooth</div>
+        </div>
+        <sc-if value="{{sc.hasTimer}}" hint-placeholder-val="{{ false }}">
+          <div aria-label="Time left {{sc.timer}}" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--rP); background: var(--surface); border: 1px solid var(--outline); font-size: 13px; font-weight: 700">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v5l3 2"/></svg>
+            {{sc.timer}}
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- 1. Choose a method -->
+      <sc-if value="{{sc.isChoose}}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <div style="margin-top: 28px; font-size: 24px; font-weight: 800; line-height: 1.2">Prove you're in the car</div>
+          <div style="margin-top: 10px; font-size: 15px; line-height: 1.45; color: var(--text2)">Before this phone can control EV6, do one of these in the car. Someone near the car can't do it from outside.</div>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 22px">
+            <sc-for list="{{sc.methods}}" as="m" hint-placeholder-count="2">
+              <button class="oc-method oc-glass" style="opacity: {{m.opacity}}" aria-label="{{m.aria}}">
+                <span style="width: 44px; height: 44px; border-radius: var(--rRound); background: var(--tileOn); color: var(--onAccentC); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{m.icon}}"/></svg>
+                </span>
+                <span style="flex: 1; min-width: 0">
+                  <span style="display: block; font-size: 16px; font-weight: 700">{{m.title}}</span>
+                  <span style="display: block; font-size: 13px; line-height: 1.4; color: var(--text2); margin-top: 2px">{{m.body}}</span>
+                  <sc-if value="{{m.blocked}}" hint-placeholder-val="{{ false }}">
+                    <span style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 700">{{m.reason}}<span style="color: var(--accent)">Review</span></span>
+                  </sc-if>
+                </span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text2); margin-top: 12px; flex-shrink: 0"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </sc-for>
+          </div>
+          <div style="flex: 1"></div>
+          <button class="oc-btn text">Not now</button>
+        </div>
+      </sc-if>
+
+      <!-- 2. Code entry -->
+      <sc-if value="{{sc.isCode}}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <div style="margin-top: 22px; font-size: 22px; font-weight: 800; line-height: 1.2">Enter the code shown in the car</div>
+          <div style="margin-top: 8px; font-size: 14px; line-height: 1.45; color: var(--text2)">Look at the instrument cluster. Starting again shows a new code.</div>
+          <div role="group" aria-label="Code, 6 digits" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 22px">
+            <sc-for list="{{sc.digits}}" as="d" hint-placeholder-count="6">
+              <span class="oc-digit" style="border-color: {{d.border}}">{{d.v}}</span>
+            </sc-for>
+          </div>
+          <div role="alert" style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--danger)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 8v5 M12 16.5h.01"/></svg>
+            Wrong code. 2 attempts left.
+          </div>
+          <div style="flex: 1"></div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{sc.keys}}" as="k" hint-placeholder-count="12">
+              <button class="oc-key" aria-label="{{k.aria}}" style="visibility: {{k.vis}}">{{k.label}}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px">
+            <button class="oc-btn text" style="flex: 1">Show a new code</button>
+            <button class="oc-btn text" style="flex: 1">Cancel</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- 3. In-car action: instructions and a wait -->
+      <sc-if value="{{sc.isWait}}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <div style="display: flex; justify-content: center; margin-top: 28px">
+            <div style="position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center">
+              <span class="oc-ring" style="animation-delay: 0s"></span>
+              <span class="oc-ring" style="animation-delay: .8s"></span>
+              <span class="oc-ring" style="animation-delay: 1.6s"></span>
+              <div style="width: 96px; height: 96px; border-radius: 50%; background: var(--tileOn); color: var(--onAccentC); display: flex; align-items: center; justify-content: center">
+                <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 16 M4 16h16v3H4z M7 19v1.5 M17 19v1.5 M7.5 13.5h.01 M16.5 13.5h.01"/></svg>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 18px; font-size: 22px; font-weight: 800; text-align: center">Do this in the car</div>
+          <div class="oc-glass" style="margin-top: 18px; padding: 6px 16px; border-radius: var(--rM)">
+            <sc-for list="{{sc.steps}}" as="st" hint-placeholder-count="2">
+              <div style="display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-top: {{st.bt}}">
+                <span style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--surface); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{st.n}}</span>
+                <span style="font-size: 15px; line-height: 1.45; padding-top: 3px">{{st.text}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div role="status" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 18px; font-size: 14px; font-weight: 600; color: var(--text2)">
+            <span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent"></span>
+            Waiting for the car…
+          </div>
+          <div style="flex: 1"></div>
+          <button class="oc-btn secondary">Cancel</button>
+        </div>
+      </sc-if>
+
+      <!-- 4–6. How a session ended -->
+      <sc-if value="{{sc.isResult}}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px">
+            <div style="width: 112px; height: 112px; border-radius: 50%; background: {{sc.medBg}}; color: {{sc.medFg}}; display: flex; align-items: center; justify-content: center; margin-bottom: 8px">
+              <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sc.icon}}"/></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 800; line-height: 1.2">{{sc.title}}</div>
+            <div style="font-size: 15px; line-height: 1.45; color: var(--text2); max-width: 310px">{{sc.body}}</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button class="oc-btn primary">{{sc.primary}}</button>
+            <sc-if value="{{sc.hasSecondary}}" hint-placeholder-val="{{ false }}">
+              <button class="oc-btn text">{{sc.secondary}}</button>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2540,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const I = {
+      code: 'M4 6h16v10H4z M8 20h8 M12 16v4 M8 11h.01 M12 11h.01 M16 11h.01',
+      button: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+      check: 'M5 12.5l4.5 4.5L19 7',
+      lock: 'M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v10H5z',
+      phones: 'M5 3h8v18H5z M15 7h4v14h-4 M9 18h.01'
+    };
+    const base = { isChoose: false, isCode: false, isWait: false, isResult: false, hasTimer: false, timer: '', methods: [], digits: [], keys: [], steps: [], hasSecondary: false, medBg: 'var(--tileOn)', medFg: 'var(--onAccentC)', icon: I.check, title: '', body: '', primary: '', secondary: '' };
+
+    // Methods in the order the device lists them. The text comes from the app, keyed by method_id
+    const methods = [
+      { title: 'Code on the instrument cluster', body: 'The car shows a 6-digit code. You type it here.', icon: I.code, blocked: true, reason: 'Needs vehicle control approval', opacity: 0.6, aria: 'Code on the instrument cluster, needs vehicle control approval' },
+      { title: 'Button in the car', body: 'Switch the car on and press a button in the car. The next screen says which one.', icon: I.button, blocked: false, reason: '', opacity: 1, aria: 'Button in the car' }
+    ];
+    const digits = ['4', '2', '9', '1', '7', '3'].map((v) => ({ v, border: 'var(--danger)' }));
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((label) => ({ label, aria: label === '⌫' ? 'Delete' : label, vis: label === '' ? 'hidden' : 'visible' }));
+    const steps = [
+      { n: '1', text: 'Switch the car on.', bt: 'none' },
+      { n: '2', text: 'Press the OK button on the steering wheel.', bt: '1px solid var(--tileBorder)' }
+    ];
+
+    const screens = [
+      { ...base, themeClass: 'oc-light', isChoose: true, methods },
+      { ...base, themeClass: 'oc-light', isCode: true, hasTimer: true, timer: '1:42', digits, keys },
+      { ...base, themeClass: 'oc-light', isWait: true, hasTimer: true, timer: '1:42', steps },
+      { ...base, themeClass: 'oc-light', isResult: true, icon: I.check, title: 'This phone is validated', body: 'You can control EV6 from this phone now. Other phones validate on their own.', primary: 'Done' },
+      { ...base, themeClass: 'oc-dark', isResult: true, icon: I.lock, medBg: 'var(--dangerC)', medFg: 'var(--danger)', title: 'Too many wrong codes', body: 'For safety, no phone can try again for a while. You can try again in 4:12.', primary: 'Close' },
+      { ...base, themeClass: 'oc-dark', isResult: true, icon: I.phones, medBg: 'var(--tileOn)', medFg: 'var(--onAccentC)', title: 'Another phone is validating', body: 'Only one phone can validate at a time. Try again when it has finished, or in 2 minutes at most.', primary: 'Try again', hasSecondary: true, secondary: 'Close' }
+    ];
+    return { screens };
+  }
+}
+</script>
+</body>
+</html>

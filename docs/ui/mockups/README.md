@@ -8,8 +8,10 @@ The files are artboards for the Claude Design canvas (`*.dc.html`, with `canvas.
 | File | What it is |
 |---|---|
 | `Phone.dc.html` | The shared dashboard: the tile grid, header, climate tile, edit mode, hero placeholder and skins. Most dashboard artboards import it with different options |
-| `Main`, `RemoteDark`, `Driving`, `Offline`, `IceRemote`, `BleLight`, `BleDark`, `IceBle`, `Tablet`, `SkinBoxy`, `SkinRound` (`.dc.html`) | One-line artboards that import `Phone` with a set of options |
-| `Wizard.dc.html` | The setup wizard: prompt, scanning, found, error, and the "add a vehicle" variant |
+| `Main`, `RemoteDark`, `Driving`, `Offline`, `IceRemote`, `BleLight`, `BleDark`, `IceBle`, `Tablet`, `SkinBoxy`, `SkinRound`, `AccessApproval`, `AccessValidate` (`.dc.html`) | One-line artboards that import `Phone` with a set of options |
+| `Wizard.dc.html` | The setup wizard: prompt, scanning, found, the approval step, timed out, and the "add a vehicle" variant |
+| `Validation.dc.html` | Phone validation: choose a method, code entry, in-car action, validated, cooldown, another phone validating |
+| `PairedPhones.dc.html` | The paired phones and their trust |
 | `Settings.dc.html` | The settings screen (a component), imported by `SettingsBle` and `SettingsRemote` |
 | `Activity.dc.html` | The connection activity popover over the Bluetooth dashboard |
 | `Switcher.dc.html` | The vehicle switcher popover over the remote dashboard |
@@ -30,6 +32,7 @@ Set as attributes on the `dc-import` in an artboard (or in the component's Tweak
 | `skin` | `default`, `boxy`, `round` | Shape and accent tokens (see [Theming](../../ui-theming.md)) |
 | `driving` | `true`, `false` | Road scene and speed (remote), Speed tile value (BLE) |
 | `connected` | `true`, `false` | Connection pill vs the Offline pill |
+| `access` | `ok`, `approval`, `validate` | The car access banners: control not approved, or this phone not validated; vehicle command tiles are greyed out meanwhile |
 
 `Settings` takes `tier`, `theme` and `skin`. `Vehicles` takes `theme` and `dialog` (shows the unpair confirmation).
 
