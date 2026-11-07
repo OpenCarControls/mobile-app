@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
+import 'package:open_car_app/widgets/stale_values.dart';
 
 /// The look shared by all tiles: a translucent fill with a hairline border, or
-/// the accent container fill when [on].
+/// the accent container fill when [on]. Under a stale [StaleValues], the
+/// content and the fill are dimmed.
 ///
 /// It has no blur of its own. The surface behind the tiles carries the one
 /// `BackdropFilter` (see `docs/ui-theming.md`).
@@ -26,6 +28,7 @@ class TileSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final stale = StaleValues.of(context);
     final foreground = on ? tokens.onAccentContainer : tokens.text;
     return AnimatedContainer(
       duration: MediaQuery.disableAnimationsOf(context)
@@ -35,7 +38,9 @@ class TileSurface extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: ShapeDecoration(
         color: on
-            ? tokens.accentContainer.withValues(alpha: _onOpacity)
+            ? tokens.accentContainer.withValues(
+                alpha: stale ? _onOpacity * kStaleOpacity : _onOpacity,
+              )
             : tokens.glassFill,
         shape: tokens.radiusMedium.shape(
           side: BorderSide(color: tokens.tileBorder),
@@ -45,7 +50,7 @@ class TileSurface extends StatelessWidget {
         data: IconThemeData(color: foreground),
         child: DefaultTextStyle.merge(
           style: AppTextStyles.caption.copyWith(color: foreground),
-          child: child,
+          child: StaleDimmed(child: child),
         ),
       ),
     );

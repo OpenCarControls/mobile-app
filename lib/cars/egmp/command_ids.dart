@@ -27,14 +27,3 @@ final kBatteryPreconditioningCommand = (
   set: CommandSet.advanced,
   id: commandId(AdvancedCommand(), 'batteryPreconditioningCommand'),
 );
-
-/// The command behind each button of the dashboard, by the button's action id.
-CommandKey egmpActionCommand(String actionId) => switch (actionId) {
-  'lock' => kDoorLockCommand,
-  'charge_port' => kChargePortCommand,
-  'lights' => kFlashLightsCommand,
-  'window_vent' => kWindowCommand,
-  // Every climate button sends a ClimateControlCommand: the power button, the
-  // target temperature, the defrosters, the steering wheel heater and the seats.
-  _ => kClimateControlCommand,
-};

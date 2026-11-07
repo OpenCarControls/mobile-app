@@ -7,7 +7,7 @@ The vehicle picture on the [dashboard](ui.md). It is a separate widget with a sm
 *   **Bluetooth tier:** not shown by default, since you are in the car and the screen space is better used by tiles. It can come back as a **Car view** tile (2×2 or 4×2) from the "Add a tile" list. The tile gives the hero a box of the tile's size.
 *   It is the same widget in both places. It must work at any box size, not only the full-screen one, and should be cheap enough to run inside a scrolling grid.
 
-> **Status:** the current dashboard renders the car with a Three.js viewer in a WebView (see [Architecture](architecture.md#3d-viewer)). Replacing the WebView is planned; the options below are not yet evaluated on a device.
+> **Status:** `VehicleDefinition.buildHero` is the interface. E-GMP's hero is the Three.js viewer in a WebView (see [Architecture](architecture.md#3d-viewer)), which takes the snapshot and the box from the dashboard; the virtual car uses the placeholder (`HeroPlaceholder`). Replacing the WebView is planned; the options below are not yet evaluated on a device.
 
 ## What the hero does
 *   **Camera is never user-controlled.** No orbit, pan or zoom. State and animation move it.

@@ -7,7 +7,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
@@ -65,14 +64,18 @@ bool _isRecent(VehicleSnapshot s) {
   return DateTime.now().difference(lastUpdated) < _kRecentThreshold;
 }
 
-class Vehicle3DViewer extends ConsumerStatefulWidget {
-  const Vehicle3DViewer({super.key});
+/// The E-GMP hero: the Three.js viewer in a WebView, driven by [snapshot]. It
+/// reads no providers and sends nothing (see `docs/ui-hero.md`).
+class Vehicle3DViewer extends StatefulWidget {
+  const Vehicle3DViewer({super.key, required this.snapshot});
+
+  final VehicleSnapshot snapshot;
 
   @override
-  ConsumerState<Vehicle3DViewer> createState() => _Vehicle3DViewerState();
+  State<Vehicle3DViewer> createState() => _Vehicle3DViewerState();
 }
 
-class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
+class _Vehicle3DViewerState extends State<Vehicle3DViewer>
     with WidgetsBindingObserver {
   InAppWebViewController? _webViewController;
   bool _isModelLoaded = false;
@@ -90,6 +93,19 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadLastFrames();
+  }
+
+  @override
+  void didUpdateWidget(Vehicle3DViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previous = oldWidget.snapshot;
+    final next = widget.snapshot;
+    if (identical(previous, next)) return;
+    // Fade out the snapshot overlay when live, fade it back in when stale.
+    if (_isModelLoaded && _isRecent(previous) != _isRecent(next)) {
+      _setOverlayVisible(!_isRecent(next));
+    }
+    _pushStateToWebView(next);
   }
 
   @override
@@ -367,32 +383,21 @@ class _Vehicle3DViewerState extends ConsumerState<Vehicle3DViewer>
     setState(() => _isModelLoaded = true);
     _lastPushedStateJson = null;
     // The first push snaps instantly to the cached state.
-    final state = ref.read(vehicleStateProvider);
+    final state = widget.snapshot;
     _pushStateToWebView(state);
     if (_isRecent(state)) _setOverlayVisible(false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(vehicleStateProvider);
-
-    ref.listen(vehicleStateProvider, (previous, next) {
-      // Fade out the snapshot overlay when live, fade it back in when stale.
-      if (previous != null &&
-          _isModelLoaded &&
-          _isRecent(previous) != _isRecent(next)) {
-        _setOverlayVisible(!_isRecent(next));
-      }
-      _pushStateToWebView(next);
-    });
-
+    final state = widget.snapshot;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final lastFrameBytes = isDark ? _lastFrameDarkBytes : _lastFrameLightBytes;
     final applyGrayFilter = !_isRecent(state);
 
     final snapshot = lastFrameBytes == null
         ? null
-        : Image.memory(lastFrameBytes, fit: BoxFit.fitHeight);
+        : Image.memory(lastFrameBytes, fit: BoxFit.contain);
 
     return Stack(
       children: [

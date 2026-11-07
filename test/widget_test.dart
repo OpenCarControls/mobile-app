@@ -68,10 +68,10 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Open Car'), findsOneWidget);
-    expect(find.text('State'), findsOneWidget);
-    expect(find.text('Controls'), findsOneWidget);
+    expect(find.text('Virtual car'), findsOneWidget);
+    expect(find.text('Doors'), findsOneWidget);
     expect(find.text('Odometer'), findsOneWidget);
     expect(find.text('Driving'), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
   });
 }

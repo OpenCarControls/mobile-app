@@ -3,7 +3,6 @@ import 'package:protobuf/protobuf.dart';
 
 import 'package:open_car_app/cars/virtual_car/catalog.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
-import 'package:open_car_app/cars/virtual_car/screens/virtual_car_dashboard.dart';
 import 'package:open_car_app/cars/virtual_car/skin.dart';
 import 'package:open_car_app/cars/virtual_car/samples.dart';
 import 'package:open_car_app/cars/virtual_car/stub_transport.dart';
@@ -63,7 +62,7 @@ class VirtualCarDefinition implements VehicleDefinition {
       AdvancedState.fromBuffer(bytes);
 
   @override
-  Widget buildDashboard() => const VirtualCarDashboardScreen();
+  Widget? buildDebugDrawer() => null;
 
   @override
   CarTransport? createStubTransport() => StubCarTransport();
