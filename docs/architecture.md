@@ -7,7 +7,7 @@ Related docs: [BLE & pairing](ble.md) · [Code generation](code-generation.md) �
 ## VehicleDefinition (`lib/models/vehicle_definition.dart`)
 Abstract class tying constants, proto types, screen, and stub transport together. Concrete implementations live in `lib/cars/<vehicle>/` (currently `egmp` and `virtual_car`). Add a new one to `availableVehiclesProvider` (`lib/providers/selected_vehicle_provider.dart`) to register it.
 
-Key methods: `decodeBasicState(bytes)`, `decodeAdvancedState(bytes)`, `buildDashboard()`, `createStubTransport()`.
+Key methods: `decodeBasicState(bytes)`, `decodeAdvancedState(bytes)`, `buildDashboard()`, `createStubTransport()`. A definition also returns its `skin` (see [Theming](ui-theming.md)).
 
 ## Wire protocol
 `AppToDevice` / `DeviceToApp` envelopes carry vehicle-specific bytes. The receiver decodes using `platform_id` (a CRC32 from the vehicle's `meta.toml`). The same wire format is used over BLE and MQTT. State fields are `optional` — always **merge** updates: `_masterState.mergeFromMessage(incoming)`.
@@ -46,6 +46,9 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `bleSourceDeviceIdProvider` | Stable per-device BLE ID (overridden at startup) |
 | `carTransportProvider` | Active transport instance |
 | `transportTypeProvider` | Cheap `TransportType` watch for UI gating |
+| `themeModeProvider` | The user's theme mode (system, light, dark), saved in `SharedPreferences` |
+| `initialThemeModeProvider` | Pre-loaded theme mode override injected at startup |
+| `currentSkinProvider` | The current vehicle's skin, or the default one when no vehicle is known |
 | `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` / `sendSystemCommand()` (BLE only) |
 | `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), from the current connection only: null until reported on it, cleared on every transport or connection change, never cached |
 | `canAccessActionsProvider` | Approves or withdraws vehicle control and toggles the developer write lock |

@@ -14,6 +14,7 @@ import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/screens/help_screen.dart';
+import 'package:open_car_app/screens/theme_gallery_screen.dart';
 import 'package:open_car_app/transport/ble_fragmentation.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
@@ -521,6 +522,11 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           OutlinedButton(
             onPressed: () => setState(() => _httpMode = true),
             child: const Text('Use HTTP instead (debug)'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => ThemeGalleryScreen.open(context),
+            child: const Text('Theme gallery (debug)'),
           ),
         ],
       ],

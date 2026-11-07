@@ -6,6 +6,7 @@ import 'package:open_car_app/cars/egmp/screens/egmp_dashboard.dart';
 import 'package:open_car_app/cars/egmp/stub_transport.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
+import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
 class EgmpDefinition implements VehicleDefinition {
@@ -19,6 +20,9 @@ class EgmpDefinition implements VehicleDefinition {
 
   @override
   int get canBusCount => kCanBusCount;
+
+  @override
+  VehicleSkin get skin => defaultSkin;
 
   @override
   String get mqttCommandTopicTemplate => kMqttCommandTopicTemplate;
