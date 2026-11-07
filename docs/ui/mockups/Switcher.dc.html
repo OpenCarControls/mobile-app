@@ -57,11 +57,11 @@ body{margin:0}
 class Component extends DCLogic {
   renderVals() {
     // Each vehicle keeps its own skin colours, so the list shows which car is which
-    const teal = { bg: 'rgba(203,234,228,.94)', fg: '#00302A' };
+    const blue = { bg: 'rgba(213,228,248,.94)', fg: '#0B2A52' };
     const steel = { bg: 'rgba(207,216,220,.94)', fg: '#1C262B' };
     const rose = { bg: 'rgba(252,214,226,.94)', fg: '#5B0F2C' };
     const vehicles = [
-      { ...teal, name: 'EV6', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
+      { ...blue, name: 'EV6', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
       { ...steel, name: 'Weekend car', sub: '41% · 380 km · Updated 3 h ago', current: false, aria: 'Switch to Weekend car' },
       { ...rose, name: 'City car', sub: '88% · 214 km · Updated yesterday', current: false, aria: 'Switch to City car' }
     ];

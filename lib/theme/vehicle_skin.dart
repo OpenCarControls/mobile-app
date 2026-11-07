@@ -68,14 +68,14 @@ class VehicleSkin {
 const defaultSkin = VehicleSkin(
   name: 'Default',
   light: SkinAccents(
-    accent: Color(0xFF00695C),
-    accentContainer: Color(0xFFCBEAE4),
-    onAccentContainer: Color(0xFF00302A),
+    accent: Color(0xFF1C68C5),
+    accentContainer: Color(0xFFD5E4F8),
+    onAccentContainer: Color(0xFF0B2A52),
   ),
   dark: SkinAccents(
-    accent: Color(0xFF4FD8C4),
-    accentContainer: Color(0xFF0F3F39),
-    onAccentContainer: Color(0xFFBDF2EA),
+    accent: Color(0xFF91B8EB),
+    accentContainer: Color(0xFF163B66),
+    onAccentContainer: Color(0xFFD5E6FF),
   ),
   shapes: SkinShapes(
     radiusSmall: RadiusToken(14),

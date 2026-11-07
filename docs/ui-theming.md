@@ -26,9 +26,9 @@ Default skin (the mockups). `accent`, `accentContainer` and `onAccentContainer` 
 | `surface` | Solid surfaces: pill, round buttons, side column | `#FFFFFF` | `#191B1E` |
 | `text` | Primary text, glyph outlines | `#15171A` | `#EAECEF` |
 | `textSecondary` | Range, captions, labels | `#515356` | `#AAACAF` |
-| `accent` | Level fill, active power button, charging text, dots | `#00695C` | `#4FD8C4` |
-| `accentContainer` | Fill of an "on" button (80–95% opaque over the layer) | `#CBEAE4` | `#0F3F39` |
-| `onAccentContainer` | Text and icons on `accentContainer` | `#00302A` | `#BDF2EA` |
+| `accent` | Level fill, active power button, charging text, dots | `#1C68C5` | `#91B8EB` |
+| `accentContainer` | Fill of an "on" button (80–95% opaque over the layer) | `#D5E4F8` | `#163B66` |
+| `onAccentContainer` | Text and icons on `accentContainer` | `#0B2A52` | `#D5E6FF` |
 | `outline` | Borders of solid controls, level track | `#CACCCF` | `#393B3E` |
 | `tileBorder` | 1 px border of frosted surfaces | 12% `text` | 14% `text` |
 | `glassFill` | Frosted tiles and cards | white at 82% | `#26282B` at 80% |
@@ -45,7 +45,7 @@ Alternate skins used in the mockups:
 
 | Skin | Light `accent` / container / on-container | Dark `accent` / container / on-container |
 |---|---|---|
-| Default (teal) | `#00695C` / `#CBEAE4` / `#00302A` | `#4FD8C4` / `#0F3F39` / `#BDF2EA` |
+| Default (blue) | `#1C68C5` / `#D5E4F8` / `#0B2A52` | `#91B8EB` / `#163B66` / `#D5E6FF` |
 | Boxy (steel) | `#37474F` / `#CFD8DC` / `#1C262B` | `#CFD8DC` / `#37474F` / `#ECEFF1` |
 | Rounded (rose) | `#B3245A` / `#FCD6E2` / `#5B0F2C` | `#FF8FB1` / `#5E1A34` / `#FFD9E5` |
 

@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 body{margin:0}
-.oc-light{--bg:#E9EBEE;--surface:#FFFFFF;--text:#15171A;--text2:#515356;--accent:#00695C;--onAccentC:#00302A;--outline:#CACCCF;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(21,23,26,.12);--danger:#B3261E;--onDanger:#FFFFFF}
-.oc-dark{--bg:#0E1013;--surface:#191B1E;--text:#EAECEF;--text2:#AAACAF;--accent:#4FD8C4;--onAccentC:#BDF2EA;--outline:#393B3E;--tileBg:rgba(38,40,43,.8);--tileOn:rgba(15,63,57,.94);--tileBorder:rgba(234,236,239,.14);--danger:#FFB4AB;--onDanger:#3B0A07}
+.oc-light{--bg:#E9EBEE;--surface:#FFFFFF;--text:#15171A;--text2:#515356;--accent:#1C68C5;--onAccentC:#0B2A52;--outline:#CACCCF;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(213,228,248,.94);--tileBorder:rgba(21,23,26,.12);--danger:#B3261E;--onDanger:#FFFFFF}
+.oc-dark{--bg:#0E1013;--surface:#191B1E;--text:#EAECEF;--text2:#AAACAF;--accent:#91B8EB;--onAccentC:#D5E6FF;--outline:#393B3E;--tileBg:rgba(38,40,43,.8);--tileOn:rgba(22,59,102,.94);--tileBorder:rgba(234,236,239,.14);--danger:#FFB4AB;--onDanger:#3B0A07}
 .oc-light,.oc-dark{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
 .oc-card{border:1px solid var(--tileBorder);background:var(--tileBg);border-radius:var(--rM);overflow:hidden}
 .vh-act{flex:1;min-height:48px;border:0;border-top:1px solid var(--tileBorder);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -81,10 +81,10 @@ class Component extends DCLogic {
     const dark = (this.props.theme ?? 'light') === 'dark';
     const dialog = this.props.dialog === true || this.props.dialog === 'true';
     const c = dark
-      ? { teal: { bg: 'rgba(15,63,57,.94)', fg: '#BDF2EA' }, steel: { bg: 'rgba(55,71,79,.94)', fg: '#ECEFF1' }, rose: { bg: 'rgba(94,26,52,.94)', fg: '#FFD9E5' } }
-      : { teal: { bg: 'rgba(203,234,228,.94)', fg: '#00302A' }, steel: { bg: 'rgba(207,216,220,.94)', fg: '#1C262B' }, rose: { bg: 'rgba(252,214,226,.94)', fg: '#5B0F2C' } };
+      ? { blue: { bg: 'rgba(22,59,102,.94)', fg: '#D5E6FF' }, steel: { bg: 'rgba(55,71,79,.94)', fg: '#ECEFF1' }, rose: { bg: 'rgba(94,26,52,.94)', fg: '#FFD9E5' } }
+      : { blue: { bg: 'rgba(213,228,248,.94)', fg: '#0B2A52' }, steel: { bg: 'rgba(207,216,220,.94)', fg: '#1C262B' }, rose: { bg: 'rgba(252,214,226,.94)', fg: '#5B0F2C' } };
     const vehicles = [
-      { ...c.teal, name: 'EV6', platform: 'E-GMP', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
+      { ...c.blue, name: 'EV6', platform: 'E-GMP', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
       { ...c.steel, name: 'Weekend car', platform: 'Combustion', sub: '41% · 380 km · Updated 3 h ago', current: false, aria: 'Switch to Weekend car' },
       { ...c.rose, name: 'City car', platform: 'Electric', sub: '88% · 214 km · Updated yesterday', current: false, aria: 'Switch to City car' }
     ];
