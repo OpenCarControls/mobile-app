@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid and the command behaviour exist (`lib/widgets/tiles`), but only the debug gallery uses them, with fake tiles. Remove this note once the dashboard is rebuilt.
+> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid, the command behaviour and the tile widgets exist (`lib/widgets/tiles`), and each platform describes its tiles and default layouts, but only the debug gallery uses them: with fake tiles, and with each vehicle's default layouts drawn from sample states. Remove this note once the dashboard is rebuilt.
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 
@@ -205,7 +205,7 @@ Because dragging alone is not accessible, edit mode must also offer move actions
 ![Phone not validated](ui/images/ble-validation-needed.png)
 
 ## Vehicle description
-Each platform declares what the shared screen shows. This is a proposal for the shape, not a final API:
+Each platform declares what the shared screen shows, in its `VehicleDefinition` (see [Architecture](architecture.md#vehicledefinition-libmodelsvehicle_definitiondart)):
 
 *   **Identity:** display name, platform label, [skin](ui-theming.md), hero builder ([3D hero](ui-hero.md)).
 *   **Energy:** one or two levels, each battery or fuel, with accessors for the level and the range.
@@ -213,13 +213,15 @@ Each platform declares what the shared screen shows. This is a proposal for the 
 *   **Default layouts:** an ordered list of `(tile id, size)` for each tier.
 *   **Climate:** whether present, target range and step (in °C and the car's own steps), the inside and outside temperature accessors, and the list of extras (id, icon, kind: toggle or leveled, side tag).
 *   **Header:** the level and range for the header row, and the status line for the remote tier.
+*   **Icons:** a tile's or extra's icon is a Material Symbol or a custom vector drawing, each with an on and an off look, since Material Symbols has nothing for the trunk, the frunk or a car window. Icons belong to the tile, not the skin.
+*   **History:** chart tiles and state sparklines draw series the app records from live state, in memory, for the last 30 minutes. Nothing stores them across app runs yet.
 
 Rules from the repo that still apply: merge incoming state with `mergeFromMessage`, take `source_device_id` from `bleSourceDeviceIdProvider`, import UUIDs and IDs from generated constants, and keep debug-only paths behind `kDebugMode`.
 
 The tiles themselves are designed one by one for each platform; the mockups only show the system they live in.
 
 ## Not yet placed
-The current dashboards show things the mockups do not place yet. They must be placed (they are all natural tiles) or consciously dropped when the dashboard is rebuilt: odometer (a tile in the mockups), per-door and per-window state, frunk and trunk state, preconditioning detail, and the advanced E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)). The BLE button configuration in [#26](https://github.com/OpenCarControls/mobile-app/issues/26) overlaps with the tile editor and should be looked at together.
+The current dashboards show things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, the preconditioning state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power and pack temperature charts). The E-GMP Windows tile closes the windows when any is open and vents them otherwise, where the old dashboard asks with a vent-or-close sheet. Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)). The BLE button configuration in [#26](https://github.com/OpenCarControls/mobile-app/issues/26) overlaps with the tile editor and should be looked at together.
 
 ## Accessibility
 *   Touch targets are at least 44 dp. The vehicle name and the edit tile need padding to reach this; the mockups draw them small.

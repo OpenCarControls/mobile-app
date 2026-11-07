@@ -8,11 +8,14 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/screens/tile_gallery_section.dart';
+import 'package:open_car_app/screens/vehicle_layouts_gallery_section.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/theme/radius_token.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
+import 'package:open_car_app/widgets/tiles/car_body_icons.dart';
+import 'package:open_car_app/widgets/tiles/tile_icon.dart';
 
 /// Debug-only screen for checking the design on a phone: the tokens and,
 /// as they are added, the components, in every skin and both brightnesses.
@@ -74,6 +77,7 @@ class _ThemeGalleryScreenState extends ConsumerState<ThemeGalleryScreen> {
                   setState(() => _pickedBrightness = picked.single),
             ),
             const _Section('Tiles', TileGallerySection()),
+            const _Section('Vehicle layouts', VehicleLayoutsGallerySection()),
             const _Section('Colours', _ColoursSection()),
             const _Section('Glass', _GlassSection()),
             const _Section('Shapes', _ShapesSection()),
@@ -498,6 +502,42 @@ class _IconsSection extends StatelessWidget {
               ),
             ],
           ),
+        const Text('Drawn', style: AppTextStyles.buttonTitle),
+        Wrap(
+          spacing: 8,
+          runSpacing: 12,
+          children: [
+            for (final (name, icon) in const [
+              ('frunk', CarBodyIcons.frunk),
+              ('trunk', CarBodyIcons.trunk),
+              ('window', CarBodyIcons.window),
+            ])
+              SizedBox(
+                width: 112,
+                child: Column(
+                  spacing: 4,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 8,
+                      children: [
+                        TileIconView(icon, size: 28),
+                        TileIconView(icon, on: true, size: 28),
+                      ],
+                    ),
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 10,
+                        color: tokens.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
