@@ -65,6 +65,18 @@ const kUnknownTileState = TileState(on: false, caption: 'Unknown');
 class TileValue {
   const TileValue(this.value, {this.unit, this.note});
 
+  /// Splits a formatted quantity ("336 km") at its last space into the value
+  /// and the unit.
+  factory TileValue.formatted(String formatted, {String? note}) {
+    final split = formatted.lastIndexOf(' ');
+    if (split < 0) return TileValue(formatted, note: note);
+    return TileValue(
+      formatted.substring(0, split),
+      unit: formatted.substring(split + 1),
+      note: note,
+    );
+  }
+
   /// The value ("697"), without its unit.
   final String value;
 

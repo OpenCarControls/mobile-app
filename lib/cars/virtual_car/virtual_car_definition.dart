@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:protobuf/protobuf.dart';
 
+import 'package:open_car_app/cars/virtual_car/catalog.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
 import 'package:open_car_app/cars/virtual_car/screens/virtual_car_dashboard.dart';
 import 'package:open_car_app/cars/virtual_car/skin.dart';
@@ -77,16 +78,23 @@ class VirtualCarDefinition implements VehicleDefinition {
   List<EnergyDescription> get energy => const [];
 
   @override
-  int? drivingSpeedKmh(VehicleSnapshot snapshot) => null;
+  int? drivingSpeedKmh(VehicleSnapshot snapshot) =>
+      (snapshot.basicState as BasicState).isDriving
+      ? virtualCarSpeedKmh(snapshot)
+      : null;
 
   @override
-  String? statusLine(VehicleSnapshot snapshot) => null;
+  String? statusLine(VehicleSnapshot snapshot) =>
+      (snapshot.basicState as BasicState).isDriving ? 'Driving' : null;
 
   @override
-  List<TileDefinition> get tiles => const [];
+  List<TileDefinition> get tiles => virtualCarTiles;
 
   @override
-  List<TileLayoutEntry> defaultLayout(DashboardTier tier) => const [];
+  List<TileLayoutEntry> defaultLayout(DashboardTier tier) => switch (tier) {
+    DashboardTier.remote => virtualCarRemoteLayout,
+    DashboardTier.bluetooth => virtualCarBluetoothLayout,
+  };
 
   @override
   ClimateDescription? get climate => null;
