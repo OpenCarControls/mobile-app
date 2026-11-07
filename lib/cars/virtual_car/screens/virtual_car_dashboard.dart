@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/cars/virtual_car/command_ids.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/transport/http_transport.dart';
+import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
+import 'package:open_car_app/widgets/can_access_banner.dart';
+import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
+import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
+import 'package:open_car_app/screens/help_screen.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -21,6 +28,11 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
         transportType == TransportType.ble ||
         transportType == TransportType.stub ||
         transportType == TransportType.http;
+    // Greyed out unless the device says it accepts the command now.
+    final doorLockUi = ref.watch(commandUiStateProvider(kDoorLockCommand));
+    final customState1Ui = ref.watch(
+      commandUiStateProvider(kToggleCustomState1Command),
+    );
     final showAdvanced = isBle && snapshot.isAdvancedStateLive;
     final awaitingAdvanced = isBle && !snapshot.isAdvancedStateLive;
 
@@ -59,15 +71,18 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     }
                   }
                 }
+              } else if (value == 'help') {
+                await HelpScreen.open(context);
               } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Unpair vehicle?'),
                     content: const Text(
-                      'This will remove the pairing and return you to the '
-                      'setup wizard. The vehicle will also forget this phone '
-                      '(factory reset required to re-pair).',
+                      'This will remove the vehicle from the app and return '
+                      'you to the setup wizard.\n\n'
+                      'To pair again, the device has to be in pairing mode '
+                      '(see Help).',
                     ),
                     actions: [
                       TextButton(
@@ -98,6 +113,14 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                   ),
                 ),
               const PopupMenuItem(
+                value: 'help',
+                child: ListTile(
+                  leading: Icon(Icons.help_outline),
+                  title: Text('Help'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(
                   leading: Icon(Icons.link_off),
@@ -112,6 +135,8 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
       body: Column(
         children: [
           const PlatformMismatchBanner(),
+          const BleBondLostBanner(),
+          const CanAccessBanner(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () =>
@@ -186,38 +211,51 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _SectionHeader(title: 'Controls'),
                   const SizedBox(height: 8),
-                  _DoorLockCard(
-                    locked: basic.areDoorsLocked,
-                    onToggle: () {
-                      ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(
-                            BasicCommand(
-                              doorLock: DoorLockCommand(
-                                lock: !basic.areDoorsLocked,
-                              ),
-                            ).writeToBuffer(),
-                          );
-                    },
-                  ),
+                  const CanAccessSection(),
+                  const SizedBox(height: 8),
+                  if (doorLockUi != CommandUiState.hidden)
+                    _DoorLockCard(
+                      locked: basic.areDoorsLocked,
+                      onToggle: doorLockUi == CommandUiState.enabled
+                          ? () => sendVehicleCommand(
+                              context,
+                              ref,
+                              () => ref
+                                  .read(vehicleStateProvider.notifier)
+                                  .sendBasicCommand(
+                                    BasicCommand(
+                                      doorLock: DoorLockCommand(
+                                        lock: !basic.areDoorsLocked,
+                                      ),
+                                    ).writeToBuffer(),
+                                  ),
+                            )
+                          : null,
+                    ),
 
                   // ── Advanced controls (BLE only, shown once live data arrives) ────
                   if (showAdvanced) ...[
                     const SizedBox(height: 16),
                     _SectionHeader(title: 'Advanced Controls'),
                     const SizedBox(height: 8),
-                    _CustomState1Card(
-                      enabled: advanced.customState1,
-                      onToggle: () {
-                        ref
-                            .read(vehicleStateProvider.notifier)
-                            .sendAdvancedCommand(
-                              AdvancedCommand(
-                                toggleCustomState1: ToggleCustomState1Command(),
-                              ).writeToBuffer(),
-                            );
-                      },
-                    ),
+                    if (customState1Ui != CommandUiState.hidden)
+                      _CustomState1Card(
+                        enabled: advanced.customState1,
+                        onToggle: customState1Ui == CommandUiState.enabled
+                            ? () => sendVehicleCommand(
+                                context,
+                                ref,
+                                () => ref
+                                    .read(vehicleStateProvider.notifier)
+                                    .sendAdvancedCommand(
+                                      AdvancedCommand(
+                                        toggleCustomState1:
+                                            ToggleCustomState1Command(),
+                                      ).writeToBuffer(),
+                                    ),
+                              )
+                            : null,
+                      ),
                   ],
 
                   // ── System info ──────────────────────────────────────────────────
@@ -373,7 +411,9 @@ class _StateTile extends StatelessWidget {
 
 class _DoorLockCard extends StatelessWidget {
   final bool locked;
-  final VoidCallback onToggle;
+
+  /// Null greys the button out.
+  final VoidCallback? onToggle;
 
   const _DoorLockCard({required this.locked, required this.onToggle});
 
@@ -421,7 +461,9 @@ class _DoorLockCard extends StatelessWidget {
 
 class _CustomState1Card extends StatelessWidget {
   final bool enabled;
-  final VoidCallback onToggle;
+
+  /// Null greys the button out.
+  final VoidCallback? onToggle;
 
   const _CustomState1Card({required this.enabled, required this.onToggle});
 

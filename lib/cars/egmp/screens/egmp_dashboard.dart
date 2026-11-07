@@ -1,15 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/cars/egmp/command_ids.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:flutter/foundation.dart';
+import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
+import 'package:open_car_app/widgets/ble_bond_lost_banner.dart';
+import 'package:open_car_app/widgets/can_access_banner.dart';
+import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
+import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
+import 'package:open_car_app/screens/help_screen.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
 
@@ -27,6 +34,19 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
   String? _currentSubMenu;
   String? _pendingAction;
   Timer? _timeUpdateTimer;
+
+  /// Sends a basic command and shows why it failed, if it does.
+  Future<void> _sendBasicCommand(List<int> commandBytes) => sendVehicleCommand(
+    context,
+    ref,
+    () =>
+        ref.read(vehicleStateProvider.notifier).sendBasicCommand(commandBytes),
+  );
+
+  /// What the device says about the command behind a button: greyed out unless it
+  /// accepts it now.
+  CommandUiState _uiState(String actionId) =>
+      ref.watch(commandUiStateProvider(egmpActionCommand(actionId)));
 
   @override
   void initState() {
@@ -102,15 +122,18 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 }
               } else if (value == 'licenses') {
                 showLicensePage(context: context, applicationName: 'Open Car');
+              } else if (value == 'help') {
+                await HelpScreen.open(context);
               } else if (value == 'unpair') {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Unpair vehicle?'),
                     content: const Text(
-                      'This will remove the pairing and return you to the '
-                      'setup wizard. The vehicle will also forget this phone '
-                      '(factory reset required to re-pair).',
+                      'This will remove the vehicle from the app and return '
+                      'you to the setup wizard.\n\n'
+                      'To pair again, the device has to be in pairing mode '
+                      '(see Help).',
                     ),
                     actions: [
                       TextButton(
@@ -148,6 +171,14 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 ),
               ),
               const PopupMenuItem(
+                value: 'help',
+                child: ListTile(
+                  leading: Icon(Icons.help_outline),
+                  title: Text('Help'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'unpair',
                 child: ListTile(
                   leading: Icon(Icons.link_off),
@@ -162,6 +193,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
       body: Column(
         children: [
           const PlatformMismatchBanner(),
+          const BleBondLostBanner(),
+          const CanAccessBanner(),
           Expanded(
             child: isWideScreen ? _buildWideLayout() : _buildNarrowLayout(),
           ),
@@ -386,9 +419,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       final cmd = BasicCommand(
                         doorLockCommand: DoorLockCommand(lock: !isLocked),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -404,9 +435,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           open: !isChargePortOpen,
                         ),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -419,9 +448,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       final cmd = BasicCommand(
                         flashLightsCommand: FlashLightsCommand(),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                   const SizedBox(width: 16),
@@ -435,9 +462,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                           climateOn: !isClimateOn,
                         ),
                       );
-                      await ref
-                          .read(vehicleStateProvider.notifier)
-                          .sendBasicCommand(cmd.writeToBuffer());
+                      await _sendBasicCommand(cmd.writeToBuffer());
                     },
                   ),
                 ],
@@ -455,35 +480,43 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     required Future<void> Function() onPressed,
   }) {
     final isLoading = _pendingAction == actionId;
-    return InkWell(
-      onTap: isLoading ? null : () => _executeCommand(actionId, onPressed),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
+    final ui = _uiState(actionId);
+    if (ui == CommandUiState.hidden) return const SizedBox.shrink();
+    final enabled = ui == CommandUiState.enabled;
+    return Opacity(
+      opacity: enabled ? 1 : 0.38,
+      child: InkWell(
+        onTap: isLoading || !enabled
+            ? null
+            : () => _executeCommand(actionId, onPressed),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: isLoading
+              ? SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.onPrimaryContainer
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : Icon(
+                  icon,
                   color: isActive
                       ? Theme.of(context).colorScheme.onPrimaryContainer
                       : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 32,
                 ),
-              )
-            : Icon(
-                icon,
-                color: isActive
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 32,
-              ),
+        ),
       ),
     );
   }
@@ -598,9 +631,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       climateOn: !isClimateOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               Row(
@@ -622,7 +653,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                               context,
                             ).colorScheme.onSurfaceVariant,
                           ),
-                    onPressed: _pendingAction == 'temp_down'
+                    onPressed:
+                        _pendingAction == 'temp_down' ||
+                            _uiState('temp_down') != CommandUiState.enabled
                         ? null
                         : () {
                             _executeCommand('temp_down', () async {
@@ -632,9 +665,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                                   targetTemperature: targetTemp - 0.5,
                                 ),
                               );
-                              await ref
-                                  .read(vehicleStateProvider.notifier)
-                                  .sendBasicCommand(cmd.writeToBuffer());
+                              await _sendBasicCommand(cmd.writeToBuffer());
                             });
                           },
                   ),
@@ -660,7 +691,9 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                               context,
                             ).colorScheme.onSurfaceVariant,
                           ),
-                    onPressed: _pendingAction == 'temp_up'
+                    onPressed:
+                        _pendingAction == 'temp_up' ||
+                            _uiState('temp_up') != CommandUiState.enabled
                         ? null
                         : () {
                             _executeCommand('temp_up', () async {
@@ -670,9 +703,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                                   targetTemperature: targetTemp + 0.5,
                                 ),
                               );
-                              await ref
-                                  .read(vehicleStateProvider.notifier)
-                                  .sendBasicCommand(cmd.writeToBuffer());
+                              await _sendBasicCommand(cmd.writeToBuffer());
                             });
                           },
                   ),
@@ -688,9 +719,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                   final cmd = BasicCommand(
                     windowCommand: WindowCommand(action: action),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -712,9 +741,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       windshieldDefrostOn: !isWindshieldDefrostOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -729,9 +756,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       rearWindowDefrostOn: !isRearDefrostOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -746,9 +771,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       steeringWheelHeaterOn: !isSteeringHeaterOn,
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -770,9 +793,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       driverSeatClimate: _nextSeatClimate(driverSeat),
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
               _buildLabeledClimateButton(
@@ -787,9 +808,7 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                       passengerSeatClimate: _nextSeatClimate(passengerSeat),
                     ),
                   );
-                  await ref
-                      .read(vehicleStateProvider.notifier)
-                      .sendBasicCommand(cmd.writeToBuffer());
+                  await _sendBasicCommand(cmd.writeToBuffer());
                 },
               ),
             ],
@@ -844,38 +863,46 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
     double iconSize = 26,
   }) {
     final isLoading = _pendingAction == actionId;
-    return InkWell(
-      onTap: isLoading ? null : () => _executeCommand(actionId, onTap),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: isLoading
-            ? Center(
-                child: SizedBox(
-                  width: iconSize,
-                  height: iconSize,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: isActive
-                        ? Theme.of(context).colorScheme.onPrimaryContainer
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+    final ui = _uiState(actionId);
+    if (ui == CommandUiState.hidden) return const SizedBox.shrink();
+    final enabled = ui == CommandUiState.enabled;
+    return Opacity(
+      opacity: enabled ? 1 : 0.38,
+      child: InkWell(
+        onTap: isLoading || !enabled
+            ? null
+            : () => _executeCommand(actionId, onTap),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: isLoading
+              ? Center(
+                  child: SizedBox(
+                    width: iconSize,
+                    height: iconSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: isActive
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
+                )
+              : Icon(
+                  icon,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onPrimaryContainer
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: iconSize,
                 ),
-              )
-            : Icon(
-                icon,
-                color: isActive
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: iconSize,
-              ),
+        ),
       ),
     );
   }
@@ -967,6 +994,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
+          const Divider(),
+          const CanAccessSection(),
           const Divider(),
           ListTile(
             title: Text(

@@ -1,7 +1,9 @@
 package com.example.open_car_app
 
 import android.app.Application
-import io.reactivex.exceptions.UndeliverableException
+import android.util.Log
+import com.polidea.rxandroidble2.exceptions.BleDisconnectedException
+import com.polidea.rxandroidble2.exceptions.BleGattException
 import io.reactivex.plugins.RxJavaPlugins
 
 class OpenCarApplication : Application() {
@@ -9,33 +11,53 @@ class OpenCarApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // flutter_reactive_ble uses RxAndroidBle (RxJava 2) internally. When
-        // the remote device terminates the GATT connection while an in-flight
-        // operation has already disposed its subscriber (e.g. during the
-        // stale-bond scenario where the firmware closes the link immediately),
-        // RxJava 2 has nowhere to route the resulting BleDisconnectedException
-        // and wraps it in an UndeliverableException — crashing the process.
+        // flutter_reactive_ble uses RxAndroidBle (RxJava 2) internally and
+        // installs no RxJavaPlugins error handler of its own. When the link is
+        // lost while an operation is in flight and its subscriber has already
+        // been disposed, RxJava 2 has nowhere to route the resulting
+        // BleDisconnectedException, wraps it in an UndeliverableException and
+        // hands it to the thread's uncaught-exception handler, which kills the
+        // process (https://github.com/dariuszseweryn/RxAndroidBle/wiki/FAQ:-UndeliverableException).
         //
-        // The recommended fix (https://github.com/dariuszseweryn/RxAndroidBle/wiki/FAQ:-UndeliverableException)
-        // is to install a global error handler that silently discards
-        // connection-related errors that arrive after their consumer is gone.
+        // Only link-loss errors are dropped (and logged); anything else takes
+        // RxJava's default path, so genuine bugs still crash.
         RxJavaPlugins.setErrorHandler { throwable ->
-            val cause = if (throwable is UndeliverableException) throwable.cause else throwable
-            if (cause != null && isIgnorableBleError(cause)) {
-                // Expected during teardown / stale-bond recovery — ignore.
+            if (isBenignLinkLoss(throwable)) {
+                Log.w(TAG, "Ignoring undeliverable BLE error after link loss", throwable)
                 return@setErrorHandler
             }
-            // All other unhandled errors should still propagate so genuine
-            // bugs are not silently swallowed.
-            Thread.currentThread().uncaughtExceptionHandler
-                ?.uncaughtException(Thread.currentThread(), throwable)
+            // Same as RxJava's default when no handler is installed.
+            val thread = Thread.currentThread()
+            thread.uncaughtExceptionHandler.uncaughtException(thread, throwable)
         }
     }
 
-    private fun isIgnorableBleError(t: Throwable): Boolean {
-        val name = t.javaClass.name
-        // Covers BleDisconnectedException, BleGattException, and any other
-        // com.polidea.rxandroidble2 error that can arrive late.
-        return name.startsWith("com.polidea.rxandroidble2")
+    companion object {
+        private const val TAG = "OpenCarApplication"
+
+        // Bounds the walk down the cause chain, in case it is cyclic.
+        private const val MAX_CAUSE_DEPTH = 10
+
+        /**
+         * True if [throwable], or something it wraps, is a RxAndroidBle
+         * disconnect or GATT error. These are what an operation still in
+         * flight fails with when the link drops.
+         *
+         * The check uses `is` on the exception classes, not their names:
+         * release builds are minified by R8, which renames them (the crash
+         * report in #49 shows `D0.b`) but rewrites the references to match.
+         */
+        private fun isBenignLinkLoss(throwable: Throwable): Boolean {
+            var current: Throwable? = throwable
+            var depth = 0
+            while (current != null && depth < MAX_CAUSE_DEPTH) {
+                if (current is BleDisconnectedException || current is BleGattException) {
+                    return true
+                }
+                current = current.cause
+                depth++
+            }
+            return false
+        }
     }
 }

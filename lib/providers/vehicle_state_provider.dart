@@ -81,6 +81,10 @@ class VehicleSnapshot {
   }
 }
 
+/// How long the vehicle state stays live without an update from the device. The command
+/// availability expires with it, over BLE and MQTT alike.
+const kStateLivenessTimeout = Duration(seconds: 30);
+
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
   Timer? _livenessTimer;
@@ -179,7 +183,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     if (!msg.hasStateUpdate()) return;
 
     _livenessTimer?.cancel();
-    _livenessTimer = Timer(const Duration(seconds: 30), () {
+    _livenessTimer = Timer(kStateLivenessTimeout, () {
       if (state.isStateLive || state.isAdvancedStateLive) {
         state = state.copyWith(isStateLive: false, isAdvancedStateLive: false);
       }
@@ -374,6 +378,41 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     );
   }
 
+  /// Send a system command (e.g. the CAN read-write approval). BLE only: the
+  /// firmware drops system commands from MQTT, so this throws
+  /// [CarTransportException] instead of waiting for the timeout.
+  Future<CommandResponse> sendSystemCommand(SystemCommand command) async {
+    if (ref.read(transportTypeProvider) == TransportType.mqtt) {
+      throw const CarTransportException(
+        'This needs a Bluetooth connection to the vehicle.',
+      );
+    }
+    final messageId = Int64(_nextMessageId++);
+    final completer = Completer<CommandResponse>();
+    _pendingCommands[messageId] = completer;
+
+    try {
+      await _send(
+        AppToDevice(
+          messageId: messageId,
+          platformId: vehicle.platformId,
+          systemCommand: command,
+        ),
+      );
+    } catch (e) {
+      _pendingCommands.remove(messageId);
+      rethrow;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        _pendingCommands.remove(messageId);
+        throw TimeoutException('Command timed out');
+      },
+    );
+  }
+
   Future<void> _send(AppToDevice envelope) {
     final transportType = ref.read(transportTypeProvider);
     if (transportType == TransportType.ble ||
@@ -381,7 +420,11 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       envelope.sourceDeviceId = ref.read(bleSourceDeviceIdProvider);
     }
     if (kDebugMode) {
-      final kind = envelope.hasBasicCommandBytes() ? 'basic' : 'advanced';
+      final kind = envelope.hasBasicCommandBytes()
+          ? 'basic'
+          : envelope.hasSystemCommand()
+          ? 'system'
+          : 'advanced';
       dev.log(
         'Sending $kind command (msgId: ${envelope.messageId}) via $transportType',
         name: 'VehicleState',
