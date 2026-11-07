@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Paired phones</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.oc-light{--bg:#E7ECEB;--surface:#FFFFFF;--text:#11181A;--text2:#46565A;--accent:#00695C;--onAccentC:#00302A;--outline:#C3CECC;--tileBg:rgba(255,255,255,.82);--tileOn:rgba(203,234,228,.94);--tileBorder:rgba(17,24,26,.12);--danger:#B3261E}
+.oc-light{--rS:14px;--rM:16px;--rL:24px;--rP:999px;--rRound:50%}
+.pp-card{border:1px solid var(--tileBorder);background:var(--tileBg);border-radius:var(--rM);overflow:hidden}
+.pp-act{min-height:44px;padding:0 14px;border-radius:var(--rS);border:1px solid var(--outline);background:transparent;color:var(--danger);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.pp-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</helmet>
+<div class="oc-light" style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Manrope', system-ui, sans-serif; padding: 24px 16px 32px">
+
+  <div style="display: flex; align-items: center; gap: 12px">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: var(--rRound); border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div style="font-size: 20px; font-weight: 800">Paired phones</div>
+  </div>
+
+  <div style="margin: 18px 4px 12px; font-size: 14px; line-height: 1.45; color: var(--text2)">Phones paired with the device in EV6, in the order they were paired. Only a validated phone can send commands to the car.</div>
+
+  <div class="pp-card">
+    <sc-for list="{{phones}}" as="ph" hint-placeholder-count="2">
+      <div style="padding: 14px; border-top: {{ph.bt}}">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 44px; height: 44px; border-radius: var(--rRound); background: {{ph.avBg}}; color: {{ph.avFg}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10v18H7z M11 18h2"/></svg>
+          </span>
+          <span style="flex: 1; min-width: 0">
+            <span style="display: block; font-size: 16px; font-weight: 700">{{ph.name}}</span>
+            <span style="display: block; font-size: 12px; color: var(--text2); font-family: ui-monospace, Menlo, monospace">{{ph.id}}</span>
+          </span>
+          <span style="padding: 5px 10px; border-radius: var(--rP); font-size: 12px; font-weight: 700; background: {{ph.chipBg}}; color: {{ph.chipFg}}; border: 1px solid {{ph.chipBorder}}; flex-shrink: 0">{{ph.trust}}</span>
+        </div>
+        <sc-if value="{{ph.hasAction}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding-left: 56px">
+            <span style="font-size: 12px; line-height: 1.4; color: var(--text2)">{{ph.note}}</span>
+            <button class="pp-act" style="opacity: {{ph.actOp}}" aria-disabled="{{ph.actDisabled}}">Remove</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ph.hasValidate}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding-left: 56px">
+            <span style="font-size: 12px; line-height: 1.4; color: var(--text2)">This phone can't send commands yet.</span>
+            <button class="pp-act" style="color: var(--accent)">Validate</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="margin: 14px 4px 0; font-size: 12px; line-height: 1.45; color: var(--text2)">The device doesn't know phone names; the app only knows which one is this phone. Once a phone is validated in EV6, only a validated phone can remove it or change the vehicle control approval.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const validated = { trust: 'Validated', chipBg: 'var(--tileOn)', chipFg: 'var(--onAccentC)', chipBorder: 'transparent', avBg: 'var(--tileOn)', avFg: 'var(--onAccentC)' };
+    const bonded = { trust: 'Not validated', chipBg: 'transparent', chipFg: 'var(--text2)', chipBorder: 'var(--outline)', avBg: 'var(--tileBorder)', avFg: 'var(--text2)' };
+    const phones = [
+      { ...validated, name: 'Another phone', id: 'ID …3F9A', hasAction: true, hasValidate: false, note: 'Only a validated phone can remove a validated phone.', actOp: 0.45, actDisabled: 'true', bt: 'none' },
+      { ...bonded, name: 'This phone', id: 'ID …81C4', hasAction: false, hasValidate: true, note: '', actOp: 1, actDisabled: 'false', bt: '1px solid var(--tileBorder)' }
+    ];
+    return { phones };
+  }
+}
+</script>
+</body>
+</html>
