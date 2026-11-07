@@ -18,6 +18,7 @@ import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 import 'package:open_car_app/screens/help_screen.dart';
+import 'package:open_car_app/screens/theme_gallery_screen.dart';
 
 class VirtualCarDashboardScreen extends ConsumerWidget {
   const VirtualCarDashboardScreen({super.key});
@@ -73,6 +74,8 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
                     }
                   }
                 }
+              } else if (kDebugMode && value == 'gallery') {
+                await ThemeGalleryScreen.open(context);
               } else if (value == 'help') {
                 await HelpScreen.open(context);
               } else if (value == 'unpair') {
@@ -105,6 +108,15 @@ class VirtualCarDashboardScreen extends ConsumerWidget {
               }
             },
             itemBuilder: (_) => [
+              if (kDebugMode)
+                const PopupMenuItem(
+                  value: 'gallery',
+                  child: ListTile(
+                    leading: Icon(Icons.palette),
+                    title: Text('Theme gallery'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               if (transportType == TransportType.http)
                 const PopupMenuItem(
                   value: 'simulate',

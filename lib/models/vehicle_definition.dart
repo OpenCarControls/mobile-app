@@ -1,12 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:protobuf/protobuf.dart';
 
+import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
 abstract class VehicleDefinition {
   String get platformName;
   int get platformId;
   int get canBusCount;
+
+  /// The platform's accent colours and shapes.
+  VehicleSkin get skin;
 
   String get mqttCommandTopicTemplate;
   String get mqttDataTopicTemplate;

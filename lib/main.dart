@@ -5,14 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/egmp/licenses.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
+import 'package:open_car_app/config/theme_mode_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/screens/pairing_wizard_screen.dart';
+import 'package:open_car_app/theme/licenses.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerEgmpLicenses();
+  registerThemeLicenses();
 
   final (deviceId, isNew) = await getOrCreateDeviceId();
   dev.log(
@@ -28,25 +32,28 @@ void main() async {
     name: 'AppBootstrap',
   );
 
+  final themeMode = await loadThemeMode();
+
   runApp(
     ProviderScope(
       overrides: [
         bleSourceDeviceIdProvider.overrideWithValue(deviceId),
         initialPairedVehicleConfigProvider.overrideWithValue(pairedConfig),
+        initialThemeModeProvider.overrideWithValue(themeMode),
       ],
       child: const OpenCarApp(),
     ),
   );
 }
 
-class OpenCarApp extends StatelessWidget {
+class OpenCarApp extends ConsumerWidget {
   const OpenCarApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'Open Car',
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,

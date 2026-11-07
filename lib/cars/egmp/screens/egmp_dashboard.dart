@@ -18,6 +18,7 @@ import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/platform_mismatch_banner.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 import 'package:open_car_app/screens/help_screen.dart';
+import 'package:open_car_app/screens/theme_gallery_screen.dart';
 import '../widgets/debug_controls_drawer.dart';
 import '../widgets/vehicle_3d_viewer.dart';
 
@@ -123,6 +124,8 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
                 }
               } else if (value == 'licenses') {
                 showLicensePage(context: context, applicationName: 'Open Car');
+              } else if (kDebugMode && value == 'gallery') {
+                await ThemeGalleryScreen.open(context);
               } else if (value == 'help') {
                 await HelpScreen.open(context);
               } else if (value == 'unpair') {
@@ -154,6 +157,15 @@ class _EgmpDashboardScreenState extends ConsumerState<EgmpDashboardScreen> {
               }
             },
             itemBuilder: (_) => [
+              if (kDebugMode)
+                const PopupMenuItem(
+                  value: 'gallery',
+                  child: ListTile(
+                    leading: Icon(Icons.palette),
+                    title: Text('Theme gallery'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               if (transportType == TransportType.http)
                 const PopupMenuItem(
                   value: 'simulate',

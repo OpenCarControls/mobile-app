@@ -18,7 +18,7 @@ body{margin:0}
 
   <dc-import name="Phone" vehicle="ev" tier="remote" theme="light" layout="phone" hint-size="390px,844px"></dc-import>
 
-  <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(17,24,26,.4)"></div>
+  <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(21,23,26,.4)"></div>
 
   <div role="dialog" aria-label="Vehicles" style="position: absolute; left: 12px; top: 74px; width: 340px; box-sizing: border-box; background: var(--surface); color: var(--text); border: 1px solid var(--tileBorder); border-radius: var(--rL); box-shadow: 0 18px 48px rgba(0,0,0,.28); overflow: hidden">
     <span style="position: absolute; top: -8px; left: 36px; width: 16px; height: 16px; background: var(--surface); border-left: 1px solid var(--tileBorder); border-top: 1px solid var(--tileBorder); transform: rotate(45deg)"></span>
@@ -57,11 +57,11 @@ body{margin:0}
 class Component extends DCLogic {
   renderVals() {
     // Each vehicle keeps its own skin colours, so the list shows which car is which
-    const teal = { bg: 'rgba(203,234,228,.94)', fg: '#00302A' };
+    const blue = { bg: 'rgba(213,228,248,.94)', fg: '#0B2A52' };
     const steel = { bg: 'rgba(207,216,220,.94)', fg: '#1C262B' };
     const rose = { bg: 'rgba(252,214,226,.94)', fg: '#5B0F2C' };
     const vehicles = [
-      { ...teal, name: 'EV6', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
+      { ...blue, name: 'EV6', sub: '64% · 312 km · Remote', current: true, aria: 'EV6, current vehicle' },
       { ...steel, name: 'Weekend car', sub: '41% · 380 km · Updated 3 h ago', current: false, aria: 'Switch to Weekend car' },
       { ...rose, name: 'City car', sub: '88% · 214 km · Updated yesterday', current: false, aria: 'Switch to City car' }
     ];
