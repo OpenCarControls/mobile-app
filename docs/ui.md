@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). Remove this note once the dashboard is rebuilt.
+> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid and the command behaviour exist (`lib/widgets/tiles`), but only the debug gallery uses them, with fake tiles. Remove this note once the dashboard is rebuilt.
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 
@@ -106,9 +106,16 @@ EV: a battery glyph. ICE: a fuel-pump/tank glyph with the fill. Hybrids show bot
 ## Tiles
 
 ### The grid
-*   Four columns on phones (eight on the wide Bluetooth layout), 8 dp gaps, a row at least 64 dp high (56 dp for icon-only buttons). A tile spans whole columns and rows.
-*   Tiles are laid out in order, flowing left to right and filling gaps (a dense flow), so a mixed set of sizes packs without holes.
+*   Four columns on phones (eight on the wide Bluetooth layout), 8 dp gaps. Every row has the same height: 64 dp, scaled with the system font size. The mockups draw rows at varying heights; that isn't part of the design.
+*   A tile spans any whole number of columns and rows.
+*   Tiles are laid out in order, flowing left to right and filling gaps (a dense flow), so a mixed set of sizes packs without avoidable holes.
+*   A tile can change size at runtime, always by whole rows or columns. Whoever owns the grid (the dashboard) sets the new span, and the tiles after it slide away or back. The same goes for leaving a tile out, as for a command the car doesn't have.
 *   The grid scrolls vertically under the pinned header. On the Bluetooth tier it is the whole screen.
+
+### Tile types
+*   A **tile** displays a state or a constant value.
+*   A **command tile** can also show a state, and tapping it sends a command.
+*   An **advanced tile** has its own UI and logic. It can have several buttons that send different commands, and it can resize itself. Climate is one. A chart is another, built per chart rather than as one generic graph tile.
 
 ### Kinds and sizes
 Each kind declares the sizes it supports; bigger sizes show more.
@@ -118,7 +125,7 @@ Each kind declares the sizes it supports; bigger sizes show more.
 | Command | 1×1, 2×1 | An icon and, by default, a one-word title. Its state is shown by fill and icon change (lock open or closed). At 2×1 it also shows a caption with the state. |
 | State | 1×1, 2×1, 2×2 | A value with a label. 2×1 adds a sparkline; 2×2 adds a large value, a note and a chart. |
 | Battery or Fuel | 4×1 | Level, range and charging state in one tile (see below). |
-| Climate | 4×1 (unfolds in place) | The climate bar and, when on, the target and extras. |
+| Climate | 4×1, or 4×3 when on | The climate bar and, when on, the target and extras. |
 | Car view | 2×2, 4×2 | The 3D hero as a tile. |
 
 Kinds are layouts. What a tile shows is up to the platform, so a command tile can carry a live value, a state tile can have a button and so on. The mockups contain only examples; the real tiles are designed per platform.
@@ -139,14 +146,14 @@ A tile may show different content by state while keeping its place and size. The
 | On / active | Accent-container fill |
 | Pending | Border in the accent colour and a pulsing fade until the `CommandResponse` arrives (or the 15 s timeout). The connection pill spins too. |
 | Unavailable | Greyed out and does nothing, while the device reports the command unavailable ([command availability](architecture.md)) or it can't be sent over this transport. A tap gives the reason when the app knows it: control isn't approved, this phone isn't validated, or it needs Bluetooth. Otherwise it says "Not available right now", since the device reports no reason. |
-| Error | Brief error feedback (a snackbar with the `CarTransportException` message); not yet mocked |
+| Error | The tile flashes red and shakes, and a snackbar gives the reason. Not mocked. With reduced motion it holds a red border briefly instead of shaking. |
 
 *Titled* (default) and *icon-only* buttons are both supported, per platform with a user override in settings. Icon-only buttons still need an accessible label that includes the state (for example "Doors, locked").
 
 ### Climate tile
 One bar the height of a button row. It always shows the title, "Inside 19.5° · Outside 12°" and a power button. While a command is pending only the power button pulses; the temperatures stay.
 
-When climate is on, a panel unfolds under the bar:
+When climate is on, the tile grows by two rows and a panel unfolds under the bar:
 *   A full-width target-temperature stepper (− value +).
 *   A row of small icon buttons for the platform's climate extras (windshield defrost, rear defrost, steering-wheel heater, seat heating). Seat heating shows its level (off/low/medium/high) as three dots and carries an L or R tag.
 
@@ -219,7 +226,7 @@ The current dashboards show things the mockups do not place yet. They must be pl
 *   Text contrast 4.5:1, large text and component boundaries 3:1. Skins must pass (see [Theming](ui-theming.md#contrast)).
 *   Every icon-only control has a label; stateful tiles announce their state.
 *   Colour is never the only state indicator. Fill is paired with an icon change or text.
-*   Honour the system's reduce-motion setting: no pulsing, spinning, scrolling road or camera glide.
+*   Honour the system's reduce-motion setting: no pulsing, spinning, shaking, scrolling road or camera glide.
 *   Editing needs a non-drag way to move tiles.
 *   The tile grid must stay reachable with large system font sizes (it scrolls; on the remote tier the hero box shrinks to its minimum).
 
@@ -243,7 +250,9 @@ Control button options. Both were kept: A (icon-only) and B (icon + title) are a
 *   Where does pull-to-refresh live on the dashboard?
 *   Tap on the level to swap percent and range?
 *   Do the climate extras work with climate off on each car? (Assumed no.)
-*   The error tile state, the drag gesture and per-tile configuration are not designed.
+*   The drag gesture and per-tile configuration are not designed.
+*   Is 64 dp the right row height? Stat tiles fit one line of label and a value, and 2×2 tiles are shorter than the mockups draw them.
+*   Should the remote tier's first row be a separate grid with its own row height, as quick command shortcuts?
 *   Should the screen animate when the link switches between Remote and Bluetooth, which reshapes it, or wait for the user?
 *   Does the remote tier get the same editor?
 *   The level and range appear in both the header and the Battery tile. Keep, or drop one?

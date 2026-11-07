@@ -10,31 +10,43 @@ import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
 /// Sends a vehicle command and, if it fails, says why in a SnackBar: the
 /// device's reason (e.g. it only listens to the car until control is
 /// approved), that this phone needs validating in the car, a timeout, or the
-/// transport's error. When control of the car still needs approving, the
-/// SnackBar opens the approval dialog.
-Future<void> sendVehicleCommand(
+/// transport's error. Returns whether it was sent and accepted.
+Future<bool> sendVehicleCommand(
   BuildContext context,
   WidgetRef ref,
   Future<Object?> Function() send,
 ) async {
   try {
     await send();
+    return true;
   } catch (e) {
-    if (!context.mounted) return;
-    final access = ref.read(canAccessStateProvider);
-    final canApprove = access != null && canAccessNeedsApproval(access);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(vehicleCommandErrorText(e)),
-        action: canApprove
-            ? SnackBarAction(
-                label: 'Review',
-                onPressed: () => showCanReadWriteApprovalDialog(context),
-              )
-            : null,
-      ),
-    );
+    if (context.mounted) {
+      showVehicleCommandMessage(context, ref, vehicleCommandErrorText(e));
+    }
+    return false;
   }
+}
+
+/// Shows [text] about a vehicle command in a SnackBar. When control of the car
+/// still needs approving, the SnackBar opens the approval dialog.
+void showVehicleCommandMessage(
+  BuildContext context,
+  WidgetRef ref,
+  String text,
+) {
+  final access = ref.read(canAccessStateProvider);
+  final canApprove = access != null && canAccessNeedsApproval(access);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(text),
+      action: canApprove
+          ? SnackBarAction(
+              label: 'Review',
+              onPressed: () => showCanReadWriteApprovalDialog(context),
+            )
+          : null,
+    ),
+  );
 }
 
 /// The text shown for a failed vehicle command.
