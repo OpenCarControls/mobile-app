@@ -126,7 +126,16 @@ void main() {
       ),
     );
 
-    await expectLater(future, throwsA('Door is open'));
+    await expectLater(
+      future,
+      throwsA(
+        isA<CommandRejectedException>().having(
+          (e) => '$e',
+          'text',
+          'Door is open',
+        ),
+      ),
+    );
   });
 
   test('selectedVehicleProvider is null for an unknown vehicle id', () {
