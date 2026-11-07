@@ -6,9 +6,13 @@ import 'package:open_car_app/cars/virtual_car/screens/virtual_car_dashboard.dart
 import 'package:open_car_app/cars/virtual_car/skin.dart';
 import 'package:open_car_app/cars/virtual_car/stub_transport.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
+import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
+import 'package:open_car_app/models/vehicle_description.dart';
+import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/widgets/hero_placeholder.dart';
 
 class VirtualCarDefinition implements VehicleDefinition {
   const VirtualCarDefinition();
@@ -21,6 +25,12 @@ class VirtualCarDefinition implements VehicleDefinition {
 
   @override
   int get canBusCount => kCanBusCount;
+
+  @override
+  String get displayName => 'Virtual car';
+
+  @override
+  String get platformLabel => 'Virtual car (test platform)';
 
   @override
   VehicleSkin get skin => virtualCarSkin;
@@ -55,4 +65,29 @@ class VirtualCarDefinition implements VehicleDefinition {
 
   @override
   CarTransport? createStubTransport() => StubCarTransport();
+
+  @override
+  Widget buildHero(BuildContext context, VehicleSnapshot snapshot) =>
+      HeroPlaceholder(dimmed: !snapshot.isStateLive);
+
+  @override
+  VehicleUnits units(VehicleSnapshot snapshot) => kMetricUnits;
+
+  @override
+  List<EnergyDescription> get energy => const [];
+
+  @override
+  int? drivingSpeedKmh(VehicleSnapshot snapshot) => null;
+
+  @override
+  String? statusLine(VehicleSnapshot snapshot) => null;
+
+  @override
+  List<TileDefinition> get tiles => const [];
+
+  @override
+  List<TileLayoutEntry> defaultLayout(DashboardTier tier) => const [];
+
+  @override
+  ClimateDescription? get climate => null;
 }

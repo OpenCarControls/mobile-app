@@ -9,6 +9,8 @@ Abstract class tying constants, proto types, screen, and stub transport together
 
 Key methods: `decodeBasicState(bytes)`, `decodeAdvancedState(bytes)`, `buildDashboard()`, `createStubTransport()`. A definition also returns its `skin` (see [Theming](ui-theming.md)).
 
+It also describes the vehicle for the shared dashboard ([Vehicle description](ui.md#vehicle-description)): its display name and platform label, hero, display units, energy stores, header status line, climate, its tile catalog (`lib/models/tile_catalog.dart`) and a default layout per tier. Tiles carry data accessors and commands, not widgets, so the shared tile widgets draw every platform alike; only chart tiles bring their own builder. `test/vehicle_catalog_test.dart` checks every registered vehicle's catalog and layouts.
+
 ## Wire protocol
 `AppToDevice` / `DeviceToApp` envelopes carry vehicle-specific bytes. The receiver decodes using `platform_id` (a CRC32 from the vehicle's `meta.toml`). The same wire format is used over BLE and MQTT. State fields are `optional` — always **merge** updates: `_masterState.mergeFromMessage(incoming)`.
 
@@ -55,6 +57,7 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `phoneAccessStateProvider` | What the device allows this phone (`SystemState.phone_access`): its trust level, whether the car has a validated phone, its validation session. From the current connection only, like `canAccessStateProvider` |
 | `phoneValidationActionsProvider` | Lists the validation methods and the paired phones, and starts, answers or cancels a validation |
 | `commandAvailabilityProvider` | Which commands the device accepts now (`SystemState.command_availability`), from the current connection only: null until reported on it, cleared on every transport or connection change and when the device goes quiet, never cached. Over MQTT it covers the basic commands |
+| `vehicleHistoryProvider` | Recent values of the series the paired vehicle's tiles draw (charts, sparklines), sampled from live state only, in memory |
 | `commandUiStateProvider` | `enabled`, `disabled` (greyed out) or `hidden` for one command, from the availability |
 
 `VehicleSnapshot` fields (`basicState`, `advancedState`) are typed as `GeneratedMessage`; cast in the vehicle's own screen. They are decoded once per message and merged via `mergeFromMessage`.

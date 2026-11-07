@@ -205,7 +205,7 @@ Because dragging alone is not accessible, edit mode must also offer move actions
 ![Phone not validated](ui/images/ble-validation-needed.png)
 
 ## Vehicle description
-Each platform declares what the shared screen shows. This is a proposal for the shape, not a final API:
+Each platform declares what the shared screen shows, in its `VehicleDefinition` (see [Architecture](architecture.md#vehicledefinition-libmodelsvehicle_definitiondart)):
 
 *   **Identity:** display name, platform label, [skin](ui-theming.md), hero builder ([3D hero](ui-hero.md)).
 *   **Energy:** one or two levels, each battery or fuel, with accessors for the level and the range.
@@ -213,6 +213,8 @@ Each platform declares what the shared screen shows. This is a proposal for the 
 *   **Default layouts:** an ordered list of `(tile id, size)` for each tier.
 *   **Climate:** whether present, target range and step (in °C and the car's own steps), the inside and outside temperature accessors, and the list of extras (id, icon, kind: toggle or leveled, side tag).
 *   **Header:** the level and range for the header row, and the status line for the remote tier.
+*   **Icons:** a tile's or extra's icon is a Material Symbol or a custom vector drawing, each with an on and an off look, since Material Symbols has nothing for the trunk, the frunk or a car window. Icons belong to the tile, not the skin.
+*   **History:** chart tiles and state sparklines draw series the app records from live state, in memory, for the last 30 minutes. Nothing stores them across app runs yet.
 
 Rules from the repo that still apply: merge incoming state with `mergeFromMessage`, take `source_device_id` from `bleSourceDeviceIdProvider`, import UUIDs and IDs from generated constants, and keep debug-only paths behind `kDebugMode`.
 
