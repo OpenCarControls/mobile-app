@@ -6,6 +6,7 @@ import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/tiles/history_chart.dart';
 import 'package:open_car_app/widgets/tiles/tile_context.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
+import 'package:open_car_app/widgets/tiles/tile_icon.dart';
 import 'package:open_car_app/widgets/tiles/tile_surface.dart';
 
 /// Shown for a value the vehicle doesn't report (yet).
@@ -33,11 +34,20 @@ class StateTile extends StatelessWidget {
     final large = span.rows >= 2 && span.columns >= 2;
     final wide = span.columns >= 2;
 
-    final label = Text(
-      tile.label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: tokens.textSecondary),
+    final icon = tile.icon;
+    final label = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          TileIconView(icon, size: 16),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          tile.label,
+          maxLines: 1,
+          style: TextStyle(color: tokens.textSecondary),
+        ),
+      ],
     );
     final valueStyle = large
         ? AppTextStyles.statValue.copyWith(fontSize: 36, height: 1.1)

@@ -78,6 +78,8 @@ void main() {
         group('the ${tier.name} default layout', () {
           final layout = vehicle.defaultLayout(tier);
 
+          test('is not empty', () => expect(layout, isNotEmpty));
+
           test('references existing tiles at supported sizes', () {
             for (final entry in layout) {
               final tile = vehicle.tileById(entry.tileId);

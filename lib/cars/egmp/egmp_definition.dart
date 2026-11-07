@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:protobuf/protobuf.dart';
 
+import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/cars/egmp/constants.g.dart';
 import 'package:open_car_app/cars/egmp/screens/egmp_dashboard.dart';
 import 'package:open_car_app/cars/egmp/stub_transport.dart';
@@ -70,23 +71,27 @@ class EgmpDefinition implements VehicleDefinition {
       HeroPlaceholder(dimmed: !snapshot.isStateLive);
 
   @override
-  VehicleUnits units(VehicleSnapshot snapshot) => kMetricUnits;
+  VehicleUnits units(VehicleSnapshot snapshot) => egmpUnits(snapshot);
 
   @override
-  List<EnergyDescription> get energy => const [];
+  List<EnergyDescription> get energy => [egmpBattery];
 
   @override
-  int? drivingSpeedKmh(VehicleSnapshot snapshot) => null;
+  int? drivingSpeedKmh(VehicleSnapshot snapshot) =>
+      egmpDrivingSpeedKmh(snapshot);
 
   @override
-  String? statusLine(VehicleSnapshot snapshot) => null;
+  String? statusLine(VehicleSnapshot snapshot) => egmpStatusLine(snapshot);
 
   @override
-  List<TileDefinition> get tiles => const [];
+  List<TileDefinition> get tiles => egmpTiles;
 
   @override
-  List<TileLayoutEntry> defaultLayout(DashboardTier tier) => const [];
+  List<TileLayoutEntry> defaultLayout(DashboardTier tier) => switch (tier) {
+    DashboardTier.remote => egmpRemoteLayout,
+    DashboardTier.bluetooth => egmpBluetoothLayout,
+  };
 
   @override
-  ClimateDescription? get climate => null;
+  ClimateDescription? get climate => egmpClimate;
 }

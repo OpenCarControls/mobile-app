@@ -54,6 +54,21 @@ class EnergyStatus {
   /// While DC charging, the time to 80%, which the car shows besides the time
   /// to the limit.
   final int? timeTo80PercentMinutes;
+
+  /// The times to the limit and to 80% ("1 h 5 min to 80%"), as the car shows
+  /// them; null when there are none.
+  String? get timeText {
+    final limit = limitPercent;
+    final toLimit = timeToLimitMinutes;
+    final to80 = timeTo80PercentMinutes;
+    final parts = [
+      if (toLimit != null && toLimit > 0)
+        '${formatMinutes(toLimit)} to ${limit != null ? '$limit%' : 'limit'}',
+      if (to80 != null && to80 > 0 && limit != 80)
+        '${formatMinutes(to80)} to 80%',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
 }
 
 /// One energy store: a battery or a fuel tank. Hybrids have two.

@@ -9,9 +9,6 @@ import 'package:open_car_app/widgets/tiles/state_tile.dart';
 import 'package:open_car_app/widgets/tiles/tile_context.dart';
 import 'package:open_car_app/widgets/tiles/tile_surface.dart';
 
-/// A power in kW with one decimal ("7.2 kW").
-String formatKilowatts(int watts) => '${(watts / 1000).toStringAsFixed(1)} kW';
-
 /// The Battery or Fuel tile: the level bar with a tick at the charge limit,
 /// over a line that depends on the state. Idle, it gives the level and the
 /// range; charging, the power and the time to the limit; exporting (V2L), the
@@ -48,7 +45,7 @@ class EnergyTile extends StatelessWidget {
       ),
       EnergyFlow.charging => (
         ['Charging', if (power != null) formatKilowatts(power)].join(' · '),
-        _timeText(status),
+        status.timeText,
         true,
       ),
       EnergyFlow.exporting => (
@@ -109,22 +106,6 @@ class EnergyTile extends StatelessWidget {
       ),
     );
   }
-
-  static String? _timeText(EnergyStatus status) {
-    final limit = status.limitPercent;
-    final toLimit = status.timeToLimitMinutes;
-    final to80 = status.timeTo80PercentMinutes;
-    return [
-      if (toLimit != null && toLimit > 0)
-        '${formatMinutes(toLimit)} to ${limit != null ? '$limit%' : 'limit'}',
-      if (to80 != null && to80 > 0 && limit != 80)
-        '${formatMinutes(to80)} to 80%',
-    ].join(' · ').nullIfEmpty;
-  }
-}
-
-extension on String {
-  String? get nullIfEmpty => isEmpty ? null : this;
 }
 
 /// The level as a bar on the outline track, with a tick at the [limit].

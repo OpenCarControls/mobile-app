@@ -43,3 +43,6 @@ String formatTemperature(double celsius, TemperatureUnit unit) =>
 /// A duration in minutes, as `45 min` or `1 h 5 min`.
 String formatMinutes(int minutes) =>
     minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min';
+
+/// A power in kW with one decimal ("7.2 kW").
+String formatKilowatts(int watts) => '${(watts / 1000).toStringAsFixed(1)} kW';
