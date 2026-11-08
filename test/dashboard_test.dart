@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:open_car_app/cars/virtual_car/command_ids.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart' as virtual_car;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
+import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
@@ -19,12 +22,15 @@ import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/stale_values.dart';
+import 'package:open_car_app/widgets/tiles/catalog_tile.dart';
+import 'package:open_car_app/widgets/tiles/tile_editing.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 
 class _FakeTransport implements CarTransport {
   _FakeTransport(this.transportType);
 
   final _controller = StreamController<DeviceToApp>.broadcast();
+  final sent = <AppToDevice>[];
 
   void emit(DeviceToApp msg) => _controller.add(msg);
 
@@ -35,7 +41,7 @@ class _FakeTransport implements CarTransport {
   Stream<DeviceToApp> get messages => _controller.stream;
 
   @override
-  Future<void> send(AppToDevice message) async {}
+  Future<void> send(AppToDevice message) async => sent.add(message);
 
   @override
   void dispose() => _controller.close();
@@ -217,6 +223,194 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getRect(find.byKey(_heroBox)), hero);
       expect(tester.getRect(find.byType(TileGrid)).top, lessThan(gridTop));
+      await harness.dispose();
+    });
+  });
+
+  group('editing the layout', () {
+    Finder editing(String label) => find.byWidgetPredicate(
+      (w) => w is EditingTile && w.tile.label == label,
+    );
+    Finder tooltip(String message) => find.byTooltip(message);
+
+    /// The order of the tiles, as the editor shows them.
+    List<String> order(WidgetTester tester) => [
+      for (final tile in tester.widgetList<EditingTile>(
+        find.byType(EditingTile),
+      ))
+        tile.tile.label,
+    ];
+
+    Future<_Harness> startEditing(WidgetTester tester) async {
+      final harness = _Harness(tester);
+      await harness.pump();
+      await tester.tap(tooltip('Edit layout'));
+      await tester.pumpAndSettle();
+      return harness;
+    }
+
+    testWidgets('Add, Done and Reset share a row', (tester) async {
+      final harness = await startEditing(tester);
+      expect(tooltip('Edit layout'), findsNothing);
+      final tops = {
+        for (final name in ['Add a tile', 'Done', 'Reset layout'])
+          tester.getTopLeft(tooltip(name)).dy,
+      };
+      expect(tops, hasLength(1));
+      await tester.tap(tooltip('Done'));
+      await tester.pumpAndSettle();
+      expect(tooltip('Edit layout'), findsOneWidget);
+      expect(find.byType(EditingTile), findsNothing);
+      await harness.dispose();
+    });
+
+    testWidgets('commands do not run while editing', (tester) async {
+      final harness = await startEditing(tester);
+      await tester.tap(editing('Doors'));
+      await tester.pumpAndSettle();
+      expect(harness.transport.sent, isEmpty);
+      await harness.dispose();
+    });
+
+    testWidgets('holding a tile starts editing and sends nothing', (
+      tester,
+    ) async {
+      final harness = _Harness(tester);
+      await harness.pump();
+      await tester.longPress(find.text('Custom 1'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EditingTile), findsWidgets);
+      expect(harness.transport.sent, isEmpty);
+      await harness.dispose();
+    });
+
+    testWidgets('the remote grid can not be edited', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump(type: TransportType.mqtt);
+      expect(tooltip('Edit layout'), findsNothing);
+      await tester.longPress(find.byType(CatalogTile).first);
+      await tester.pumpAndSettle();
+      expect(find.byType(EditingTile), findsNothing);
+      await harness.dispose();
+    });
+
+    testWidgets('a tile can be removed, added back and resized', (
+      tester,
+    ) async {
+      final harness = await startEditing(tester);
+      await tester.tap(tooltip('Remove Doors'));
+      await tester.pumpAndSettle();
+      expect(editing('Doors'), findsNothing);
+
+      await tester.tap(tooltip('Add a tile'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Doors'));
+      await tester.pumpAndSettle();
+      expect(order(tester).last, 'Doors');
+
+      expect(
+        find.descendant(of: editing('Doors'), matching: find.text('1×1')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(of: editing('Doors'), matching: find.text('1×1')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: editing('Doors'), matching: find.text('2×1')),
+        findsOneWidget,
+      );
+      await harness.dispose();
+    });
+
+    testWidgets('a tile the car lacks is greyed out in the add list', (
+      tester,
+    ) async {
+      final harness = await startEditing(tester);
+      harness.transport.emit(
+        DeviceToApp(
+          platformId: virtual_car.kPlatformId,
+          stateUpdate: StateUpdate(
+            systemState: SystemState(
+              commandAvailability: CommandAvailability(
+                basic: {
+                  kDoorLockCommand.id: CommandAvailabilityState
+                      .COMMAND_AVAILABILITY_STATE_UNSUPPORTED,
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(editing('Doors'), findsNothing);
+
+      await tester.tap(tooltip('Add a tile'));
+      await tester.pumpAndSettle();
+      final doors = find.widgetWithText(ListTile, 'Doors');
+      expect(tester.widget<ListTile>(doors).enabled, isFalse);
+      await tester.tap(doors);
+      await tester.pumpAndSettle();
+      expect(editing('Doors'), findsNothing);
+      await harness.dispose();
+    });
+
+    testWidgets('the move actions work without dragging', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final harness = await startEditing(tester);
+      final before = order(tester);
+
+      void perform(String label, CustomSemanticsAction action) {
+        final node = tester.getSemantics(editing(label));
+        node.owner!.performAction(
+          node.id,
+          SemanticsAction.customAction,
+          CustomSemanticsAction.getIdentifier(action),
+        );
+      }
+
+      perform(before[1], EditingTile.moveEarlierAction);
+      await tester.pumpAndSettle();
+      expect(order(tester), [before[1], before[0], ...before.skip(2)]);
+
+      perform(before[1], EditingTile.moveLaterAction);
+      await tester.pumpAndSettle();
+      expect(order(tester), before);
+
+      expect(
+        tester.widget<EditingTile>(editing(before.first)).onMoveEarlier,
+        isNull,
+      );
+      expect(
+        tester.widget<EditingTile>(editing(before.last)).onMoveLater,
+        isNull,
+      );
+      await harness.dispose();
+      semantics.dispose();
+    });
+
+    testWidgets('reset restores the default and can be undone', (tester) async {
+      final harness = await startEditing(tester);
+      final before = order(tester);
+      await tester.tap(tooltip('Remove Doors'));
+      await tester.pumpAndSettle();
+      final edited = order(tester);
+
+      await tester.tap(tooltip('Reset layout'));
+      await tester.pumpAndSettle();
+      expect(order(tester), before);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(order(tester), edited);
+      await harness.dispose();
+    });
+
+    testWidgets('a link change ends editing', (tester) async {
+      final harness = await startEditing(tester);
+      await harness.switchTo(TransportType.mqtt);
+      await harness.switchTo(TransportType.ble);
+      expect(find.byType(EditingTile), findsNothing);
       await harness.dispose();
     });
   });

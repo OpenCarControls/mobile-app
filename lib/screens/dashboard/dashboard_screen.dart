@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:open_car_app/models/dashboard_layout.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
@@ -22,6 +23,7 @@ import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/tiles/catalog_tile.dart';
 import 'package:open_car_app/widgets/tiles/tile_context.dart';
+import 'package:open_car_app/widgets/tiles/tile_editing.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 
 /// From this width the dashboard uses its wide layouts.
@@ -39,6 +41,9 @@ const double _layerBlur = 18;
 
 /// The cross-fade when the link switches between Remote and Bluetooth.
 const _tierSwitchDuration = Duration(milliseconds: 300);
+
+/// The grid item of the edit controls; no catalog tile has this id.
+const _editControlId = '__edit__';
 
 /// The tier for a transport: remote over MQTT, Bluetooth otherwise (stub and
 /// HTTP behave like BLE).
@@ -61,6 +66,11 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  /// The grid being edited, if any.
+  DashboardGrid? _editing;
+
+  void _setEditing(DashboardGrid? grid) => setState(() => _editing = grid);
+
   @override
   Widget build(BuildContext context) {
     final vehicle = ref.watch(selectedVehicleProvider);
@@ -68,6 +78,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (vehicle == null) return const SizedBox.shrink();
     final snapshot = ref.watch(vehicleStateProvider);
     final tier = dashboardTierFor(ref.watch(transportTypeProvider));
+    // A link change swaps the grid: don't come back to it still in edit mode.
+    ref.listen(transportTypeProvider, (previous, next) {
+      if (previous == null) return;
+      if (dashboardTierFor(previous) != dashboardTierFor(next)) {
+        _setEditing(null);
+      }
+    });
+    final grid = DashboardGrid.of(tier);
+    final editing = _editing == grid;
     final data = TileContext(
       vehicle: vehicle,
       snapshot: snapshot,
@@ -85,7 +104,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       key: ValueKey(tier),
       tier: tier,
       data: data,
-      layout: layout,
+      items: _gridItems(grid, tier, layout, data),
       onRefresh: () => ref.read(bleConnectionProvider.notifier).pullToRefresh(),
       onSettings: () => SettingsScreen.open(context),
       onNameLongPress: debugDrawer == null
@@ -93,16 +112,121 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           : () => _scaffoldKey.currentState?.openEndDrawer(),
     );
 
-    return Scaffold(
-      key: _scaffoldKey,
-      endDrawer: debugDrawer,
-      body: AnimatedSwitcher(
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : _tierSwitchDuration,
-        child: dashboard,
+    return PopScope(
+      canPop: !editing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _setEditing(null);
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        endDrawer: debugDrawer,
+        body: AnimatedSwitcher(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : _tierSwitchDuration,
+          child: dashboard,
+        ),
       ),
     );
+  }
+
+  /// [layout]'s tiles for [grid], with the editing controls the grid allows.
+  List<TileGridItem> _gridItems(
+    DashboardGrid grid,
+    DashboardTier tier,
+    List<TileLayoutEntry> layout,
+    TileContext data,
+  ) {
+    final items = catalogGridItems(layout, data, tiers: tier.tileTiers);
+    if (grid.editing == TileGridEditing.none) return items;
+    if (_editing != grid) {
+      return [
+        for (final item in items)
+          TileGridItem(
+            id: item.id,
+            span: item.span,
+            child: GestureDetector(
+              onLongPress: () => _setEditing(grid),
+              child: item.child,
+            ),
+          ),
+        if (grid.editing == TileGridEditing.explicit)
+          TileGridItem(
+            id: _editControlId,
+            span: const TileSpan(1, 1),
+            child: EditLayoutTile(onPressed: () => _setEditing(grid)),
+          ),
+      ];
+    }
+
+    void save(List<TileLayoutEntry> edited) =>
+        ref.read(savedLayoutsProvider.notifier).save(grid, edited);
+    final vehicle = data.vehicle;
+    final addable = [
+      for (final tile in tilesNotInLayout(layout, vehicle, tier))
+        (tile: tile, supported: !_commandHidden(tile)),
+    ];
+    // Removing the last tile of an implicit grid would leave nothing to hold
+    // to edit it again.
+    final removable =
+        grid.editing == TileGridEditing.explicit || items.length > 1;
+    return [
+      for (final (index, item) in items.indexed)
+        () {
+          final tile = vehicle.tileById(item.id)!;
+          return TileGridItem(
+            id: item.id,
+            span: item.span,
+            child: EditingTile(
+              tile: tile,
+              span: item.span,
+              onRemove: removable
+                  ? () => save(layout.withoutTile(tile.id))
+                  : null,
+              onNextSize: tile.sizes.length > 1
+                  ? () => save(layout.withNextSize(tile))
+                  : null,
+              onMoveEarlier: index > 0
+                  ? () => save(layout.withTileMoved(tile.id, -1))
+                  : null,
+              onMoveLater: index < items.length - 1
+                  ? () => save(layout.withTileMoved(tile.id, 1))
+                  : null,
+              child: item.child,
+            ),
+          );
+        }(),
+      TileGridItem(
+        id: _editControlId,
+        span: kEditActionsSpan,
+        child: EditActionsTile(
+          onAdd: addable.isEmpty
+              ? null
+              : () async {
+                  final tile = await showAddTileSheet(context, addable);
+                  if (tile != null) save(layout.withTile(tile));
+                },
+          onDone: () => _setEditing(null),
+          onReset: () => _reset(grid, layout),
+        ),
+      ),
+    ];
+  }
+
+  void _reset(DashboardGrid grid, List<TileLayoutEntry> previous) {
+    final layouts = ref.read(savedLayoutsProvider.notifier);
+    layouts.reset(grid);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Layout reset'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => layouts.save(grid, previous),
+          ),
+        ),
+      );
   }
 
   bool _commandHidden(TileDefinition? tile) {
@@ -122,7 +246,7 @@ class _Dashboard extends StatelessWidget {
     super.key,
     required this.tier,
     required this.data,
-    required this.layout,
+    required this.items,
     required this.onRefresh,
     required this.onSettings,
     this.onNameLongPress,
@@ -132,7 +256,7 @@ class _Dashboard extends StatelessWidget {
   final TileContext data;
 
   /// The tiles to show, in order.
-  final List<TileLayoutEntry> layout;
+  final List<TileGridItem> items;
   final Future<void> Function() onRefresh;
   final VoidCallback onSettings;
   final VoidCallback? onNameLongPress;
@@ -140,7 +264,6 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= kWideLayoutMinWidth;
-    final items = catalogGridItems(layout, data, tiers: tier.tileTiers);
     Widget header({bool blur = true}) => DashboardHeader(
       vehicle: data.vehicle,
       snapshot: data.snapshot,
