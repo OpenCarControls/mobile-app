@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/phone_access_provider.dart';
-import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
 import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/settings_rows.dart';
@@ -119,7 +118,6 @@ class _CanAccessSectionState extends ConsumerState<CanAccessSection> {
         // Development firmware only: an extra lock, locked at every boot.
         if (state.devLockAvailable)
           SwitchListTile(
-            activeThumbColor: context.tokens.accent,
             title: const Text('Developer write lock unlocked'),
             subtitle: const Text(
               'Development firmware only. Locks again at every restart.',

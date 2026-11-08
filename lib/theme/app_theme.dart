@@ -15,6 +15,12 @@ ThemeData buildAppTheme(VehicleSkin skin, Brightness brightness) {
       ? Brightness.dark
       : Brightness.light;
   final buttonShape = WidgetStatePropertyAll(tokens.radiusMedium.shape());
+  // A disabled switch keeps Material's colours.
+  WidgetStateProperty<Color?> switchColor({Color? on, Color? off}) =>
+      WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) return null;
+        return states.contains(WidgetState.selected) ? on : off;
+      });
 
   return ThemeData(
     useMaterial3: true,
@@ -80,6 +86,17 @@ ThemeData buildAppTheme(VehicleSkin skin, Brightness brightness) {
       style: ButtonStyle(
         shape: WidgetStatePropertyAll(tokens.radiusSmall.shape()),
       ),
+    ),
+    // On matches the selected segment of a segmented button. Material draws
+    // an off switch in the outline colour, which is too faint here: it would
+    // look disabled.
+    switchTheme: SwitchThemeData(
+      thumbColor: switchColor(
+        on: tokens.onAccentContainer,
+        off: tokens.textSecondary,
+      ),
+      trackColor: switchColor(on: tokens.accentContainer),
+      trackOutlineColor: switchColor(off: tokens.textSecondary),
     ),
     inputDecorationTheme: InputDecorationThemeData(
       border: OutlineInputBorder(borderRadius: tokens.radiusSmall.borderRadius),

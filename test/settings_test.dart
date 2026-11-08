@@ -23,6 +23,7 @@ import 'package:open_car_app/screens/dashboard/dashboard_screen.dart';
 import 'package:open_car_app/screens/paired_phones_screen.dart';
 import 'package:open_car_app/screens/settings_screen.dart';
 import 'package:open_car_app/theme/app_theme.dart';
+import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/tiles/tile_editing.dart';
@@ -451,6 +452,20 @@ void main() {
       expect(find.text('Refused'), findsOneWidget);
       await _end(tester);
     });
+  });
+
+  test('switches use the accent when on and stay visible when off', () {
+    final theme = buildAppTheme(defaultSkin, Brightness.dark);
+    final tokens = theme.extension<AppTokens>()!;
+    final switches = theme.switchTheme;
+    const on = {WidgetState.selected};
+    expect(switches.trackColor!.resolve(on), tokens.accentContainer);
+    expect(switches.thumbColor!.resolve(on), tokens.onAccentContainer);
+    expect(switches.thumbColor!.resolve({}), tokens.textSecondary);
+    expect(switches.trackOutlineColor!.resolve({}), tokens.textSecondary);
+    // Disabled keeps Material's colours.
+    expect(switches.thumbColor!.resolve({WidgetState.disabled}), isNull);
+    expect(switches.trackColor!.resolve({...on, WidgetState.disabled}), isNull);
   });
 
   group('formatting', () {
