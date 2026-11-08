@@ -392,7 +392,9 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('reset restores the default and can be undone', (tester) async {
+    testWidgets('reset asks first, then restores and leaves edit mode', (
+      tester,
+    ) async {
       final harness = await startEditing(tester);
       final before = order(tester);
       await tester.tap(remove('Doors'));
@@ -401,11 +403,48 @@ void main() {
 
       await tester.tap(tooltip('Reset layout'));
       await tester.pumpAndSettle();
-      expect(order(tester), before);
-
-      await tester.tap(find.text('Undo'));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(order(tester), edited);
+
+      await tester.tap(tooltip('Reset layout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Reset'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EditingTile), findsNothing);
+
+      await tester.tap(tooltip('Edit layout'));
+      await tester.pumpAndSettle();
+      expect(order(tester), before);
+      await harness.dispose();
+    });
+
+    testWidgets('pull-to-refresh is off only while editing', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump();
+
+      Future<bool> refreshShows() async {
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(TileGrid)),
+        );
+        // Far enough to show the indicator, not to arm a real refresh.
+        for (var i = 0; i < 4; i++) {
+          await gesture.moveBy(const Offset(0, 20));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        final shown = find
+            .byType(RefreshProgressIndicator)
+            .evaluate()
+            .isNotEmpty;
+        await gesture.cancel();
+        await tester.pumpAndSettle();
+        return shown;
+      }
+
+      expect(await refreshShows(), isTrue);
+      await tester.tap(tooltip('Edit layout'));
+      await tester.pumpAndSettle();
+      expect(await refreshShows(), isFalse);
       await harness.dispose();
     });
 

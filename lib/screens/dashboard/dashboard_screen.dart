@@ -109,6 +109,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       tier: tier,
       data: data,
       items: _gridItems(grid, tier, layout, data),
+      editing: editing,
       onRefresh: () => ref.read(bleConnectionProvider.notifier).pullToRefresh(),
       onSettings: () => SettingsScreen.open(context),
       onNameLongPress: debugDrawer == null
@@ -219,7 +220,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   if (tile != null) save(layout.withTile(tile));
                 },
           onDone: () => _setEditing(null),
-          onReset: () => _reset(grid, layout),
+          onReset: () => _reset(grid),
         ),
       ),
       TileGridItem(
@@ -248,20 +249,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     index - layout.indexWhere((entry) => entry.tileId == tileId),
   );
 
-  void _reset(DashboardGrid grid, List<TileLayoutEntry> previous) {
-    final layouts = ref.read(savedLayoutsProvider.notifier);
-    layouts.reset(grid);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: const Text('Layout reset'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => layouts.save(grid, previous),
+  /// Asks, then puts [grid] back to its default and leaves edit mode.
+  Future<void> _reset(DashboardGrid grid) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset this layout?'),
+        content: const Text('Your changes to this grid will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-        ),
-      );
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    ref.read(savedLayoutsProvider.notifier).reset(grid);
+    _setEditing(null);
   }
 
   bool _commandHidden(TileDefinition? tile) {
@@ -282,6 +291,7 @@ class _Dashboard extends StatelessWidget {
     required this.tier,
     required this.data,
     required this.items,
+    required this.editing,
     required this.onRefresh,
     required this.onSettings,
     this.onNameLongPress,
@@ -292,6 +302,9 @@ class _Dashboard extends StatelessWidget {
 
   /// The tiles to show, in order.
   final List<TileGridItem> items;
+
+  /// Whether the grid is in edit mode.
+  final bool editing;
   final Future<void> Function() onRefresh;
   final VoidCallback onSettings;
   final VoidCallback? onNameLongPress;
@@ -328,6 +341,7 @@ class _Dashboard extends StatelessWidget {
           header: header(),
           items: items,
           columns: wide ? kTileColumnsWide : kTileColumnsPhone,
+          editing: editing,
           onRefresh: onRefresh,
         ),
       },
@@ -514,12 +528,16 @@ class _BluetoothLayout extends StatefulWidget {
     required this.header,
     required this.items,
     required this.columns,
+    required this.editing,
     required this.onRefresh,
   });
 
   final Widget header;
   final List<TileGridItem> items;
   final int columns;
+
+  /// Pull-to-refresh is off while editing.
+  final bool editing;
   final Future<void> Function() onRefresh;
 
   @override
@@ -536,6 +554,9 @@ class _BluetoothLayoutState extends State<_BluetoothLayout> {
       children: [
         RefreshIndicator(
           onRefresh: widget.onRefresh,
+          notificationPredicate: (notification) =>
+              !widget.editing &&
+              defaultScrollNotificationPredicate(notification),
           edgeOffset: _headerHeight,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),

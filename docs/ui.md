@@ -179,7 +179,8 @@ In edit mode:
 *   Hold a tile and drag to move it; the other tiles reflow as it passes. Commands do not run while editing.
 *   One 2×1 tile at the end of the grid holds **+**, **Done** (check) and **Reset** (undo arrow), so they always share a row. On an implicit grid it is only there while editing. A hint line follows it.
 *   **+** opens the **Add a tile** sheet: the tiles not on the dashboard, for example the Car view tile or a stat that was removed. A tile whose command the car lacks is greyed out there, the only place it can be seen.
-*   Every change is saved at once. Reset offers an undo.
+*   Every change is saved at once. Reset asks for confirmation, then leaves edit mode.
+*   Pull-to-refresh is off while editing.
 *   The last tile of an implicit grid can't be removed, since there would be nothing left to hold.
 
 Because dragging alone is not accessible, every tile also has "Move earlier" and "Move later" screen-reader actions, and every control has a label. Dragging doesn't scroll the page yet, so a move past the screen edge takes more than one drag.
