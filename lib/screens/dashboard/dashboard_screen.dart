@@ -11,6 +11,7 @@ import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/dashboard_layout_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_history_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
@@ -76,7 +77,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // A tile whose command the car doesn't have is left out, and the tiles
     // after it close the gap.
     final layout = [
-      for (final entry in vehicle.defaultLayout(tier))
+      for (final entry in ref.watch(dashboardLayoutProvider(tier)))
         if (!_commandHidden(vehicle.tileById(entry.tileId))) entry,
     ];
 
@@ -139,12 +140,7 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= kWideLayoutMinWidth;
-    final tiers = switch (tier) {
-      // Advanced tiles need Bluetooth: over MQTT they are left out.
-      DashboardTier.remote => const {TileTier.basic},
-      DashboardTier.bluetooth => const {TileTier.basic, TileTier.advanced},
-    };
-    final items = catalogGridItems(layout, data, tiers: tiers);
+    final items = catalogGridItems(layout, data, tiers: tier.tileTiers);
     Widget header({bool blur = true}) => DashboardHeader(
       vehicle: data.vehicle,
       snapshot: data.snapshot,

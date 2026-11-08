@@ -53,6 +53,10 @@ class PairedVehicleConfig {
     this.mqttPassword,
   });
 
+  /// Keys what is stored per vehicle (saved layouts, unsupported commands).
+  /// The platform name for now: with one paired vehicle it is enough.
+  String get storageKey => vehicleId;
+
   /// Whether this vehicle is reached over BLE when in range: paired over BLE
   /// (not the HTTP debug path) with a bonded device to connect to.
   bool get usesBle =>

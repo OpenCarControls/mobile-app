@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_car_app/config/unsupported_commands_config.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
@@ -66,6 +68,12 @@ class CommandAvailabilityNotifier extends Notifier<CommandAvailability?> {
     state = CommandAvailability()
       ..mergeFromMessage(state ?? CommandAvailability())
       ..mergeFromMessage(system.commandAvailability);
+    final vehicleKey = ref.read(pairedVehicleProvider)?.storageKey;
+    if (vehicleKey != null) {
+      ref
+          .read(unsupportedCommandsProvider.notifier)
+          .record(vehicleKey, system.commandAvailability);
+    }
     _staleTimer?.cancel();
     _staleTimer = Timer(kStateLivenessTimeout, () => state = null);
   }
@@ -76,8 +84,57 @@ final commandAvailabilityProvider =
       CommandAvailabilityNotifier.new,
     );
 
+/// The commands each vehicle doesn't have, by storage key, as encoded by
+/// [_unsupportedId]. Loaded before [runApp].
+final initialUnsupportedCommandsProvider = Provider<UnsupportedCommands>(
+  (_) => const {},
+);
+
+/// Which commands each vehicle doesn't have, remembered from its availability
+/// reports. A car's equipment doesn't change, so unlike the availability this
+/// is kept across connections and app runs, and offline the app still knows
+/// what to leave out. It can only hide a command, never enable one.
+class UnsupportedCommandsNotifier extends Notifier<UnsupportedCommands> {
+  @override
+  UnsupportedCommands build() => ref.read(initialUnsupportedCommandsProvider);
+
+  /// Updates [vehicleKey]'s commands from a [report]. Only `AVAILABLE` takes a
+  /// command back: the device also reports `UNAVAILABLE` for every command
+  /// while the phone isn't validated, which says nothing about the car.
+  void record(String vehicleKey, CommandAvailability report) {
+    final previous = state[vehicleKey] ?? const <String>{};
+    final next = {...previous};
+    void apply(CommandSet set, Map<int, CommandAvailabilityState> states) {
+      for (final MapEntry(key: id, value: availability) in states.entries) {
+        final key = _unsupportedId((set: set, id: id));
+        switch (availability) {
+          case CommandAvailabilityState.COMMAND_AVAILABILITY_STATE_UNSUPPORTED:
+            next.add(key);
+          case CommandAvailabilityState.COMMAND_AVAILABILITY_STATE_AVAILABLE:
+            next.remove(key);
+          default:
+        }
+      }
+    }
+
+    apply(CommandSet.basic, report.basic);
+    apply(CommandSet.advanced, report.advanced);
+    if (next.length == previous.length && next.containsAll(previous)) return;
+    state = {...state, vehicleKey: next};
+    unawaited(saveUnsupportedCommands(vehicleKey, next));
+  }
+}
+
+final unsupportedCommandsProvider =
+    NotifierProvider<UnsupportedCommandsNotifier, UnsupportedCommands>(
+      UnsupportedCommandsNotifier.new,
+    );
+
+String _unsupportedId(CommandKey key) => '${key.set.name}/${key.id}';
+
 /// What to do with the button of command [id] in [set], given what the device
-/// [reported] on the current connection (null if nothing yet).
+/// [reported] on the current connection (null if nothing yet) and whether the
+/// car is [knownUnsupported] from an earlier report.
 ///
 /// Over BLE and MQTT the app waits for the device: a command is enabled only
 /// while the device says it accepts it, so right after connecting, or when the
@@ -88,12 +145,17 @@ CommandUiState commandUiState(
   CommandAvailability? reported,
   TransportType transport,
   CommandSet set,
-  int id,
-) {
+  int id, {
+  bool knownUnsupported = false,
+}) {
   final state = switch (set) {
     CommandSet.basic => reported?.basic[id],
     CommandSet.advanced => reported?.advanced[id],
   };
+  if (knownUnsupported &&
+      state != CommandAvailabilityState.COMMAND_AVAILABILITY_STATE_AVAILABLE) {
+    return CommandUiState.hidden;
+  }
   // Nothing reported for this command (yet): not known to be available.
   if (state == null) {
     return transport.waitsForAvailability
@@ -131,7 +193,15 @@ final commandUiStateProvider = Provider.family<CommandUiState, CommandKey>((
 ) {
   final reported = ref.watch(commandAvailabilityProvider);
   final transport = ref.watch(carTransportProvider).transportType;
-  return commandUiState(reported, transport, key.set, key.id);
+  final vehicleKey = ref.watch(pairedVehicleProvider)?.storageKey;
+  final unsupported = ref.watch(unsupportedCommandsProvider)[vehicleKey];
+  return commandUiState(
+    reported,
+    transport,
+    key.set,
+    key.id,
+    knownUnsupported: unsupported?.contains(_unsupportedId(key)) ?? false,
+  );
 });
 
 /// Why a greyed-out command in [set] can't be sent. The device doesn't report a
