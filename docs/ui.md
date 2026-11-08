@@ -28,6 +28,7 @@ Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connect
 | No contextual tiles | Tiles that appear and disappear by state make the layout unpredictable. Contextual *content* inside a stable tile gives the same information. |
 | Light and dark themes, Material 3 foundations with a custom skin layer | Familiar widgets, but shapes and colours are ours to vary per platform. |
 | When the link switches between Remote and Bluetooth, the screen cross-fades straight to the other tier | Waiting for the user would leave the wrong tier on screen, with tiles the new transport can't serve. A short fade (none with reduced motion) keeps the reshape from being jarring. To revisit after use on a phone. |
+| Editing is decided per grid, and the remote grid is locked for now | The remote tier will likely split into a small editable grid of quick commands and a lower grid that may stay locked. Until then it has one grid, so it stays locked. |
 | Pull-to-refresh works anywhere on the dashboard | The whole page scrolls, even where the header and the hero stay put, so there is no separate gesture target. |
 
 ## The two tiers
@@ -37,7 +38,7 @@ Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connect
 | Header | Vehicle name, level row, status line, speed while driving | Small vehicle name, one slim level row |
 | Tiles | Basic tiles only | Basic and advanced tiles |
 | Default layout | Four buttons and climate | Battery, buttons, climate, stats and charts |
-| Editing | Same editor, basic tiles only (not mocked) | Edit tile at the end of the grid |
+| Editing | Locked for now | Edit tile at the end of the grid |
 | System commands (settings: device, advanced) | No | Yes |
 
 Gate on the transport type, never on the vehicle (see the transport gating in [Architecture](architecture.md)). Over MQTT, advanced tiles are left out, not shown disabled.
@@ -165,19 +166,25 @@ The extras are part of the same climate command, so they are only offered while 
 
 ### Default layouts and persistence
 *   Every platform ships a default layout for each tier, so nobody starts with an empty screen. Defaults reference tiles by stable id.
-*   The user's layout is saved per vehicle and per tier. Switching vehicle switches layout.
+*   The user's layout is saved per vehicle and per grid. Switching vehicle switches layout.
 *   A new app version that adds tiles does not insert them into a saved layout. They show up in the "Add a tile" list.
 *   "Reset" restores the platform's default.
 
 ### Editing
-The edit control is a small tile with a dotted border and a pencil, placed after the last tile, so it takes no space elsewhere. Tap it to enter edit mode:
+Each grid is locked, or editable implicitly or explicitly. An **explicit** grid ends with a small tile with a dotted border and a pencil. On both kinds, holding a tile starts editing, and the same hold can go on to drag it.
 
-*   Every tile gets a dashed outline and is dimmed under an overlay holding an **×** (remove) at its corner and, if the tile has more than one size, a **size badge** (for example `1×1`) in the middle. Tapping the badge cycles through the sizes the kind supports.
-*   Tiles can be dragged to move. Commands do not run while editing.
-*   The pencil tile becomes two: **Done** (check) and **Reset** (undo arrow).
-*   Under the grid: a hint line and an **Add a tile** list of tiles not on the dashboard (for example the Car view tile or a stat that was removed).
+In edit mode:
 
-Because dragging alone is not accessible, edit mode must also offer move actions (for example "move earlier/later" in the tile's actions), and every control needs a label. The drag gesture itself is not mocked.
+*   Every tile gets a dashed outline and is dimmed under an overlay holding an **×** (remove) and, if the tile has more than one size, a **size badge** (for example `1×1`). The two sit in opposite corners so that their touch targets stay apart on a 1×1 tile. Tapping the badge cycles through the sizes the kind supports.
+*   Hold a tile and drag to move it; the other tiles reflow as it passes. Commands do not run while editing.
+*   One 2×1 tile at the end of the grid holds **+**, **Done** (check) and **Reset** (undo arrow), so they always share a row. On an implicit grid it is only there while editing. A hint line follows it.
+*   **+** opens the **Add a tile** sheet: the tiles not on the dashboard, for example the Car view tile or a stat that was removed. A tile whose command the car lacks is greyed out there, the only place it can be seen.
+*   Every change is saved at once. Reset offers an undo.
+*   The last tile of an implicit grid can't be removed, since there would be nothing left to hold.
+
+Because dragging alone is not accessible, every tile also has "Move earlier" and "Move later" screen-reader actions, and every control has a label. Dragging doesn't scroll the page yet, so a move past the screen edge takes more than one drag.
+
+The screenshot predates the single controls tile and the sheet.
 
 ![Edit mode](ui/images/ble-dark-edit.png)
 
@@ -231,7 +238,7 @@ The old per-vehicle screens showed things the mockups do not place. The platform
 *   The fuel glyph has no fill yet, since no platform has a tank.
 *   Stale tiles are dimmed but screen readers aren't told; the pill says the state is offline.
 
-Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)). The BLE button configuration in [#26](https://github.com/OpenCarControls/mobile-app/issues/26) overlaps with the tile editor and should be looked at together.
+Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)).
 
 ## Accessibility
 *   Touch targets are at least 44 dp. The vehicle name and the edit tile need padding to reach this; the mockups draw them small.
@@ -261,9 +268,8 @@ Control button options. Both were kept: A (icon-only) and B (icon + title) are a
 ## Open questions
 *   Tap on the level to swap percent and range?
 *   Do the climate extras work with climate off on each car? (Assumed no.)
-*   The drag gesture and per-tile configuration are not designed.
+*   Per-tile configuration is not designed.
 *   Is 64 dp the right row height? Stat tiles fit one line of label and a value, and 2×2 tiles are shorter than the mockups draw them.
 *   Should the remote tier's first row be a separate grid with its own row height, as quick command shortcuts?
-*   Does the remote tier get the same editor?
 *   The level and range appear in both the header and the Battery tile. Keep, or drop one?
 *   Is the remote hero box minimum height right on small phones and with large fonts?
