@@ -117,6 +117,17 @@ class PhoneValidationActions {
     return result.pairedPhones.phones.map(PairedPhoneInfo.fromProto).toList();
   }
 
+  /// Asks the device to remove a phone's bond. It only answers a refusal, and
+  /// ignores the request while its pairing window is closed: read the list
+  /// again to see whether the phone is gone.
+  Future<void> removePairedPhone(List<int> deviceId) => _ref
+      .read(vehicleStateProvider.notifier)
+      .sendUnansweredSystemCommand(
+        SystemCommand(
+          removePairedPhone: RemovePairedPhoneCommand(deviceId: deviceId),
+        ),
+      );
+
   Future<SystemCommandResult> _sendForResult(
     SystemCommand command,
     SystemCommandResult_Result expected,
@@ -136,3 +147,21 @@ class PhoneValidationActions {
 final phoneValidationActionsProvider = Provider<PhoneValidationActions>(
   PhoneValidationActions.new,
 );
+
+/// The phones bonded to the device, asked for on each connection and when this
+/// phone's trust changes. BLE only: fails over MQTT.
+final pairedPhonesProvider = FutureProvider.autoDispose<List<PairedPhoneInfo>>(
+  (ref) {
+    ref.watch(carTransportProvider);
+    ref.watch(phoneAccessStateProvider.select((access) => access?.trust));
+    return ref.read(phoneValidationActionsProvider).listPairedPhones();
+  },
+  // A failure is shown with a way to try again.
+  retry: (_, _) => null,
+);
+
+/// This phone is only bonded while the car has a validated phone, so the device
+/// refuses it the approval and removing a validated phone.
+bool isOutrankedByValidatedPhone(PhoneAccessState access) =>
+    access.trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED &&
+    access.carHasValidatedPhone;

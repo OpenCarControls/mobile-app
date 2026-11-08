@@ -33,6 +33,9 @@ class SavedLayoutsNotifier extends Notifier<SavedLayouts> {
     unawaited(clearLayout(key));
   }
 
+  /// Puts every grid back to the platform's default on the current vehicle.
+  void resetAll() => DashboardGrid.values.forEach(reset);
+
   String? _key(DashboardGrid grid) {
     final vehicleKey = ref.read(pairedVehicleProvider)?.storageKey;
     return vehicleKey == null ? null : savedLayoutKey(vehicleKey, grid);

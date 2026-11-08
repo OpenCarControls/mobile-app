@@ -3,6 +3,7 @@ import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/egmp/licenses.dart';
+import 'package:open_car_app/config/button_style_config.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/config/saved_layouts_config.dart';
@@ -39,6 +40,7 @@ void main() async {
   );
 
   final themeMode = await loadThemeMode();
+  final buttonStyle = await loadButtonStyle();
   final savedLayouts = await loadSavedLayouts();
   final unsupportedCommands = await loadUnsupportedCommands();
 
@@ -48,6 +50,7 @@ void main() async {
         bleSourceDeviceIdProvider.overrideWithValue(deviceId),
         initialPairedVehicleConfigProvider.overrideWithValue(pairedConfig),
         initialThemeModeProvider.overrideWithValue(themeMode),
+        initialButtonStyleProvider.overrideWithValue(buttonStyle),
         initialSavedLayoutsProvider.overrideWithValue(savedLayouts),
         initialUnsupportedCommandsProvider.overrideWithValue(
           unsupportedCommands,
