@@ -19,6 +19,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_banner.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_header.dart';
 import 'package:open_car_app/screens/settings_screen.dart';
+import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/tiles/catalog_tile.dart';
@@ -44,6 +45,9 @@ const _tierSwitchDuration = Duration(milliseconds: 300);
 
 /// The grid item of the edit controls; no catalog tile has this id.
 const _editControlId = '__edit__';
+
+/// The grid item of the edit mode hint.
+const _editHintId = '__edit_hint__';
 
 /// The tier for a transport: remote over MQTT, Bluetooth otherwise (stub and
 /// HTTP behave like BLE).
@@ -145,10 +149,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           TileGridItem(
             id: item.id,
             span: item.span,
-            child: GestureDetector(
-              onLongPress: () => _setEditing(grid),
-              child: item.child,
+            // Holding a tile starts editing, and the same hold can drag it.
+            drag: TileDragHandlers(
+              onStart: () => _setEditing(grid),
+              onMoveTo: (index) => ref
+                  .read(savedLayoutsProvider.notifier)
+                  .save(grid, _moved(layout, item.id, index)),
             ),
+            child: item.child,
           ),
         if (grid.editing == TileGridEditing.explicit)
           TileGridItem(
@@ -177,6 +185,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return TileGridItem(
             id: item.id,
             span: item.span,
+            drag: TileDragHandlers(
+              onStart: () {},
+              onMoveTo: (index) => save(_moved(layout, tile.id, index)),
+            ),
             child: EditingTile(
               tile: tile,
               span: item.span,
@@ -210,8 +222,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           onReset: () => _reset(grid, layout),
         ),
       ),
+      TileGridItem(
+        id: _editHintId,
+        span: const TileSpan(kTileColumnsPhone, 1),
+        child: Center(
+          child: Text(
+            'Hold a tile and drag to move it. Tap its size to resize it.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.caption.copyWith(
+              color: context.tokens.textSecondary,
+            ),
+          ),
+        ),
+      ),
     ];
   }
+
+  /// [layout] with the tile [tileId] at [index].
+  List<TileLayoutEntry> _moved(
+    List<TileLayoutEntry> layout,
+    String tileId,
+    int index,
+  ) => layout.withTileMoved(
+    tileId,
+    index - layout.indexWhere((entry) => entry.tileId == tileId),
+  );
 
   void _reset(DashboardGrid grid, List<TileLayoutEntry> previous) {
     final layouts = ref.read(savedLayoutsProvider.notifier);

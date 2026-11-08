@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -232,6 +233,8 @@ void main() {
       (w) => w is EditingTile && w.tile.label == label,
     );
     Finder tooltip(String message) => find.byTooltip(message);
+    Finder remove(String label) =>
+        find.descendant(of: editing(label), matching: find.byIcon(Icons.close));
 
     /// The order of the tiles, as the editor shows them.
     List<String> order(WidgetTester tester) => [
@@ -298,7 +301,7 @@ void main() {
       tester,
     ) async {
       final harness = await startEditing(tester);
-      await tester.tap(tooltip('Remove Doors'));
+      await tester.tap(remove('Doors'));
       await tester.pumpAndSettle();
       expect(editing('Doors'), findsNothing);
 
@@ -392,7 +395,7 @@ void main() {
     testWidgets('reset restores the default and can be undone', (tester) async {
       final harness = await startEditing(tester);
       final before = order(tester);
-      await tester.tap(tooltip('Remove Doors'));
+      await tester.tap(remove('Doors'));
       await tester.pumpAndSettle();
       final edited = order(tester);
 
@@ -403,6 +406,78 @@ void main() {
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();
       expect(order(tester), edited);
+      await harness.dispose();
+    });
+
+    /// Holds [label]'s tile, then drags it [delta] with the finger still down.
+    Future<TestGesture> holdAndDrag(
+      WidgetTester tester,
+      Finder tile,
+      Offset delta,
+    ) async {
+      final gesture = await tester.startGesture(tester.getCenter(tile));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      await gesture.moveBy(delta);
+      await tester.pumpAndSettle();
+      return gesture;
+    }
+
+    testWidgets('dragging a tile moves it and keeps it', (tester) async {
+      final harness = await startEditing(tester);
+      final before = order(tester);
+      final start = tester.getTopLeft(editing(before[0]));
+      final next = tester.getTopLeft(editing(before[1]));
+
+      final gesture = await holdAndDrag(
+        tester,
+        editing(before[0]),
+        next - start,
+      );
+      // It stays under the finger while the others slide.
+      expect(tester.getTopLeft(editing(before[0])), next);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(order(tester), [before[1], before[0], ...before.skip(2)]);
+      expect(tester.getTopLeft(editing(before[0])), next);
+      expect(tester.getTopLeft(editing(before[1])), start);
+      await harness.dispose();
+    });
+
+    testWidgets('the same hold starts editing and drags', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump();
+      final finder = find.text('Custom 1');
+      final gesture = await holdAndDrag(tester, finder, const Offset(-100, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(order(tester).first, 'Custom 1');
+      expect(harness.transport.sent, isEmpty);
+      await harness.dispose();
+    });
+
+    testWidgets('the edit controls stay last', (tester) async {
+      final harness = await startEditing(tester);
+      final before = order(tester);
+      final gesture = await holdAndDrag(
+        tester,
+        editing(before.first),
+        const Offset(300, 400),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+      final draggable = [
+        for (final item in tester.widget<TileGrid>(find.byType(TileGrid)).items)
+          item.drag != null,
+      ];
+      expect(draggable, [...before.map((_) => true), false, false]);
+      await harness.dispose();
+    });
+
+    testWidgets('edit mode explains the gestures', (tester) async {
+      final harness = await startEditing(tester);
+      expect(find.textContaining('Hold a tile'), findsOneWidget);
       await harness.dispose();
     });
 

@@ -82,16 +82,23 @@ class EditingTile extends StatelessWidget {
           if (onRemove case final onRemove?)
             Align(
               alignment: Alignment.topRight,
-              child: IconButton(
-                onPressed: onRemove,
-                tooltip: 'Remove ${tile.accessibleLabel}',
-                icon: const Icon(Icons.close, size: 18),
-                color: tokens.text,
-                constraints: const BoxConstraints.tightFor(
-                  width: kMinTouchTarget,
-                  height: kMinTouchTarget,
+              // No tooltip: its hold would take the touch from dragging, and
+              // this button covers much of a small tile.
+              child: Semantics(
+                button: true,
+                label: 'Remove ${tile.accessibleLabel}',
+                excludeSemantics: true,
+                onTap: onRemove,
+                child: IconButton(
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close, size: 18),
+                  color: tokens.text,
+                  constraints: const BoxConstraints.tightFor(
+                    width: kMinTouchTarget,
+                    height: kMinTouchTarget,
+                  ),
+                  padding: EdgeInsets.zero,
                 ),
-                padding: EdgeInsets.zero,
               ),
             ),
         ],
