@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:open_car_app/config/button_style_config.dart';
 import 'package:open_car_app/models/dashboard_layout.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
@@ -14,6 +15,7 @@ import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/dashboard_layout_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/providers/vehicle_history_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_banner.dart';
@@ -75,6 +77,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   void _setEditing(DashboardGrid? grid) => setState(() => _editing = grid);
 
+  Future<void> _openSettings() async {
+    final edit = await SettingsScreen.open(context);
+    if (!edit || !mounted) return;
+    // The link may have changed while settings was open.
+    final tier = dashboardTierFor(ref.read(transportTypeProvider));
+    final grid = DashboardGrid.of(tier);
+    if (grid.editing != TileGridEditing.none) _setEditing(grid);
+  }
+
   @override
   Widget build(BuildContext context) {
     final vehicle = ref.watch(selectedVehicleProvider);
@@ -95,6 +106,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       vehicle: vehicle,
       snapshot: snapshot,
       history: ref.watch(vehicleHistoryProvider),
+      iconOnly: ref.watch(buttonStyleProvider) == DashboardButtonStyle.iconOnly,
     );
     final debugDrawer = kDebugMode ? vehicle.buildDebugDrawer() : null;
     // A tile whose command the car doesn't have is left out, and the tiles
@@ -111,7 +123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       items: _gridItems(grid, tier, layout, data),
       editing: editing,
       onRefresh: () => ref.read(bleConnectionProvider.notifier).pullToRefresh(),
-      onSettings: () => SettingsScreen.open(context),
+      onSettings: _openSettings,
       onNameLongPress: debugDrawer == null
           ? null
           : () => _scaffoldKey.currentState?.openEndDrawer(),

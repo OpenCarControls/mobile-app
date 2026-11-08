@@ -78,7 +78,7 @@ Opened from the settings button in the dashboard header. A back button and the t
 
 | Section | Rows | Tier |
 |---|---|---|
-| Dashboard | Theme (System / Light / Dark); button style (icon and title, or icon only); Edit dashboard; Reset dashboard layout; Units ("Follow the car", read-only) | Both |
+| Dashboard | Theme (System / Light / Dark); button style (icon and title, or icon only); Edit dashboard (closes settings and starts the [editor](ui.md#editing); off with the reason while the remote grid is locked); Reset dashboard layout (every grid of this vehicle back to its default, unlike the editor's Reset, which is for the grid being edited); Units ("Follow the car", read-only) | Both |
 | Vehicle | Paired phones (the count and how many are validated; opens [Paired phones](#paired-phones)); Unpair vehicle (danger colour; forgets the vehicle in this app) | Paired phones: Bluetooth only. Unpair: both |
 | Car access | Vehicle control: the CAN read-write approval and its state, opening the approval or the withdraw confirmation (today's `CanAccessSection`); This phone: validated or not, with **Validate this phone** when it isn't; the developer write lock switch, in development firmware only | Bluetooth only |
 | Device | Firmware version; hardware; running time; mobile signal; Update firmware ([#28](https://github.com/OpenCarControls/mobile-app/issues/28)); Restart device | Bluetooth only |
@@ -100,7 +100,7 @@ Opened from the settings button in the dashboard header. A back button and the t
 The phones paired with the device, in the order they were paired (BLE only). The device doesn't know phone names, so each phone shows as "This phone" or "Another phone" with the end of its id. Each has a trust chip: **Validated** or **Not validated**.
 
 *   This phone, when it isn't validated, has **Validate**.
-*   Other phones have **Remove**. Once a phone is validated in this car, only a validated phone can remove a validated phone, so on a phone that isn't validated the button is disabled with that reason.
+*   Other phones have **Remove**, with a confirmation. Once a phone is validated in this car, only a validated phone can remove a validated phone, so on a phone that isn't validated the button is disabled with that reason. The device only removes phones during its pairing window and doesn't answer an accepted request, so the app reads the list again and says so if the phone is still there.
 *   Removing this phone's own bond and clearing all phones are part of unpairing and [#25](https://github.com/OpenCarControls/mobile-app/issues/25).
 
 ![Paired phones](ui/images/paired-phones.png)

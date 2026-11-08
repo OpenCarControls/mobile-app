@@ -114,6 +114,9 @@ class CommandRejectedException implements Exception {
 /// availability expires with it, over BLE and MQTT alike.
 const kStateLivenessTimeout = Duration(seconds: 30);
 
+/// How long a refusal can take to come back from the device.
+const _refusalWait = Duration(seconds: 3);
+
 class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   StreamSubscription<DeviceToApp>? _subscription;
   Timer? _livenessTimer;
@@ -437,6 +440,14 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       },
     );
   }
+
+  /// Sends a system command the device only answers to refuse: restarting and
+  /// removing a phone. Throws if it is refused or can't be sent; completes once
+  /// a refusal would have arrived.
+  Future<void> sendUnansweredSystemCommand(SystemCommand command) =>
+      sendSystemCommand(
+        command,
+      ).timeout(_refusalWait, onTimeout: CommandResponse.new);
 
   Future<void> _send(AppToDevice envelope) {
     final transportType = ref.read(transportTypeProvider);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:open_car_app/config/button_style_config.dart';
 import 'package:open_car_app/config/theme_mode_config.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
@@ -23,6 +24,27 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );
+
+/// Holds the value loaded from SharedPreferences before [runApp].
+final initialButtonStyleProvider = Provider<DashboardButtonStyle>(
+  (_) => DashboardButtonStyle.titled,
+);
+
+class ButtonStyleNotifier extends Notifier<DashboardButtonStyle> {
+  @override
+  DashboardButtonStyle build() => ref.read(initialButtonStyleProvider);
+
+  Future<void> set(DashboardButtonStyle style) async {
+    state = style;
+    await saveButtonStyle(style);
+  }
+}
+
+/// The user's choice of titled or icon-only command tiles.
+final buttonStyleProvider =
+    NotifierProvider<ButtonStyleNotifier, DashboardButtonStyle>(
+      ButtonStyleNotifier.new,
+    );
 
 /// The current vehicle's skin, or the default one when no vehicle is known
 /// (the pairing wizard).
