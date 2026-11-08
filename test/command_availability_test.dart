@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_car_app/config/unsupported_commands_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:open_car_app/cars/egmp/command_ids.dart' as egmp;
@@ -198,6 +199,56 @@ void main() {
       for (final t in [TransportType.stub, TransportType.http]) {
         expect(state(null, t, CommandSet.basic, 1), CommandUiState.enabled);
       }
+    });
+  });
+
+  group('remembered unsupported commands', () {
+    final key = virtual_car.kDoorLockCommand;
+    final id = key.id;
+
+    CommandUiState uiState(ProviderContainer container) =>
+        container.read(commandUiStateProvider(key));
+
+    test('stay hidden without a report, across runs', () async {
+      final transport = _FakeTransport(TransportType.ble);
+      final container = _container(transport);
+      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
+      await pumpEventQueue();
+      expect(uiState(container), CommandUiState.hidden);
+
+      final saved = await loadUnsupportedCommands();
+      final nextRun = ProviderContainer(
+        overrides: [
+          bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
+          initialPairedVehicleConfigProvider.overrideWithValue(_config),
+          initialUnsupportedCommandsProvider.overrideWithValue(saved),
+          carTransportProvider.overrideWithValue(
+            _FakeTransport(TransportType.ble),
+          ),
+        ],
+      );
+      addTearDown(nextRun.dispose);
+      expect(nextRun.read(commandAvailabilityProvider), isNull);
+      expect(uiState(nextRun), CommandUiState.hidden);
+    });
+
+    test('unavailable says nothing about the car', () async {
+      final transport = _FakeTransport(TransportType.ble);
+      final container = _container(transport);
+      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
+      transport.emit(_update(CommandAvailability(basic: {id: _unavailable})));
+      await pumpEventQueue();
+      expect(uiState(container), CommandUiState.hidden);
+    });
+
+    test('available takes it back', () async {
+      final transport = _FakeTransport(TransportType.ble);
+      final container = _container(transport);
+      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
+      transport.emit(_update(CommandAvailability(basic: {id: _available})));
+      await pumpEventQueue();
+      expect(uiState(container), CommandUiState.enabled);
+      expect((await loadUnsupportedCommands()).values.single, isEmpty);
     });
   });
 

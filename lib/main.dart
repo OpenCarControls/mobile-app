@@ -5,8 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/egmp/licenses.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
+import 'package:open_car_app/config/saved_layouts_config.dart';
 import 'package:open_car_app/config/theme_mode_config.dart';
+import 'package:open_car_app/config/unsupported_commands_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
+import 'package:open_car_app/providers/command_availability_provider.dart';
+import 'package:open_car_app/providers/dashboard_layout_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
@@ -35,6 +39,8 @@ void main() async {
   );
 
   final themeMode = await loadThemeMode();
+  final savedLayouts = await loadSavedLayouts();
+  final unsupportedCommands = await loadUnsupportedCommands();
 
   runApp(
     ProviderScope(
@@ -42,6 +48,10 @@ void main() async {
         bleSourceDeviceIdProvider.overrideWithValue(deviceId),
         initialPairedVehicleConfigProvider.overrideWithValue(pairedConfig),
         initialThemeModeProvider.overrideWithValue(themeMode),
+        initialSavedLayoutsProvider.overrideWithValue(savedLayouts),
+        initialUnsupportedCommandsProvider.overrideWithValue(
+          unsupportedCommands,
+        ),
       ],
       child: const OpenCarApp(),
     ),

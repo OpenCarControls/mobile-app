@@ -15,7 +15,15 @@ enum TileTier { basic, advanced }
 
 /// The two dashboard layouts: remote (MQTT) shows basic tiles only, Bluetooth
 /// shows both tiers. See `docs/ui.md`.
-enum DashboardTier { remote, bluetooth }
+enum DashboardTier {
+  remote({TileTier.basic}),
+  bluetooth({TileTier.basic, TileTier.advanced});
+
+  const DashboardTier(this.tileTiers);
+
+  /// The tiles this tier can show.
+  final Set<TileTier> tileTiers;
+}
 
 /// The layouts a tile can take. Each kind supports a fixed set of sizes; a
 /// tile may offer fewer.
