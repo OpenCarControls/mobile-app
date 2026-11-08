@@ -76,8 +76,9 @@ abstract class VehicleDefinition {
   /// Called once per incoming message; result is stored and merged into state.
   GeneratedMessage decodeAdvancedState(List<int> bytes);
 
-  /// Build the vehicle's dashboard screen widget.
-  Widget buildDashboard();
+  /// The platform's debug drawer on the dashboard, or null. Only opened in
+  /// debug builds.
+  Widget? buildDebugDrawer();
 
   /// Return a stub transport for this vehicle, or null if none is available.
   /// Used as a fallback when MQTT (and later BLE) are unavailable.

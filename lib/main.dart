@@ -10,7 +10,9 @@ import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
+import 'package:open_car_app/screens/dashboard/dashboard_screen.dart';
 import 'package:open_car_app/screens/pairing_wizard_screen.dart';
+import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/licenses.dart';
 
 void main() async {
@@ -51,30 +53,19 @@ class OpenCarApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final skin = ref.watch(currentSkinProvider);
     return MaterialApp(
       title: 'Open Car',
       themeMode: ref.watch(themeModeProvider),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(skin, Brightness.light),
+      darkTheme: buildAppTheme(skin, Brightness.dark),
       home: const AppEntryRouter(),
     );
   }
 }
 
 /// Routes to [PairingWizardScreen] when no vehicle is paired, or directly
-/// to the vehicle dashboard when one is. Reacts to [pairedVehicleProvider]
+/// to the [DashboardScreen] when one is. Reacts to [pairedVehicleProvider]
 /// so unpairing from the dashboard automatically returns to the wizard.
 class AppEntryRouter extends ConsumerWidget {
   const AppEntryRouter({super.key});
@@ -83,6 +74,6 @@ class AppEntryRouter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vehicle = ref.watch(selectedVehicleProvider);
     if (vehicle == null) return const PairingWizardScreen();
-    return vehicle.buildDashboard();
+    return const DashboardScreen();
   }
 }

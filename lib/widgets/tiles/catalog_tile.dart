@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
+import 'package:open_car_app/widgets/stale_values.dart';
 import 'package:open_car_app/widgets/tiles/catalog_command_tile.dart';
 import 'package:open_car_app/widgets/tiles/climate_tile.dart';
 import 'package:open_car_app/widgets/tiles/energy_tile.dart';
@@ -10,7 +11,9 @@ import 'package:open_car_app/widgets/tiles/tile_context.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 import 'package:open_car_app/widgets/tiles/tile_surface.dart';
 
-/// The widget for a catalog [tile] at [span].
+/// The widget for a catalog [tile] at [span]. Its values are dimmed while
+/// they come from a past snapshot: any state that isn't live, and for an
+/// advanced tile, advanced state that isn't.
 class CatalogTile extends StatelessWidget {
   const CatalogTile({
     super.key,
@@ -25,6 +28,15 @@ class CatalogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = data.snapshot;
+    final stale = switch (tile.tier) {
+      TileTier.basic => !snapshot.isStateLive,
+      TileTier.advanced => !snapshot.isAdvancedStateLive,
+    };
+    return StaleValues(stale: stale, child: _tile());
+  }
+
+  Widget _tile() {
     return switch (tile) {
       final CommandTileDefinition tile => CatalogCommandTile(
         tile: tile,

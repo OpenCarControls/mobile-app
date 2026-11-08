@@ -15,8 +15,10 @@ import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/screens/dashboard/dashboard_banner.dart';
+import 'package:open_car_app/theme/app_theme.dart';
+import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
-import 'package:open_car_app/widgets/can_access_banner.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 
@@ -258,6 +260,7 @@ void main() {
             carTransportProvider.overrideWithValue(transport),
           ],
           child: MaterialApp(
+            theme: buildAppTheme(defaultSkin, Brightness.light),
             home: Scaffold(body: ListView(children: [child])),
           ),
         ),
@@ -266,7 +269,7 @@ void main() {
     }
 
     testWidgets('approval needs the risks acknowledged', (tester) async {
-      final transport = await pump(tester, const CanAccessBanner());
+      final transport = await pump(tester, const DashboardBannerSlot());
       expect(find.text('Review'), findsNothing);
 
       transport.emit(_accessUpdate(_identifiedNotApproved()));
@@ -339,7 +342,7 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  // Keep the access state alive, as the dashboards do.
+                  // Keep the access state alive, as the dashboard does.
                   ref.watch(canAccessStateProvider);
                   return TextButton(
                     onPressed: () => sendVehicleCommand(

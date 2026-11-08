@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** this is a design, not the current behaviour. The app still has one screen per vehicle (see [Architecture](architecture.md#per-vehicle-screens-libcarsvehiclescreens)). The tile grid, the command behaviour and the tile widgets exist (`lib/widgets/tiles`), and each platform describes its tiles and default layouts, but only the debug gallery uses them: with fake tiles, and with each vehicle's default layouts drawn from sample states. Remove this note once the dashboard is rebuilt.
+> **Status:** the shared dashboard is built (see [Architecture](architecture.md#dashboard-libscreensdashboard)) with each platform's default layouts. Not built yet: the editor and saved layouts ([#68](https://github.com/OpenCarControls/mobile-app/issues/68)), the settings screen ([#69](https://github.com/OpenCarControls/mobile-app/issues/69); the settings button opens an interim list of the old menu entries), the connection activity popover ([#72](https://github.com/OpenCarControls/mobile-app/issues/72); the pill does nothing on tap), the vehicle switcher ([#74](https://github.com/OpenCarControls/mobile-app/issues/74); the chevron does nothing), the "Validate this phone" banner, and the 3D renderer ([#75](https://github.com/OpenCarControls/mobile-app/issues/75); E-GMP keeps its WebView viewer behind the hero interface, the virtual car uses the placeholder).
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 
@@ -27,6 +27,8 @@ Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connect
 | Climate is one bar; target temperature and extras appear only when climate is on | They need climate on. Inside and outside temperature are always visible. |
 | No contextual tiles | Tiles that appear and disappear by state make the layout unpredictable. Contextual *content* inside a stable tile gives the same information. |
 | Light and dark themes, Material 3 foundations with a custom skin layer | Familiar widgets, but shapes and colours are ours to vary per platform. |
+| When the link switches between Remote and Bluetooth, the screen cross-fades straight to the other tier | Waiting for the user would leave the wrong tier on screen, with tiles the new transport can't serve. A short fade (none with reduced motion) keeps the reshape from being jarring. To revisit after use on a phone. |
+| Pull-to-refresh works anywhere on the dashboard | The whole page scrolls, even where the header and the hero stay put, so there is no separate gesture target. |
 
 ## The two tiers
 | | Remote (MQTT) | Bluetooth (BLE; also stub/HTTP in debug) |
@@ -187,17 +189,17 @@ Because dragging alone is not accessible, edit mode must also offer move actions
 
     | Banner | When | Action |
     |---|---|---|
-    | Wrong vehicle platform | The device reports a different platform (existing `PlatformMismatchBanner`) | Unpair |
-    | The device no longer knows this phone | Repeated early drops (existing `BleBondLostBanner`) | Help, or unpair and pair again |
-    | Control isn't approved | The car is identified but the CAN read-write approval is missing or for another car (existing `CanAccessBanner`) | Review: the approval dialog |
+    | Wrong vehicle platform | The device reports a different platform (`vehicleStateProvider` sets `mismatchedPlatformId`) | Unpair |
+    | The device no longer knows this phone | Repeated early drops (`bleBondLostProvider`) | Help, or unpair and pair again |
+    | Control isn't approved | The car is identified but the CAN read-write approval is missing or for another car (`canAccessNeedsApproval`) | Review: the approval dialog |
     | Validate this phone | This phone is bonded but not validated in this car ([phone validation](ui-screens.md#phone-validation)) | Validate: the validation flow |
 
     The approval and validation banners only show over Bluetooth, since both are BLE-only. While either shows, vehicle command tiles are greyed out.
 *   **Charging.** The charge-port tile is on, the Battery tile shows the charging state, and on the remote tier the hero shows the cable and the port glow and the status line shows the charging text.
 *   **Driving.** On the remote tier the hero shows the car on an advancing road, the speed is shown at the top right and the status line says Driving; charging text is hidden. On the Bluetooth tier a Speed tile shows the speed.
 *   **Units.** Distance, speed and temperature follow the car's units (km/miles, °C/°F). The climate target steps in the car's own steps (for example 1 °F). Keep the existing formatting helpers' behaviour.
-*   **Pull to refresh.** The existing pull-to-refresh that retries the BLE connection must keep working; "Reconnect Bluetooth" in the connection popover offers the same action. The gesture target on the dashboard is not yet designed (the tile grid scrolled to the top is the natural one).
-*   **Settings.** The settings button opens the settings screen, replacing the old overflow menu (see [Settings](ui-screens.md#settings)). Debug-only entries and the debug drawer stay behind `kDebugMode`.
+*   **Pull to refresh.** Pulling anywhere on the dashboard retries the BLE connection, as before; "Reconnect Bluetooth" in the connection popover offers the same action.
+*   **Settings.** The settings button opens the settings screen, replacing the old overflow menu (see [Settings](ui-screens.md#settings)). Debug-only entries and the debug drawer (a long press on the vehicle name) stay behind `kDebugMode`.
 
 ![Driving](ui/images/driving.png)
 ![Offline](ui/images/offline.png)
@@ -221,7 +223,15 @@ Rules from the repo that still apply: merge incoming state with `mergeFromMessag
 The tiles themselves are designed one by one for each platform; the mockups only show the system they live in.
 
 ## Not yet placed
-The current dashboards show things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, the preconditioning state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power and pack temperature charts). The E-GMP Windows tile closes the windows when any is open and vents them otherwise, where the old dashboard asks with a vent-or-close sheet. Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)). The BLE button configuration in [#26](https://github.com/OpenCarControls/mobile-app/issues/26) overlaps with the tile editor and should be looked at together.
+The old per-vehicle screens showed things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, the preconditioning state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power and pack temperature charts). Gaps left by the move from the old per-vehicle screens, to look at later:
+
+*   The E-GMP Windows tile closes the windows when any is open and vents them otherwise, where the old dashboard asked with a vent-or-close sheet. The windows are to be reworked.
+*   The odometer was in the old E-GMP "About & Settings" page, reachable over MQTT; it is in the Bluetooth layout only.
+*   V2L shows as "Exporting power" in the status line and the Battery tile, which is not mocked (the old screen said "V2L Active").
+*   The fuel glyph has no fill yet, since no platform has a tank.
+*   Stale tiles are dimmed but screen readers aren't told; the pill says the state is offline.
+
+Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)). The BLE button configuration in [#26](https://github.com/OpenCarControls/mobile-app/issues/26) overlaps with the tile editor and should be looked at together.
 
 ## Accessibility
 *   Touch targets are at least 44 dp. The vehicle name and the edit tile need padding to reach this; the mockups draw them small.
@@ -249,13 +259,11 @@ Level indicator options. A (battery glyph beside the number) was chosen.
 Control button options. Both were kept: A (icon-only) and B (icon + title) are a per-platform choice, B by default.
 
 ## Open questions
-*   Where does pull-to-refresh live on the dashboard?
 *   Tap on the level to swap percent and range?
 *   Do the climate extras work with climate off on each car? (Assumed no.)
 *   The drag gesture and per-tile configuration are not designed.
 *   Is 64 dp the right row height? Stat tiles fit one line of label and a value, and 2×2 tiles are shorter than the mockups draw them.
 *   Should the remote tier's first row be a separate grid with its own row height, as quick command shortcuts?
-*   Should the screen animate when the link switches between Remote and Bluetooth, which reshapes it, or wait for the user?
 *   Does the remote tier get the same editor?
 *   The level and range appear in both the header and the Battery tile. Keep, or drop one?
 *   Is the remote hero box minimum height right on small phones and with large fonts?

@@ -10,7 +10,6 @@ import 'package:open_car_app/cars/egmp/command_ids.dart' as egmp;
 import 'package:open_car_app/cars/virtual_car/command_ids.dart' as virtual_car;
 import 'package:open_car_app/cars/virtual_car/constants.g.dart'
     as virtual_car_constants;
-import 'package:open_car_app/cars/virtual_car/screens/virtual_car_dashboard.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart'
     as egmp_pb;
@@ -23,6 +22,9 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/screens/dashboard/dashboard_screen.dart';
+import 'package:open_car_app/theme/app_theme.dart';
+import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
 class _FakeTransport implements CarTransport {
@@ -132,26 +134,6 @@ void main() {
       expect(egmp.kClimateControlCommand.id, 4);
       expect(egmp.kWindowCommand.id, 5);
       expect(egmp.kBatteryPreconditioningCommand.id, 1);
-    });
-
-    test('every dashboard button maps to a command', () {
-      expect(egmp.egmpActionCommand('lock'), egmp.kDoorLockCommand);
-      expect(egmp.egmpActionCommand('charge_port'), egmp.kChargePortCommand);
-      expect(egmp.egmpActionCommand('lights'), egmp.kFlashLightsCommand);
-      expect(egmp.egmpActionCommand('window_vent'), egmp.kWindowCommand);
-      for (final climate in [
-        'climate',
-        'climate_power',
-        'temp_down',
-        'temp_up',
-        'windshield_defrost',
-        'rear_defrost',
-        'steering_heater',
-        'driver_seat',
-        'passenger_seat',
-      ]) {
-        expect(egmp.egmpActionCommand(climate), egmp.kClimateControlCommand);
-      }
     });
 
     test('an unknown field name is an error', () {
@@ -399,19 +381,22 @@ void main() {
             initialPairedVehicleConfigProvider.overrideWithValue(_config),
             carTransportProvider.overrideWithValue(transport),
           ],
-          child: const MaterialApp(home: VirtualCarDashboardScreen()),
+          child: MaterialApp(
+            theme: buildAppTheme(defaultSkin, Brightness.light),
+            home: const DashboardScreen(),
+          ),
         ),
       );
       await tester.pump();
       return transport;
     }
 
-    VoidCallback? doorButton(WidgetTester tester) {
-      final button = find.ancestor(
-        of: find.textContaining(RegExp('^(Lock|Unlock)\$')),
-        matching: find.byType(ElevatedButton),
+    /// Whether the Doors tile is enabled, from what it tells screen readers.
+    bool? doorButton(WidgetTester tester) {
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('^Doors, ')),
       );
-      return tester.widget<ElevatedButton>(button).onPressed;
+      return node.label.endsWith('not available') ? null : true;
     }
 
     testWidgets('greys the door button out unless the device accepts it', (
@@ -423,17 +408,21 @@ void main() {
 
       transport.emit(_update(CommandAvailability(basic: {1: _available})));
       await tester.pump();
+      await tester.pump();
       expect(doorButton(tester), isNotNull);
 
       transport.emit(_update(CommandAvailability(basic: {1: _unavailable})));
+      await tester.pump();
       await tester.pump();
       expect(doorButton(tester), isNull);
 
       // The device went quiet: back to greyed out, not the last value.
       transport.emit(_update(CommandAvailability(basic: {1: _available})));
       await tester.pump();
+      await tester.pump();
       expect(doorButton(tester), isNotNull);
       await tester.pump(kStateLivenessTimeout);
+      await tester.pump();
       await tester.pump();
       expect(doorButton(tester), isNull);
 
@@ -445,7 +434,8 @@ void main() {
       final transport = await pump(tester);
       transport.emit(_update(CommandAvailability(basic: {1: _unsupported})));
       await tester.pump();
-      expect(find.text('Doors'), findsNothing);
+      await tester.pump();
+      expect(find.bySemanticsLabel(RegExp('^Doors, ')), findsNothing);
       await tester.pumpWidget(const SizedBox());
     });
   });
