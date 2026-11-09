@@ -356,16 +356,18 @@ class WizardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Container(
-      padding:
-          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: ShapeDecoration(
-        color: tokens.glassFill,
-        shape: tokens.radiusMedium.shape(
-          side: BorderSide(color: tokens.tileBorder),
-        ),
+    // A Material, so a list tile inside it can draw its ripple.
+    return Material(
+      color: tokens.glassFill,
+      shape: tokens.radiusMedium.shape(
+        side: BorderSide(color: tokens.tileBorder),
       ),
-      child: child,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: child,
+      ),
     );
   }
 }
