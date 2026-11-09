@@ -66,10 +66,10 @@ Tapping the connection pill on the dashboard opens a small popover anchored to i
 *   It is not a technical log: no UUIDs, message ids or error codes in the list.
 *   A footer states what is and is not listed.
 
-Open decisions:
-*   **Share log:** what it contains. It should be plain text and exclude identifiers such as the device id, the broker address and credentials.
-*   **Retention:** how many entries or how long are kept, and whether they survive an app restart.
-*   It could also show commands whose result is unknown after a transport change, which overlaps with [Resend or report pending commands when the transport changes](https://github.com/OpenCarControls/mobile-app/issues/23).
+*   **Local to this phone:** the log records only what this phone saw and did. It is not synced with the vehicle or other phones, so a command from another phone or something done in the car doesn't appear.
+*   **Retention:** the last 200 entries per vehicle. They survive an app restart and are deleted when the vehicle is unpaired.
+*   **Share log:** plain text with the listed lines and their dates and times, the app version and the vehicle's platform name. It leaves out the custom vehicle name, device id, broker address, credentials and raw error text.
+*   Commands whose result is unknown after a transport change can be added as another result once [Resend or report pending commands when the transport changes](https://github.com/OpenCarControls/mobile-app/issues/23) is done.
 
 ![Connection activity](ui/images/connection-activity.png)
 

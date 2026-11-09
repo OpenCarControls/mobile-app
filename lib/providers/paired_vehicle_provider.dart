@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 
 /// Holds the value loaded from SharedPreferences before [runApp].
 /// Overridden in [ProviderScope] at app startup — never reads storage itself.
@@ -17,7 +18,13 @@ class PairedVehicleNotifier extends Notifier<PairedVehicleConfig?> {
   }
 
   Future<void> unpair() async {
+    final vehicleKey = state?.storageKey;
     await PairedVehicleConfig.clear();
+    if (vehicleKey != null) {
+      await ref
+          .read(connectionActivityLogsProvider.notifier)
+          .forget(vehicleKey);
+    }
     state = null;
   }
 }

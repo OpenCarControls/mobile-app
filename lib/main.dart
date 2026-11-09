@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/cars/egmp/licenses.dart';
 import 'package:open_car_app/config/button_style_config.dart';
+import 'package:open_car_app/config/connection_activity_config.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/config/saved_layouts_config.dart';
@@ -11,6 +12,7 @@ import 'package:open_car_app/config/theme_mode_config.dart';
 import 'package:open_car_app/config/unsupported_commands_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/dashboard_layout_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
@@ -43,6 +45,7 @@ void main() async {
   final buttonStyle = await loadButtonStyle();
   final savedLayouts = await loadSavedLayouts();
   final unsupportedCommands = await loadUnsupportedCommands();
+  final connectionActivity = await loadConnectionActivity();
 
   runApp(
     ProviderScope(
@@ -55,6 +58,7 @@ void main() async {
         initialUnsupportedCommandsProvider.overrideWithValue(
           unsupportedCommands,
         ),
+        initialConnectionActivityProvider.overrideWithValue(connectionActivity),
       ],
       child: const OpenCarApp(),
     ),
