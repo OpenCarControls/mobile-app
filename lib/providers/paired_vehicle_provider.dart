@@ -26,3 +26,22 @@ final pairedVehicleProvider =
     NotifierProvider<PairedVehicleNotifier, PairedVehicleConfig?>(
       PairedVehicleNotifier.new,
     );
+
+/// Whether the first-run wizard still has steps to show after pairing. While
+/// it does, the router keeps showing the wizard, although a vehicle is paired.
+///
+/// Held in memory only: an app closed during those steps opens on the
+/// dashboard, whose banners and settings offer the same set-up.
+class WizardSetupPendingNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void begin() => state = true;
+
+  void finish() => state = false;
+}
+
+final wizardSetupPendingProvider =
+    NotifierProvider<WizardSetupPendingNotifier, bool>(
+      WizardSetupPendingNotifier.new,
+    );

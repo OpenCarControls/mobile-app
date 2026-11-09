@@ -2,10 +2,10 @@
 
 The screens around the [dashboard](ui.md): the setup wizard, phone validation, the connection activity popover, settings and the paired phones, and vehicle switching and management. They share the dashboard's components, tokens and [skin](ui-theming.md). The mockups are in [`ui/mockups`](ui/mockups/README.md).
 
-> **Status:** these are designs, not the current behaviour. The setup wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval and validation shown here.
+> **Status:** the setup wizard and settings are built; the rest are designs, not the current behaviour. The wizard's validation step comes with the validation flow ([#71](https://github.com/OpenCarControls/mobile-app/issues/71)). Its overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval and validation shown here.
 
 ## Setup wizard
-The wizard pairs a vehicle and then sets it up. Today it is `PairingWizardScreen`, with five steps: prompt, scanning, found, pairing and error (see [BLE & pairing](ble.md)). The design restyles those steps and adds the set-up steps that follow pairing.
+The wizard (`PairingWizardScreen`) pairs a vehicle and then sets it up (see [BLE & pairing](ble.md)). After pairing it waits for the device to report its CAN access, up to 20 s, and shows the approval only if this car needs it and this phone may give it. If the car isn't identified in that time, or the app is closed, the dashboard's banners offer the same steps.
 
 *   **Frame:** the step title, **Help** at the top right (as today's app bar), and a segmented progress bar with a step label ("Step 2 of 3 · Pair"). A large icon medallion in the middle, a title and one short paragraph, and full-width buttons at the bottom. The step names and count (Find, Pair, Set up) may change when the wizard is overhauled ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)).
 *   **Steps in the mockup:**

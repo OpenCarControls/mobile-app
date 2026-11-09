@@ -19,7 +19,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const ProviderScope(child: OpenCarApp()));
 
-    expect(find.text('Pair Your Vehicle'), findsOneWidget);
+    expect(find.text('Pair your vehicle'), findsOneWidget);
     expect(find.text('Put your device in pairing mode'), findsOneWidget);
     expect(find.text('Start'), findsOneWidget);
   });
@@ -27,7 +27,7 @@ void main() {
   testWidgets('the wizard links to the recovery steps', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: OpenCarApp()));
 
-    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.text('Help'));
     await tester.pumpAndSettle();
     final steps = find.text(
       'Do this ${virtual_car.kBlePowerCycleResetShortBoots} times in a row.',

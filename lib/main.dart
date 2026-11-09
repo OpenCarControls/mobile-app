@@ -77,16 +77,18 @@ class OpenCarApp extends ConsumerWidget {
   }
 }
 
-/// Routes to [PairingWizardScreen] when no vehicle is paired, or directly
-/// to the [DashboardScreen] when one is. Reacts to [pairedVehicleProvider]
-/// so unpairing from the dashboard automatically returns to the wizard.
+/// Routes to [PairingWizardScreen] when no vehicle is paired or the wizard
+/// still has set-up steps to show, and otherwise to the [DashboardScreen].
+/// Reacts to [pairedVehicleProvider] so unpairing from the dashboard
+/// automatically returns to the wizard.
 class AppEntryRouter extends ConsumerWidget {
   const AppEntryRouter({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vehicle = ref.watch(selectedVehicleProvider);
-    if (vehicle == null) return const PairingWizardScreen();
+    final setupPending = ref.watch(wizardSetupPendingProvider);
+    if (vehicle == null || setupPending) return const PairingWizardScreen();
     return const DashboardScreen();
   }
 }
