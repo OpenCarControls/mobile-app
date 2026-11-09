@@ -5,7 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:open_car_app/providers/ble_pairing_connect.dart';
+import 'package:open_car_app/providers/can_access_provider.dart';
+import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
 import 'package:open_car_app/cars/virtual_car/constants.g.dart';
 import 'package:open_car_app/config/mqtt_broker_config.g.dart';
@@ -15,9 +18,16 @@ import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/screens/help_screen.dart';
 import 'package:open_car_app/screens/theme_gallery_screen.dart';
+import 'package:open_car_app/theme/app_text_styles.dart';
+import 'package:open_car_app/theme/app_theme.dart';
+import 'package:open_car_app/theme/app_tokens.dart';
+import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/transport/ble_fragmentation.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
+import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
+import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
+import 'package:open_car_app/widgets/wizard_frame.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 // ── Wizard step state machine ─────────────────────────────────────────────────
@@ -35,6 +45,12 @@ enum _Step {
   /// Bond or HTTP pair in progress.
   pairing,
 
+  /// Paired; waiting for the device to report what still needs setting up.
+  connecting,
+
+  /// The CAN read-write approval. Can be skipped.
+  approval,
+
   /// Fatal error; user can retry.
   error,
 }
@@ -42,7 +58,12 @@ enum _Step {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class PairingWizardScreen extends ConsumerStatefulWidget {
-  const PairingWizardScreen({super.key});
+  const PairingWizardScreen({super.key, this.addVehicle = false});
+
+  /// Pushed over the app to add another vehicle: it has a close button and
+  /// its own heading, and pops when done. The first run has neither, because
+  /// there is nothing to go back to.
+  final bool addVehicle;
 
   @override
   ConsumerState<PairingWizardScreen> createState() =>
@@ -54,7 +75,23 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   String? _foundDeviceId;
   String? _foundDeviceName;
   String _errorMessage = '';
+  String _errorTitle = _pairingFailedTitle;
+  WizardStage _errorStage = WizardStage.pair;
   bool _staleBondWarning = false;
+
+  static const _pairingFailedTitle = 'Pairing failed';
+
+  /// How long to wait for the device to report its CAN access after pairing.
+  /// It repeats that state every few seconds, once the connection is up.
+  static const _setupWaitSeconds = 20;
+
+  // Set-up steps
+  bool _paired = false;
+  bool _finished = false;
+  bool _acknowledged = false;
+  bool _approving = false;
+  String? _approvalError;
+  Timer? _setupTimer;
 
   // Scan countdown
   int _remainingSeconds = kBleScanTimeoutSeconds;
@@ -73,6 +110,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   @override
   void dispose() {
     _stopScan();
+    _setupTimer?.cancel();
     _hostController.dispose();
     _portController.dispose();
     super.dispose();
@@ -87,7 +125,10 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     ].request().then((s) => s.values.every((v) => v.isGranted));
 
     if (!granted) {
-      _setError('Bluetooth permission denied. Grant it in app settings.');
+      _setError(
+        'Bluetooth permission denied. Grant it in app settings.',
+        stage: WizardStage.find,
+      );
       return;
     }
 
@@ -129,6 +170,8 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
           'No device found. Make sure the device is in pairing mode and try '
           'again. If this phone or app was paired with it before, the device '
           'may no longer recognise it: see Help to reset its paired phones.',
+          title: 'No vehicle found',
+          stage: WizardStage.find,
         );
       }
     });
@@ -306,21 +349,19 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       await connSub.cancel();
       connSub = null;
 
-      await ref
-          .read(pairedVehicleProvider.notifier)
-          .pair(
-            PairedVehicleConfig(
-              vehicleId: actualVehicle.platformName,
-              bleRemoteId: deviceId,
-              transportPreference: TransportPreference.ble,
-            ),
-          );
-      // AppEntryRouter will rebuild to show the dashboard.
+      await _savePairing(
+        PairedVehicleConfig(
+          vehicleId: actualVehicle.platformName,
+          bleRemoteId: deviceId,
+          transportPreference: TransportPreference.ble,
+        ),
+      );
     } on TimeoutException {
       await connSub?.cancel();
       _setError(
-        'Pairing timed out. Make sure the pairing window is still open on '
-        'the device and try again.',
+        'Make sure the pairing window is still open on the device and try '
+        'again.',
+        title: 'Pairing timed out',
       );
     } on Exception catch (e) {
       await connSub?.cancel();
@@ -386,7 +427,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       await t.openPairingWindow();
       if (mounted) setState(() => _httpPairingWindowOpen = true);
     } on Exception catch (e) {
-      _setError('Could not open pairing window: $e');
+      _setError('Could not open pairing window: $e', stage: WizardStage.find);
     } finally {
       t.dispose();
     }
@@ -417,17 +458,15 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         ),
       );
 
-      await ref
-          .read(pairedVehicleProvider.notifier)
-          .pair(
-            PairedVehicleConfig(
-              vehicleId: actualVehicle.platformName,
-              bleRemoteId: '',
-              transportPreference: TransportPreference.http,
-              httpHost: host,
-              httpPort: port,
-            ),
-          );
+      await _savePairing(
+        PairedVehicleConfig(
+          vehicleId: actualVehicle.platformName,
+          bleRemoteId: '',
+          transportPreference: TransportPreference.http,
+          httpHost: host,
+          httpPort: port,
+        ),
+      );
     } catch (e) {
       _setError('HTTP pairing failed: $e');
     } finally {
@@ -437,11 +476,17 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  void _setError(String message) {
+  void _setError(
+    String message, {
+    String title = _pairingFailedTitle,
+    WizardStage stage = WizardStage.pair,
+  }) {
     if (!mounted) return;
     setState(() {
       _step = _Step.error;
       _errorMessage = message;
+      _errorTitle = title;
+      _errorStage = stage;
     });
   }
 
@@ -458,75 +503,176 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     });
   }
 
+  // ── Set-up steps ────────────────────────────────────────────────────────────
+
+  /// Saves the pairing and moves on to the set-up steps.
+  Future<void> _savePairing(PairedVehicleConfig config) async {
+    // Before pairing, so the router never swaps the wizard for the dashboard.
+    if (!widget.addVehicle) {
+      ref.read(wizardSetupPendingProvider.notifier).begin();
+    }
+    await ref.read(pairedVehicleProvider.notifier).pair(config);
+    if (!mounted) return;
+
+    setState(() {
+      _paired = true;
+      _step = _Step.connecting;
+    });
+    ref.listenManual(canAccessStateProvider, (_, _) => _onAccessChanged());
+    ref.listenManual(phoneAccessStateProvider, (_, _) => _onAccessChanged());
+    _setupTimer = Timer(const Duration(seconds: _setupWaitSeconds), () {
+      if (_step == _Step.connecting) _afterApproval();
+    });
+    _onAccessChanged();
+  }
+
+  /// Decides what the approval step does, from what the device reports on the
+  /// connection the app has just opened.
+  void _onAccessChanged() {
+    if (_finished || _approving) return;
+    if (_step != _Step.connecting && _step != _Step.approval) return;
+
+    // The device would refuse this phone the approval.
+    final phone = ref.read(phoneAccessStateProvider);
+    if (phone != null && isOutrankedByValidatedPhone(phone)) {
+      _afterApproval();
+      return;
+    }
+
+    if (_step != _Step.connecting) return;
+    final access = ref.read(canAccessStateProvider);
+    if (access == null) return;
+    if (canAccessNeedsApproval(access)) {
+      _setupTimer?.cancel();
+      setState(() => _step = _Step.approval);
+    } else if (access.approval ==
+            CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_APPROVED ||
+        access.approval ==
+            CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_AWAITING_CAR) {
+      _afterApproval();
+    }
+    // Otherwise the car isn't identified yet: wait, up to the timer. The
+    // dashboard's banner offers the approval once it is.
+  }
+
+  Future<void> _approve() async {
+    setState(() {
+      _approving = true;
+      _approvalError = null;
+    });
+    try {
+      await ref.read(canAccessActionsProvider).setApproval(true);
+      if (mounted) _afterApproval();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _approving = false;
+          _approvalError = '$e';
+        });
+      }
+    }
+  }
+
+  /// The approval is done or skipped. The phone validation step (#71) goes
+  /// here, since a validation method may need the approval.
+  void _afterApproval() => _finishSetup();
+
+  void _finishSetup() {
+    if (_finished) return;
+    _finished = true;
+    _setupTimer?.cancel();
+    if (widget.addVehicle) {
+      Navigator.of(context).pop();
+    } else {
+      // The router rebuilds to show the dashboard.
+      ref.read(wizardSetupPendingProvider.notifier).finish();
+    }
+  }
+
+  void _close() {
+    if (_paired) {
+      _finishSetup();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────────
+
+  WizardStage get _stage => switch (_step) {
+    _Step.prompt || _Step.scanning => WizardStage.find,
+    _Step.found || _Step.pairing => WizardStage.pair,
+    _Step.connecting || _Step.approval => WizardStage.setUp,
+    _Step.error => _errorStage,
+  };
+
+  void _openHelp() => HelpScreen.open(context);
+
+  WizardFrame _frame({
+    required String title,
+    Widget? medallion,
+    String? body,
+    List<Widget> content = const [],
+    List<Widget> actions = const [],
+  }) => WizardFrame(
+    heading: widget.addVehicle ? 'Add a vehicle' : 'Pair your vehicle',
+    // Pairing can't be abandoned halfway: it would still save the vehicle.
+    onClose: widget.addVehicle && _step != _Step.pairing ? _close : null,
+    onHelp: _openHelp,
+    stage: _stage,
+    medallion: medallion,
+    title: title,
+    body: body,
+    content: content,
+    actions: actions,
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pair Your Vehicle'),
-        actions: [
-          IconButton(
-            onPressed: () => HelpScreen.open(context),
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'Help',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: switch (_step) {
-            _Step.prompt => _buildPrompt(),
-            _Step.scanning => _buildScanning(),
-            _Step.found => _buildFound(),
-            _Step.pairing => _buildPairing(),
-            _Step.error => _buildError(),
-          },
-        ),
-      ),
+    final page = PopScope(
+      canPop: !(widget.addVehicle && _step == _Step.pairing),
+      child: switch (_step) {
+        _Step.prompt => _buildPrompt(),
+        _Step.scanning => _buildScanning(),
+        _Step.found => _buildFound(),
+        _Step.pairing => _buildPairing(),
+        _Step.connecting => _buildConnecting(),
+        _Step.approval => _buildApproval(),
+        _Step.error => _buildError(),
+      },
     );
+
+    // Added over a paired vehicle, the app's theme is that vehicle's skin.
+    if (widget.addVehicle && !_paired) {
+      return Theme(
+        data: buildAppTheme(defaultSkin, Theme.of(context).brightness),
+        child: page,
+      );
+    }
+    return page;
   }
 
   Widget _buildPrompt() {
     if (kDebugMode && _httpMode) return _buildHttpForm();
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Icon(Icons.bluetooth_searching, size: 64),
-        const SizedBox(height: 24),
-        Text(
-          'Put your device in pairing mode',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        Text(
+    return _frame(
+      medallion: const WizardMedallion(icon: Symbols.bluetooth_searching),
+      title: 'Put your device in pairing mode',
+      body:
           'A device with no paired phone yet is in pairing mode for '
-          '${HelpScreen.duration(kBleFirstSetupPairingWindowSeconds)} after it is '
-          'powered on. If yours has a pairing button, hold it. Then tap Start: '
-          'the app searches for $kBleScanTimeoutSeconds seconds.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 32),
-        FilledButton.icon(
-          onPressed: _startScan,
-          icon: const Icon(Icons.search),
-          label: const Text('Start'),
-        ),
+          '${HelpScreen.duration(kBleFirstSetupPairingWindowSeconds)} after it '
+          'is powered on. If yours has a pairing button, hold it. Then tap '
+          'Start: the app searches for $kBleScanTimeoutSeconds seconds.',
+      actions: [
+        WizardPrimaryButton(label: 'Start', onPressed: _startScan),
         if (kDebugMode) ...[
-          const SizedBox(height: 16),
-          OutlinedButton(
+          WizardSecondaryButton(
+            label: 'Use HTTP instead (debug)',
             onPressed: () => setState(() => _httpMode = true),
-            child: const Text('Use HTTP instead (debug)'),
           ),
-          const SizedBox(height: 8),
-          OutlinedButton(
+          WizardSecondaryButton(
+            label: 'Theme gallery (debug)',
             onPressed: () => ThemeGalleryScreen.open(context),
-            child: const Text('Theme gallery (debug)'),
           ),
         ],
       ],
@@ -534,30 +680,17 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   }
 
   Widget _buildScanning() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const CircularProgressIndicator.adaptive(strokeWidth: 3),
-        const SizedBox(height: 24),
-        Text(
-          'Looking for your vehicle…',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '$_remainingSeconds s remaining',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 32),
-        OutlinedButton(
+    return _frame(
+      medallion: const WizardMedallion(icon: Symbols.bluetooth, rings: true),
+      title: 'Looking for your vehicle…',
+      body: '$_remainingSeconds s remaining',
+      actions: [
+        WizardSecondaryButton(
+          label: 'Cancel',
           onPressed: () {
             _stopScan();
             _retry();
           },
-          child: const Text('Cancel'),
         ),
       ],
     );
@@ -571,156 +704,111 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   bool get _foundOutsidePairingMode =>
       _foundDeviceName == null || _foundDeviceName!.isEmpty;
 
-  Widget _buildFoundNotice(String text) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: colors.onSecondaryContainer),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.onSecondaryContainer,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  /// The note on the found step, if there is one to show.
+  String? get _foundNote {
+    if (_staleBondWarning && _foundOutsidePairingMode) {
+      // The device has an old bond for this phone and, outside pairing
+      // mode, doesn't clear it: Pair again would fail the same way.
+      return 'The vehicle still remembers an old pairing with this phone and '
+          'is not in pairing mode, so it can\'t pair again. Reset its paired '
+          'phones (see Help), then tap Pair again.';
+    }
+    if (_staleBondWarning) {
+      return 'Your phone had paired with this vehicle before, and the vehicle '
+          'still remembered it. The old pairing is cleared now. Tap Pair '
+          'again to finish; you may see a second pairing prompt.';
+    }
+    if (_foundOutsidePairingMode) {
+      return 'This vehicle is not in pairing mode. If this phone is still '
+          'paired with it, Pair works. Otherwise put it in pairing mode first '
+          '(see Help).';
+    }
+    return null;
   }
 
   Widget _buildFound() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Icon(Icons.bluetooth_connected, size: 64),
-        const SizedBox(height: 24),
-        Text(
-          'Vehicle found',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        if (_foundDeviceName != null && _foundDeviceName!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            _foundDeviceName!,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
+    final note = _foundNote;
+    return _frame(
+      medallion: const WizardMedallion(icon: Symbols.bluetooth_connected),
+      title: 'Vehicle found',
+      body: 'Check that this is your vehicle, then pair.',
+      content: [
+        _DeviceCard(name: _foundDeviceName, id: _foundDeviceId ?? ''),
+        if (note != null) WizardNote(note),
+        if (_foundOutsidePairingMode)
+          Center(
+            child: TextButton.icon(
+              onPressed: _openHelp,
+              icon: const Icon(Symbols.help),
+              label: const Text('Help'),
+            ),
           ),
-        ],
-        const SizedBox(height: 4),
-        Text(
-          _foundDeviceId ?? '',
-          textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-        ),
-        if (_staleBondWarning && _foundOutsidePairingMode) ...[
-          // The device has an old bond for this phone and, outside pairing
-          // mode, doesn't clear it: Pair again would fail the same way.
-          const SizedBox(height: 24),
-          _buildFoundNotice(
-            'The vehicle still remembers an old pairing with this phone and '
-            'is not in pairing mode, so it can\'t pair again. Reset its '
-            'paired phones (see Help), then tap Pair again.',
-          ),
-        ] else if (_staleBondWarning) ...[
-          const SizedBox(height: 24),
-          _buildFoundNotice(
-            'Your phone had previously paired with this vehicle, but the '
-            'vehicle was still remembering it. The vehicle has now cleared the '
-            'old pairing. Tap Pair again to complete the process — you may see '
-            'a second pairing prompt.',
-          ),
-        ] else if (_foundOutsidePairingMode) ...[
-          const SizedBox(height: 24),
-          _buildFoundNotice(
-            'This vehicle is not in pairing mode. If this phone is still '
-            'paired with it, Pair works. Otherwise put it in pairing mode '
-            'first (see Help).',
-          ),
-        ],
-        if (_foundOutsidePairingMode) ...[
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => HelpScreen.open(context),
-            icon: const Icon(Icons.help_outline),
-            label: const Text('Help'),
-          ),
-        ],
-        const SizedBox(height: 32),
-        FilledButton.icon(
-          onPressed: _pairBle,
-          icon: const Icon(Icons.link),
-          label: const Text('Pair'),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton(onPressed: _retry, child: const Text('Cancel')),
+      ],
+      actions: [
+        WizardPrimaryButton(label: 'Pair', onPressed: _pairBle),
+        WizardSecondaryButton(label: 'Cancel', onPressed: _retry),
       ],
     );
   }
 
   Widget _buildPairing() {
-    return const Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        CircularProgressIndicator.adaptive(strokeWidth: 3),
-        SizedBox(height: 24),
-        Text('Pairing…', textAlign: TextAlign.center),
-        SizedBox(height: 8),
-        Text(
-          'Confirm the pairing request on your phone if prompted.',
-          textAlign: TextAlign.center,
+    return _frame(
+      medallion: const WizardMedallion(icon: Symbols.bluetooth, rings: true),
+      title: 'Pairing…',
+      body: 'Confirm the pairing request on your phone if prompted.',
+    );
+  }
+
+  Widget _buildConnecting() {
+    return _frame(
+      medallion: const WizardMedallion(
+        icon: Symbols.bluetooth_connected,
+        rings: true,
+      ),
+      title: 'Connecting to your vehicle…',
+      body: 'Paired. You can also finish setting it up later in settings.',
+      actions: [
+        WizardSecondaryButton(label: 'Not now', onPressed: _afterApproval),
+      ],
+    );
+  }
+
+  Widget _buildApproval() {
+    return _frame(
+      title: 'Allow control of this car?',
+      body:
+          'Read this before letting the device send commands. You can also do '
+          'it later in settings.',
+      content: [
+        _ApprovalCard(
+          acknowledged: _acknowledged,
+          onChanged: _approving
+              ? null
+              : (value) => setState(() => _acknowledged = value ?? false),
+          error: _approvalError,
+        ),
+      ],
+      actions: [
+        WizardPrimaryButton(
+          label: 'Allow control',
+          onPressed: _acknowledged && !_approving ? _approve : null,
+        ),
+        WizardSecondaryButton(
+          label: 'Not now',
+          onPressed: _approving ? null : _afterApproval,
         ),
       ],
     );
   }
 
   Widget _buildError() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(
-          Icons.error_outline,
-          size: 64,
-          color: Theme.of(context).colorScheme.error,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Pairing failed',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _errorMessage,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 32),
-        FilledButton.icon(
-          onPressed: _retry,
-          icon: const Icon(Icons.refresh),
-          label: const Text('Try again'),
-        ),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: () => HelpScreen.open(context),
-          icon: const Icon(Icons.help_outline),
-          label: const Text('Help'),
-        ),
+    return _frame(
+      medallion: const WizardMedallion(icon: Symbols.error, danger: true),
+      title: _errorTitle,
+      body: _errorMessage,
+      actions: [
+        WizardPrimaryButton(label: 'Try again', onPressed: _retry),
+        WizardSecondaryButton(label: 'Help', onPressed: _openHelp),
       ],
     );
   }
@@ -728,73 +816,137 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
   // ── HTTP form (debug only) ──────────────────────────────────────────────────
 
   Widget _buildHttpForm() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _frame(
+      title: 'HTTP Debug Transport',
+      body: 'Enter the address of the device HTTP server.',
+      content: [
+        TextField(
+          controller: _hostController,
+          decoration: const InputDecoration(
+            labelText: 'Host',
+            hintText: '192.168.1.100',
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        TextField(
+          controller: _portController,
+          decoration: const InputDecoration(labelText: 'Port'),
+          keyboardType: TextInputType.number,
+        ),
+        OutlinedButton(
+          onPressed: _httpTesting ? null : _testHttpConnection,
+          child: _httpTesting
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                )
+              : const Text('Test Connection'),
+        ),
+        if (_httpTestResult.isNotEmpty)
+          Text(_httpTestResult, textAlign: TextAlign.center),
+        OutlinedButton(
+          onPressed: _openHttpPairingWindow,
+          child: Text(
+            _httpPairingWindowOpen
+                ? 'Pairing window open ✓'
+                : 'Open Pairing Window on Device',
+          ),
+        ),
+      ],
+      actions: [
+        WizardPrimaryButton(
+          label: 'Pair',
+          onPressed: _httpPairingWindowOpen ? _pairHttp : null,
+        ),
+        WizardSecondaryButton(
+          label: 'Back to BLE',
+          onPressed: () => setState(() => _httpMode = false),
+        ),
+      ],
+    );
+  }
+}
+
+/// The device the scan found. One outside pairing mode has no name.
+class _DeviceCard extends StatelessWidget {
+  const _DeviceCard({required this.name, required this.id});
+
+  final String? name;
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final name = this.name;
+    return WizardCard(
+      child: Row(
+        spacing: 12,
         children: [
-          Text(
-            'HTTP Debug Transport',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          const Text('Enter the address of the device HTTP server.'),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _hostController,
-            decoration: const InputDecoration(
-              labelText: 'Host',
-              hintText: '192.168.1.100',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.url,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _portController,
-            decoration: const InputDecoration(
-              labelText: 'Port',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _httpTesting ? null : _testHttpConnection,
-            child: _httpTesting
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : const Text('Test Connection'),
-          ),
-          if (_httpTestResult.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              _httpTestResult,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: _openHttpPairingWindow,
-            child: Text(
-              _httpPairingWindowOpen
-                  ? 'Pairing window open ✓'
-                  : 'Open Pairing Window on Device',
+          Icon(Symbols.bluetooth, color: tokens.accent),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (name != null && name.isNotEmpty)
+                  Text(name, style: AppTextStyles.wizardButton),
+                Text(
+                  id,
+                  style: AppTextStyles.caption.copyWith(
+                    color: tokens.textSecondary,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _httpPairingWindowOpen ? _pairHttp : null,
-            icon: const Icon(Icons.link),
-            label: const Text('Pair'),
+        ],
+      ),
+    );
+  }
+}
+
+/// The risks of approving control, and the acknowledgement.
+class _ApprovalCard extends StatelessWidget {
+  const _ApprovalCard({
+    required this.acknowledged,
+    required this.onChanged,
+    required this.error,
+  });
+
+  final bool acknowledged;
+  final ValueChanged<bool?>? onChanged;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final error = this.error;
+    return WizardCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DefaultTextStyle.merge(
+            style: AppTextStyles.wizardNote.copyWith(
+              color: tokens.textSecondary,
+            ),
+            child: const CanReadWriteRisksText(),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () => setState(() => _httpMode = false),
-            child: const Text('Back to BLE'),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: acknowledged,
+            onChanged: onChanged,
+            title: const Text('I understand the risks'),
           ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                error,
+                style: AppTextStyles.wizardNote.copyWith(color: tokens.danger),
+              ),
+            ),
         ],
       ),
     );

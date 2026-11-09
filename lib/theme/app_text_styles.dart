@@ -21,4 +21,15 @@ abstract final class AppTextStyles {
     fontSize: 22,
     fontWeight: FontWeight.w800,
   );
+  static const wizardTitle = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    height: 1.2,
+  );
+  static const wizardBody = TextStyle(fontSize: 15, height: 1.45);
+  static const wizardNote = TextStyle(fontSize: 13, height: 1.45);
+  static const wizardButton = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+  );
 }

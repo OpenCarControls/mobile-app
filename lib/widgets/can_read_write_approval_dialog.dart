@@ -12,6 +12,40 @@ Future<void> showCanReadWriteApprovalDialog(BuildContext context) {
   );
 }
 
+/// What approving CAN read-write mode risks. Shown by the approval dialog and
+/// the pairing wizard's approval step.
+class CanReadWriteRisksText extends StatelessWidget {
+  const CanReadWriteRisksText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
+      children: [
+        Text(
+          'Until now the device has only listened to the car. Allowing '
+          'control lets it send messages on the car\'s internal network '
+          'to carry out commands.',
+        ),
+        Text(
+          'This is experimental software, not made or approved by the '
+          'car\'s manufacturer. A wrong or unexpected message can make '
+          'the car behave unexpectedly, show warnings, drain its battery '
+          'or need a visit to a workshop, and may affect your warranty. '
+          'Only send commands while you can see the car and it is parked '
+          'safely.',
+        ),
+        Text(
+          'This approval is only for the car the device is plugged into '
+          'now. Moving the device to another car needs a new approval. '
+          'You can withdraw it at any time.',
+        ),
+      ],
+    );
+  }
+}
+
 class _CanReadWriteApprovalDialog extends ConsumerStatefulWidget {
   const _CanReadWriteApprovalDialog();
 
@@ -55,26 +89,7 @@ class _CanReadWriteApprovalDialogState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Until now the device has only listened to the car. Allowing '
-              'control lets it send messages on the car\'s internal network '
-              'to carry out commands.',
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'This is experimental software, not made or approved by the '
-              'car\'s manufacturer. A wrong or unexpected message can make '
-              'the car behave unexpectedly, show warnings, drain its battery '
-              'or need a visit to a workshop, and may affect your warranty. '
-              'Only send commands while you can see the car and it is parked '
-              'safely.',
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'This approval is only for the car the device is plugged into '
-              'now. Moving the device to another car needs a new approval. '
-              'You can withdraw it at any time.',
-            ),
+            const CanReadWriteRisksText(),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
