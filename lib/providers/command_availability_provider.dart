@@ -225,6 +225,15 @@ String commandUnavailableReason({
   return 'Not available right now.';
 }
 
+/// Validating this phone is what a greyed-out command is waiting for. The
+/// approval comes first, like in [commandUnavailableReason].
+final commandNeedsValidationProvider = Provider<bool>((ref) {
+  final canAccess = ref.watch(canAccessStateProvider);
+  if (canAccess != null && canAccessNeedsApproval(canAccess)) return false;
+  return ref.watch(phoneAccessStateProvider)?.trust ==
+      PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED;
+});
+
 /// The reason for [commandUnavailableReason], from the live state.
 final commandUnavailableReasonProvider = Provider.family<String, CommandKey>((
   ref,

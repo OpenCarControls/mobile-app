@@ -439,6 +439,20 @@ void main() {
         ),
       );
       await tester.pump();
+      transport.emit(
+        DeviceToApp(
+          platformId: virtual_car_constants.kPlatformId,
+          stateUpdate: StateUpdate(
+            systemState: SystemState(
+              phoneAccess: PhoneAccessState(
+                trust: PhoneTrustLevel.PHONE_TRUST_LEVEL_VALIDATED,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
       return transport;
     }
 

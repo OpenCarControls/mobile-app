@@ -12,8 +12,10 @@ import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
+import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/dashboard_layout_provider.dart';
+import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/providers/vehicle_history_provider.dart';
@@ -51,8 +53,8 @@ const _editControlId = '__edit__';
 /// The grid item of the edit mode hint.
 const _editHintId = '__edit_hint__';
 
-/// The tier for a transport: remote over MQTT, Bluetooth otherwise (stub and
-/// HTTP behave like BLE).
+/// The tier of a transport, which says what the link can do: remote over MQTT,
+/// Bluetooth otherwise (stub and HTTP behave like BLE).
 DashboardTier dashboardTierFor(TransportType transport) => switch (transport) {
   TransportType.mqtt => DashboardTier.remote,
   TransportType.ble ||
@@ -60,8 +62,22 @@ DashboardTier dashboardTierFor(TransportType transport) => switch (transport) {
   TransportType.http => DashboardTier.bluetooth,
 };
 
+/// The tier the dashboard shows: the Bluetooth one only for a phone the device
+/// reports as validated on this connection, and the remote one until it does.
+/// The stub can't validate, so it keeps the tier of its link.
+final dashboardTierProvider = Provider<DashboardTier>((ref) {
+  final transport = ref.watch(transportTypeProvider);
+  if (transport == TransportType.ble || transport == TransportType.http) {
+    final trust = ref.watch(phoneAccessStateProvider.select((a) => a?.trust));
+    return trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_VALIDATED
+        ? DashboardTier.bluetooth
+        : DashboardTier.remote;
+  }
+  return dashboardTierFor(transport);
+});
+
 /// The shared dashboard: the current vehicle's tiles in its default layout
-/// for the tier the transport gives. See `docs/ui.md`.
+/// for the tier [dashboardTierProvider] gives. See `docs/ui.md`.
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -80,9 +96,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _openSettings() async {
     final edit = await SettingsScreen.open(context);
     if (!edit || !mounted) return;
-    // The link may have changed while settings was open.
-    final tier = dashboardTierFor(ref.read(transportTypeProvider));
-    final grid = DashboardGrid.of(tier);
+    // The tier may have changed while settings was open.
+    final grid = DashboardGrid.of(ref.read(dashboardTierProvider));
     if (grid.editing != TileGridEditing.none) _setEditing(grid);
   }
 
@@ -92,14 +107,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Briefly null while unpairing, before the router shows the wizard.
     if (vehicle == null) return const SizedBox.shrink();
     final snapshot = ref.watch(vehicleStateProvider);
-    final tier = dashboardTierFor(ref.watch(transportTypeProvider));
-    // A link change swaps the grid: don't come back to it still in edit mode.
-    ref.listen(transportTypeProvider, (previous, next) {
-      if (previous == null) return;
-      if (dashboardTierFor(previous) != dashboardTierFor(next)) {
-        _setEditing(null);
-      }
-    });
+    final tier = ref.watch(dashboardTierProvider);
+    // A tier change swaps the grid: don't come back to it still in edit mode.
+    ref.listen(dashboardTierProvider, (_, _) => _setEditing(null));
     final grid = DashboardGrid.of(tier);
     final editing = _editing == grid;
     final data = TileContext(

@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:open_car_app/models/paired_phone.dart';
 import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/settings_rows.dart';
@@ -156,6 +157,7 @@ class _PhoneRow extends StatelessWidget {
       _ => null,
     };
     final removable = !phone.isThisPhone;
+    final validatable = phone.isThisPhone && !phone.isValidated;
     final noteStyle = AppTextStyles.caption.copyWith(
       color: tokens.textSecondary,
     );
@@ -204,6 +206,11 @@ class _PhoneRow extends StatelessWidget {
               spacing: 12,
               children: [
                 Expanded(child: Text(note ?? '', style: noteStyle)),
+                if (validatable)
+                  FilledButton(
+                    onPressed: () => PhoneValidationScreen.open(context),
+                    child: const Text('Validate'),
+                  ),
                 if (removable)
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(

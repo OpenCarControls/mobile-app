@@ -9,8 +9,11 @@ import 'package:open_car_app/formatting/units.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/models/vehicle_description.dart';
+import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/pending_command_controls_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
+    show dashboardTierFor;
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/stale_values.dart';
@@ -123,12 +126,7 @@ class _RemoteHeaderContent extends StatelessWidget {
                 onLongPress: onNameLongPress,
               ),
             ),
-            _PillSlot(
-              child: ConnectionPill(
-                snapshot: snapshot,
-                tier: DashboardTier.remote,
-              ),
-            ),
+            _PillSlot(child: ConnectionPill(snapshot: snapshot)),
             SettingsButton(onPressed: onSettings),
           ],
         ),
@@ -187,12 +185,7 @@ class _BluetoothHeaderContent extends StatelessWidget {
     final units = vehicle.units(snapshot);
     final energy = vehicle.energy;
     final controls = [
-      _PillSlot(
-        child: ConnectionPill(
-          snapshot: snapshot,
-          tier: DashboardTier.bluetooth,
-        ),
-      ),
+      _PillSlot(child: ConnectionPill(snapshot: snapshot)),
       SettingsButton(onPressed: onSettings),
     ];
     return Column(
@@ -495,12 +488,9 @@ class SettingsButton extends StatelessWidget {
 /// See "Connection pill" in `docs/ui.md`. Tapping it will open the connection
 /// activity (#72).
 class ConnectionPill extends ConsumerStatefulWidget {
-  const ConnectionPill({super.key, required this.snapshot, required this.tier});
+  const ConnectionPill({super.key, required this.snapshot});
 
   final VehicleSnapshot snapshot;
-
-  /// Remote over MQTT, Bluetooth otherwise.
-  final DashboardTier tier;
 
   @override
   ConsumerState<ConnectionPill> createState() => _ConnectionPillState();
@@ -543,14 +533,15 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = widget.tier;
+    // The real link, whichever tier the dashboard shows.
+    final link = dashboardTierFor(ref.watch(transportTypeProvider));
     final snapshot = widget.snapshot;
     final pending = ref.watch(
       pendingCommandControlsProvider.select((ids) => ids.isNotEmpty),
     );
     final live = snapshot.isStateLive;
     final label = live
-        ? switch (tier) {
+        ? switch (link) {
             DashboardTier.remote => 'Remote',
             DashboardTier.bluetooth => 'Bluetooth',
           }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
 
@@ -21,19 +22,26 @@ Future<bool> sendVehicleCommand(
     return true;
   } catch (e) {
     if (context.mounted) {
-      showVehicleCommandMessage(context, ref, vehicleCommandErrorText(e));
+      showVehicleCommandMessage(
+        context,
+        ref,
+        vehicleCommandErrorText(e),
+        offerValidation: e is CommandRejectedException && e.needsValidation,
+      );
     }
     return false;
   }
 }
 
 /// Shows [text] about a vehicle command in a SnackBar. When control of the car
-/// still needs approving, the SnackBar opens the approval dialog.
+/// still needs approving, the SnackBar opens the approval dialog. Otherwise,
+/// with [offerValidation], it opens the phone validation.
 void showVehicleCommandMessage(
   BuildContext context,
   WidgetRef ref,
-  String text,
-) {
+  String text, {
+  bool offerValidation = false,
+}) {
   final access = ref.read(canAccessStateProvider);
   final canApprove = access != null && canAccessNeedsApproval(access);
   ScaffoldMessenger.of(context).showSnackBar(
@@ -43,6 +51,11 @@ void showVehicleCommandMessage(
           ? SnackBarAction(
               label: 'Review',
               onPressed: () => showCanReadWriteApprovalDialog(context),
+            )
+          : offerValidation
+          ? SnackBarAction(
+              label: 'Validate',
+              onPressed: () => PhoneValidationScreen.open(context),
             )
           : null,
     ),

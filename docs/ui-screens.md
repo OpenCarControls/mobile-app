@@ -2,7 +2,7 @@
 
 The screens around the [dashboard](ui.md): the setup wizard, phone validation, the connection activity popover, settings and the paired phones, and vehicle switching and management. They share the dashboard's components, tokens and [skin](ui-theming.md). The mockups are in [`ui/mockups`](ui/mockups/README.md).
 
-> **Status:** the setup wizard and settings are built; the rest are designs, not the current behaviour. The wizard's validation step comes with the validation flow ([#71](https://github.com/OpenCarControls/mobile-app/issues/71)). Its overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval and validation shown here.
+> **Status:** the setup wizard, phone validation and settings are built; the rest are designs, not the current behaviour. The wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval shown here.
 
 ## Setup wizard
 The wizard (`PairingWizardScreen`) pairs a vehicle and then sets it up (see [BLE & pairing](ble.md)). After pairing it waits for the device to report its CAN access, up to 20 s, and shows the approval only if this car needs it and this phone may give it. If the car isn't identified in that time, or the app is closed, the dashboard's banners offer the same steps.
@@ -13,10 +13,9 @@ The wizard (`PairingWizardScreen`) pairs a vehicle and then sets it up (see [BLE
     *   *Scanning:* pulsing rings around the Bluetooth icon, the time remaining, **Cancel**.
     *   *Found:* the device name and id in a card, a note when the phone had a stale bond (the existing text, shortened), **Pair** and **Cancel**.
     *   *Set up: allow control.* The CAN read-write approval, with the existing risks text in a card and **Allow control** enabled only once "I understand the risks" is ticked. **Not now** skips it.
-    *   *Set up: validate this phone.* The [phone validation](#phone-validation) flow, in the wizard's frame. It can be skipped too.
     *   *Timed out:* a danger-coloured medallion, the plain explanation from today's wizard (a device paired before may no longer recognise this phone), **Try again** and **Help**.
     *   *Pairing* (waiting for the system dialog) looks like scanning with different text and is not mocked.
-*   **Order of the set-up steps:** the approval comes first, because a validation method that shows a code on the car's display needs it. Both steps can be done later from [settings](#settings) and from the dashboard's banners, so skipping never strands the user.
+*   **After the wizard:** the approval comes first, because a validation method that shows a code on the car's display needs it. [Phone validation](#phone-validation) isn't a wizard step: the dashboard offers it next, with its banner. Both can be done later from [settings](#settings) and from the dashboard's banners, so skipping never strands the user.
 *   **Adding another vehicle:** the same wizard, with a close button and the heading "Add a vehicle". The first run has no close button, because there is nothing to go back to.
 *   **Skin:** before the vehicle is known the wizard uses the default skin. Once a platform is detected (the existing `platform_id` match), its skin can take over for the rest of the flow.
 *   **Kept from today:** the connect retry, the pairing-window timeout, the stale-bond handling and the HTTP form behind `kDebugMode` (not mocked).
@@ -26,11 +25,11 @@ Messages say what to do, not what failed technically.
 ![Setup wizard](ui/images/wizard.png)
 
 ## Phone validation
-Vehicle commands need a *validated* phone: one whose owner proved, in the car, that it is theirs, by something a stranger near the car can't do ([#60](https://github.com/OpenCarControls/mobile-app/issues/60)). A paired phone that isn't validated can use everything else (state, system commands, and the approval before any phone is validated) but its command tiles are greyed out. Validation is BLE only and belongs to the car: moving the device to another car, removing the phone's bond or resetting the bonds means validating again.
+Vehicle commands need a *validated* phone: one whose owner proved, in the car, that it is theirs, by something a stranger near the car can't do ([#60](https://github.com/OpenCarControls/mobile-app/issues/60)). A paired phone that isn't validated can use everything else (state, system commands, and the approval before any phone is validated), on the [remote layout](ui.md#the-two-tiers) with its command tiles greyed out. Validation is BLE only and belongs to the car: moving the device to another car, removing the phone's bond or resetting the bonds means validating again.
 
 The flow is a full-screen modal with a close button, the vehicle name and, while a session runs, the time left.
 
-1.  **Choose a method.** A short explanation ("Prove you're in the car") and the car's methods as cards, in the order the device lists them. Each card has an icon, a title and one sentence. A method the device reports as unavailable is greyed out. When it needs the CAN read-write approval (a code on the cluster does), it says so, with **Review**, which opens the approval. **Not now** closes the flow.
+1.  **Choose a method.** A short explanation ("Prove you're in the car") and the car's methods as cards, in the order the device lists them. Each card has an icon, a title and one sentence. A method the device reports as unavailable is greyed out, with no reason from the device; the card's sentence says what the method needs. The list is read again every few seconds, so a method lights up when the car allows it. When the method needs the CAN read-write approval (a code on the cluster does) and this phone can give it, the card says so, with **Review**, which opens the approval. **Not now** closes the flow.
 2.  **Code entry** (a code shown in the car). A row of `code_length` digit boxes, a numeric keypad, and the session's time left. It submits by itself once every digit is in. A wrong code turns the boxes and the message red: "Wrong code. 2 attempts left." **Show a new code** starts the session again, and the car shows a new code; **Cancel** ends it.
 3.  **In-car action.** Numbered instructions for the method, "Waiting for the car…", the time left and **Cancel**. The app waits for the session to end, and moves on by itself.
 4.  **How it ended:**
@@ -38,14 +37,15 @@ The flow is a full-screen modal with a close button, the vehicle name and, while
 | Ending | Screen |
 |---|---|
 | Validated | "This phone is validated", **Done** |
-| Too many wrong codes | "Too many wrong codes", the cooldown left, during which no phone can start again; **Close** |
-| Timed out | "Time's up", **Start again** (not mocked) |
+| Too many wrong codes, or a start refused during the cooldown | "Too many wrong codes", the cooldown left, during which no phone can start again; **Close** |
+| Timed out | "Time's up", **Start again** and **Close** (not mocked) |
 | Another phone is validating | "Another phone is validating", **Try again** and **Close** |
 | Cancelled, or the car changed | Back to the method list (not mocked) |
 
 *   **Text:** every method's title, description and instructions come from the app, keyed by `method_id` (for example `virtual_car.cluster_code`, `virtual_car.button`), with a generic text per method kind for an id the app doesn't know. No text comes from the device. The instructions in the mockup ("Press the OK button on the steering wheel") are an example.
 *   **Numbers:** the session length, code length, attempts and cooldown come from the contract (`[ble.phone_validation]` in `transport.toml`) for the instructions; the time, attempts and cooldown left come from the session itself.
-*   **Entry points:** the wizard's set-up step, the "Validate this phone" banner on the dashboard, a tap on a tile greyed out because the phone isn't validated, the Car access section in settings, and the Paired phones screen.
+*   **Refusals:** the device says why it refused a command in `PhoneValidationRefusal`, and the app words it. Closing the flow during a session cancels it.
+*   **Entry points:** the "Validate this phone" banner on the dashboard, a tap on a tile greyed out because the phone isn't validated, the **Validate** action on a command the device refused for that reason, the Car access section in settings, and the Paired phones screen.
 
 ![Phone validation](ui/images/phone-validation.png)
 

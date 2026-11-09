@@ -521,7 +521,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     ref.listenManual(canAccessStateProvider, (_, _) => _onAccessChanged());
     ref.listenManual(phoneAccessStateProvider, (_, _) => _onAccessChanged());
     _setupTimer = Timer(const Duration(seconds: _setupWaitSeconds), () {
-      if (_step == _Step.connecting) _afterApproval();
+      if (_step == _Step.connecting) _finishSetup();
     });
     _onAccessChanged();
   }
@@ -535,7 +535,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     // The device would refuse this phone the approval.
     final phone = ref.read(phoneAccessStateProvider);
     if (phone != null && isOutrankedByValidatedPhone(phone)) {
-      _afterApproval();
+      _finishSetup();
       return;
     }
 
@@ -549,7 +549,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
             CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_APPROVED ||
         access.approval ==
             CanReadWriteApproval.CAN_READ_WRITE_APPROVAL_AWAITING_CAR) {
-      _afterApproval();
+      _finishSetup();
     }
     // Otherwise the car isn't identified yet: wait, up to the timer. The
     // dashboard's banner offers the approval once it is.
@@ -562,7 +562,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     });
     try {
       await ref.read(canAccessActionsProvider).setApproval(true);
-      if (mounted) _afterApproval();
+      if (mounted) _finishSetup();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -573,10 +573,8 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     }
   }
 
-  /// The approval is done or skipped. The phone validation step (#71) goes
-  /// here, since a validation method may need the approval.
-  void _afterApproval() => _finishSetup();
-
+  /// The approval is done or skipped. The phone is validated from the
+  /// dashboard, which offers it next.
   void _finishSetup() {
     if (_finished) return;
     _finished = true;
@@ -768,7 +766,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
       title: 'Connecting to your vehicle…',
       body: 'Paired. You can also finish setting it up later in settings.',
       actions: [
-        WizardSecondaryButton(label: 'Not now', onPressed: _afterApproval),
+        WizardSecondaryButton(label: 'Not now', onPressed: _finishSetup),
       ],
     );
   }
@@ -795,7 +793,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
         ),
         WizardSecondaryButton(
           label: 'Not now',
-          onPressed: _approving ? null : _afterApproval,
+          onPressed: _approving ? null : _finishSetup,
         ),
       ],
     );

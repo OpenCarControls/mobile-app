@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/phone_access_provider.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
-import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/settings_rows.dart';
 
 /// Why the approval controls are off for a phone that isn't validated.
@@ -113,8 +112,12 @@ class _CanAccessSectionState extends ConsumerState<CanAccessSection> {
           ),
         if (thisPhone != null)
           SettingsRow(title: 'This phone', value: thisPhone),
-        // Until the validation flow exists (#71).
-        if (kDebugMode) const PhoneValidationDebugSection(),
+        if (access?.trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED)
+          SettingsRow(
+            title: 'Validate this phone',
+            opensScreen: true,
+            onTap: () => PhoneValidationScreen.open(context),
+          ),
         // Development firmware only: an extra lock, locked at every boot.
         if (state.devLockAvailable)
           SwitchListTile(

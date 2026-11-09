@@ -246,7 +246,9 @@ void main() {
     });
 
     testWidgets('the button style reaches the command tiles', (tester) async {
-      await _pump(tester, home: const DashboardScreen());
+      final (transport, _) = await _pump(tester, home: const DashboardScreen());
+      transport.reportAccess(PhoneAccessState(trust: _validated));
+      await tester.pumpAndSettle();
       expect(find.text('Custom 1'), findsOneWidget);
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
@@ -277,8 +279,24 @@ void main() {
       await _end(tester);
     });
 
+    testWidgets("edit says why it's off for a phone that isn't validated", (
+      tester,
+    ) async {
+      final (transport, _) = await _pump(tester);
+      transport.reportAccess(PhoneAccessState(trust: _bonded));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Validate this phone to edit the tiles'),
+        findsOneWidget,
+      );
+      expect(find.text('Connected over Bluetooth'), findsOneWidget);
+      await _end(tester);
+    });
+
     testWidgets('edit goes back to the dashboard in edit mode', (tester) async {
-      await _pump(tester, home: const DashboardScreen());
+      final (transport, _) = await _pump(tester, home: const DashboardScreen());
+      transport.reportAccess(PhoneAccessState(trust: _validated));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Edit dashboard'));
