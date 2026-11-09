@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,7 +16,6 @@ import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
-import 'package:open_car_app/widgets/phone_validation_debug_section.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 
 class _FakeTransport implements CarTransport {
@@ -567,133 +565,5 @@ void main() {
     expect(info.deviceId, [9, 8]);
     expect(info.isValidated, isFalse);
     expect(info.isThisPhone, isFalse);
-  });
-
-  group('debug section', () {
-    Future<_FakeTransport> pump(WidgetTester tester) async {
-      final transport = _FakeTransport(TransportType.ble);
-      addTearDown(transport.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
-            initialPairedVehicleConfigProvider.overrideWithValue(_config),
-            carTransportProvider.overrideWithValue(transport),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ListView(children: const [PhoneValidationDebugSection()]),
-            ),
-          ),
-        ),
-      );
-      return transport;
-    }
-
-    testWidgets('runs a code entry validation', (tester) async {
-      final transport = await pump(tester);
-      expect(find.textContaining('connect over Bluetooth'), findsOneWidget);
-
-      transport.emit(_accessUpdate(PhoneAccessState(trust: _bonded)));
-      await tester.pumpAndSettle();
-      expect(find.text('Cancel session'), findsNothing);
-
-      await tester.tap(find.text('List methods'));
-      await tester.pump();
-      transport.emit(
-        DeviceToApp(
-          commandResponse: CommandResponse(
-            messageId: transport.sent.last.messageId,
-            success: true,
-            systemResult: SystemCommandResult(
-              validationMethods: PhoneValidationMethods(
-                methods: [
-                  PhoneValidationMethod(
-                    methodId: _codeMethod,
-                    kind: _codeEntry,
-                    available: true,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(_codeMethod));
-      await tester.pump();
-      expect(
-        transport.sent.last.systemCommand.startPhoneValidation.methodId,
-        _codeMethod,
-      );
-      final session = _codeSession();
-      transport.emit(
-        DeviceToApp(
-          commandResponse: CommandResponse(
-            messageId: transport.sent.last.messageId,
-            success: true,
-            systemResult: SystemCommandResult(validationSession: session),
-          ),
-        ),
-      );
-      transport.emit(
-        _accessUpdate(PhoneAccessState(trust: _bonded, validation: session)),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), '042917');
-      await tester.tap(find.text('Submit code'));
-      await tester.pump();
-      expect(
-        transport.sent.last.systemCommand.submitPhoneValidationCode.code,
-        '042917',
-      );
-
-      // The device says the code is wrong: the reason is shown.
-      transport.emit(
-        DeviceToApp(
-          commandResponse: CommandResponse(
-            messageId: transport.sent.last.messageId,
-            success: false,
-            errorMessage: 'wrong code',
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('wrong code'), findsOneWidget);
-
-      // Dispose the providers, which cancels the state liveness timer.
-      await tester.pumpWidget(const SizedBox());
-    });
-
-    testWidgets('greys out a method that can\'t start', (tester) async {
-      final transport = await pump(tester);
-      transport.emit(_accessUpdate(PhoneAccessState(trust: _bonded)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('List methods'));
-      await tester.pump();
-      transport.emit(
-        DeviceToApp(
-          commandResponse: CommandResponse(
-            messageId: transport.sent.last.messageId,
-            success: true,
-            systemResult: SystemCommandResult(
-              validationMethods: PhoneValidationMethods(
-                methods: [PhoneValidationMethod(methodId: _codeMethod)],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final count = transport.sent.length;
-      await tester.tap(find.text(_codeMethod));
-      await tester.pump();
-      expect(transport.sent, hasLength(count));
-
-      await tester.pumpWidget(const SizedBox());
-    });
   });
 }

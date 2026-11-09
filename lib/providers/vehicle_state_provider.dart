@@ -99,11 +99,16 @@ class CommandRejectedException implements Exception {
       response.statusCode ==
       CommandStatusCode.COMMAND_STATUS_CODE_REJECTED_NOT_VALIDATED;
 
-  /// The phone's session after a refused validation command, when it explains
-  /// the refusal (a wrong code, no attempts left, the cooldown).
+  /// The phone's session after a wrong code, with the attempts left.
   PhoneValidationSession? get validationSession {
     final result = response.systemResult;
     return result.hasValidationSession() ? result.validationSession : null;
+  }
+
+  /// Why a validation command was refused, for any reason but a wrong code.
+  PhoneValidationRefusal? get validationRefusal {
+    final result = response.systemResult;
+    return result.hasValidationRefusal() ? result.validationRefusal : null;
   }
 
   @override

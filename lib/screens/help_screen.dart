@@ -111,7 +111,24 @@ class HelpScreen extends StatelessWidget {
                 ),
                 const _HelpNote(
                   'Every phone that was paired with the device has to pair '
-                  'again afterwards. The device keeps its other settings.',
+                  'again afterwards, then validate again. The device keeps '
+                  'its other settings.',
+                ),
+              ],
+            ),
+            const _HelpCard(
+              icon: Icons.verified_user_outlined,
+              title: 'Validating a phone again',
+              children: [
+                _HelpText(
+                  'Only a phone validated in the car can send commands and '
+                  'see the full dashboard. A phone has to validate again '
+                  'after it pairs again, after the paired phones are reset, '
+                  'and when the device moves to another car.',
+                ),
+                _HelpText(
+                  'Tap Validate on the dashboard, or Validate this phone in '
+                  'settings, while connected over Bluetooth.',
                 ),
               ],
             ),

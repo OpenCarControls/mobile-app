@@ -13,6 +13,8 @@ import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
+import 'package:open_car_app/providers/phone_access_provider.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
@@ -77,7 +79,21 @@ DeviceToApp _liveState() => DeviceToApp(
   ),
 );
 
+class _AccessNotifier extends PhoneAccessStateNotifier {
+  _AccessNotifier(this._initial);
+
+  final PhoneTrustLevel? _initial;
+
+  @override
+  PhoneAccessState? build() =>
+      _initial == null ? null : PhoneAccessState(trust: _initial);
+
+  void report(PhoneTrustLevel trust) => state = PhoneAccessState(trust: trust);
+}
+
 const _heroBox = Key('dashboard-hero-box');
+const _validated = PhoneTrustLevel.PHONE_TRUST_LEVEL_VALIDATED;
+const _bonded = PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED;
 
 /// The dashboard of the virtual car on a 400×800 phone, over transports the
 /// test can switch between.
@@ -90,6 +106,7 @@ class _Harness {
       type: _FakeTransport(type),
   };
   late final _TypeNotifier _type;
+  late final _AccessNotifier _access;
 
   _FakeTransport get transport =>
       transports[_type.state] ?? transports[TransportType.ble]!;
@@ -98,6 +115,7 @@ class _Harness {
     TransportType type = TransportType.ble,
     double textScale = 1,
     double height = 800,
+    PhoneTrustLevel? trust = _validated,
   }) async {
     tester.view.physicalSize = Size(400, height);
     tester.view.devicePixelRatio = 1;
@@ -108,6 +126,7 @@ class _Harness {
       addTearDown(t.dispose);
     }
     _type = _TypeNotifier(type);
+    _access = _AccessNotifier(trust);
     final typeProvider = NotifierProvider<_TypeNotifier, TransportType>(
       () => _type,
     );
@@ -119,6 +138,7 @@ class _Harness {
           carTransportProvider.overrideWith(
             (ref) => transports[ref.watch(typeProvider)]!,
           ),
+          phoneAccessStateProvider.overrideWith(() => _access),
         ],
         child: MaterialApp(
           theme: buildAppTheme(defaultSkin, Brightness.light),
@@ -128,6 +148,10 @@ class _Harness {
     );
     await tester.pumpAndSettle();
   }
+
+  /// What the device reports about this phone. Set directly: a report over the
+  /// transport would also make the state live.
+  void reportTrust(PhoneTrustLevel trust) => _access.report(trust);
 
   Future<void> switchTo(TransportType type) async {
     _type.set(type);
@@ -188,6 +212,59 @@ void main() {
     await harness.switchTo(TransportType.ble);
     expect(find.byKey(_heroBox), findsNothing);
     await harness.dispose();
+  });
+
+  group('a phone that is not validated', () {
+    testWidgets('sees the remote layout until the device says it is', (
+      tester,
+    ) async {
+      final harness = _Harness(tester);
+      await harness.pump(trust: null);
+      expect(find.byKey(_heroBox), findsOneWidget, reason: 'unknown');
+
+      harness.reportTrust(_bonded);
+      await tester.pumpAndSettle();
+      expect(find.byKey(_heroBox), findsOneWidget, reason: 'bonded');
+      expect(find.text('Custom 1'), findsNothing);
+      harness.transport.emit(_liveState());
+      await tester.pumpAndSettle();
+      expect(find.text('Bluetooth'), findsOneWidget, reason: 'the real link');
+
+      harness.reportTrust(_validated);
+      await tester.pumpAndSettle();
+      expect(find.byKey(_heroBox), findsNothing);
+      expect(find.text('Custom 1'), findsOneWidget);
+      await harness.dispose();
+    });
+
+    testWidgets('is offered the validation by the banner', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump(trust: _bonded);
+      await tester.tap(find.text('Validate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneValidationScreen), findsOneWidget);
+      await harness.dispose();
+      await tester.pump(const Duration(seconds: 16));
+    });
+
+    testWidgets('opens the validation from a greyed-out tile', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump(trust: _bonded);
+      await tester.tap(find.bySemanticsLabel(RegExp('^Doors, ')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PhoneValidationScreen), findsOneWidget);
+      await harness.dispose();
+      await tester.pump(const Duration(seconds: 16));
+    });
+
+    testWidgets('a validated phone gets no banner', (tester) async {
+      final harness = _Harness(tester);
+      await harness.pump();
+      expect(find.text('Validate this phone'), findsNothing);
+      await harness.dispose();
+    });
   });
 
   group('the remote hero box', () {

@@ -20,7 +20,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_header.dart'
     show formatUpdatedAgo;
 import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
-    show dashboardTierFor;
+    show dashboardTierFor, dashboardTierProvider;
 import 'package:open_car_app/screens/help_screen.dart';
 import 'package:open_car_app/screens/paired_phones_screen.dart';
 import 'package:open_car_app/screens/theme_gallery_screen.dart';
@@ -72,7 +72,7 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           _VehicleSummary(vehicle: vehicle, tier: tier),
           const SettingsSectionTitle('Dashboard'),
-          _dashboardCard(context, ref, tier),
+          _dashboardCard(context, ref, ref.watch(dashboardTierProvider)),
           const SettingsSectionTitle('Vehicle'),
           _vehicleCard(context, ref, vehicle, bluetooth: bluetooth),
           if (bluetooth) ...[
@@ -140,7 +140,9 @@ class SettingsScreen extends ConsumerWidget {
           title: 'Edit dashboard',
           subtitle: editable
               ? 'Rearrange, resize, add or remove tiles'
-              : 'Connect over Bluetooth to edit the tiles',
+              : ref.watch(transportTypeProvider) == TransportType.mqtt
+              ? 'Connect over Bluetooth to edit the tiles'
+              : 'Validate this phone to edit the tiles',
           enabled: editable,
           opensScreen: true,
           onTap: () => Navigator.of(context).pop(true),

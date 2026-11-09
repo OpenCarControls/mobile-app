@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/pending_command_controls_provider.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/vehicle_command_feedback.dart';
 
@@ -25,7 +26,7 @@ const _failureDurationReduced = Duration(milliseconds: 1500);
 /// inside a bigger tile.
 ///
 /// While the device doesn't accept [command] it is greyed out and a tap says
-/// why. While [send] runs it pulses and ignores taps. If [send] fails, it
+/// why, or opens the validation when that is all it needs. While [send] runs it pulses and ignores taps. If [send] fails, it
 /// flashes red and shakes, and [sendVehicleCommand] says why in a SnackBar.
 ///
 /// Commands the car doesn't have show nothing. Leave a whole tile out of the
@@ -83,6 +84,10 @@ class _CommandControlState extends ConsumerState<CommandControl>
   Future<void> _onTap() async {
     if (ref.read(commandUiStateProvider(widget.command)) !=
         CommandUiState.enabled) {
+      if (ref.read(commandNeedsValidationProvider)) {
+        await PhoneValidationScreen.open(context);
+        return;
+      }
       showVehicleCommandMessage(
         context,
         ref,

@@ -6,15 +6,18 @@ import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/providers/phone_access_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/screens/help_screen.dart';
+import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/can_read_write_approval_dialog.dart';
 
 /// The one banner slot at the top of the tile area. Only the most important
 /// banner shows: a wrong vehicle platform, then a lost Bluetooth bond, then
-/// control that isn't approved. See "Banners" in `docs/ui.md`.
+/// control that isn't approved, then a phone that isn't validated. See
+/// "Banners" in `docs/ui.md`.
 class DashboardBannerSlot extends ConsumerWidget {
   const DashboardBannerSlot({super.key});
 
@@ -26,6 +29,7 @@ class DashboardBannerSlot extends ConsumerWidget {
     final bondLost = ref.watch(bleBondLostProvider);
     // Only known over Bluetooth: null otherwise.
     final access = ref.watch(canAccessStateProvider);
+    final trust = ref.watch(phoneAccessStateProvider.select((a) => a?.trust));
 
     final Widget? banner;
     if (mismatchedId != null) {
@@ -78,6 +82,20 @@ class DashboardBannerSlot extends ConsumerWidget {
           (
             label: 'Review',
             onPressed: () => showCanReadWriteApprovalDialog(context),
+          ),
+        ],
+      );
+    } else if (trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED) {
+      banner = DashboardBanner(
+        icon: Symbols.verified_user,
+        title: 'Validate this phone',
+        text:
+            'Only a validated phone can send commands and see the full '
+            'dashboard. Validating takes a moment in the car.',
+        actions: [
+          (
+            label: 'Validate',
+            onPressed: () => PhoneValidationScreen.open(context),
           ),
         ],
       );

@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** the shared dashboard is built (see [Architecture](architecture.md#dashboard-libscreensdashboard)) with each platform's default layouts. Not built yet: the connection activity popover ([#72](https://github.com/OpenCarControls/mobile-app/issues/72); the pill does nothing on tap), the vehicle switcher ([#74](https://github.com/OpenCarControls/mobile-app/issues/74); the chevron does nothing), the "Validate this phone" banner, and the 3D renderer ([#75](https://github.com/OpenCarControls/mobile-app/issues/75); E-GMP keeps its WebView viewer behind the hero interface, the virtual car uses the placeholder).
+> **Status:** the shared dashboard is built (see [Architecture](architecture.md#dashboard-libscreensdashboard)) with each platform's default layouts. Not built yet: the connection activity popover ([#72](https://github.com/OpenCarControls/mobile-app/issues/72); the pill does nothing on tap), the vehicle switcher ([#74](https://github.com/OpenCarControls/mobile-app/issues/74); the chevron does nothing), and the 3D renderer ([#75](https://github.com/OpenCarControls/mobile-app/issues/75); E-GMP keeps its WebView viewer behind the hero interface, the virtual car uses the placeholder).
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 
@@ -27,12 +27,13 @@ Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connect
 | Climate is one bar; target temperature and extras appear only when climate is on | They need climate on. Inside and outside temperature are always visible. |
 | No contextual tiles | Tiles that appear and disappear by state make the layout unpredictable. Contextual *content* inside a stable tile gives the same information. |
 | Light and dark themes, Material 3 foundations with a custom skin layer | Familiar widgets, but shapes and colours are ours to vary per platform. |
-| When the link switches between Remote and Bluetooth, the screen cross-fades straight to the other tier | Waiting for the user would leave the wrong tier on screen, with tiles the new transport can't serve. A short fade (none with reduced motion) keeps the reshape from being jarring. To revisit after use on a phone. |
+| Over Bluetooth, only a phone the device reports as validated gets the Bluetooth tier | Until then the phone can't send commands, so the calm remote layout comes first, and the banner says how to get the rest. It is the default on every connection, because the app never remembers trust. |
+| When the tier changes, the screen cross-fades straight to the other one | Waiting for the user would leave the wrong tier on screen, with tiles the new transport can't serve. A short fade (none with reduced motion) keeps the reshape from being jarring. To revisit after use on a phone. |
 | Editing is decided per grid, and the remote grid is locked for now | The remote tier will likely split into a small editable grid of quick commands and a lower grid that may stay locked. Until then it has one grid, so it stays locked. |
 | Pull-to-refresh works anywhere on the dashboard | The whole page scrolls, even where the header and the hero stay put, so there is no separate gesture target. |
 
 ## The two tiers
-| | Remote (MQTT) | Bluetooth (BLE; also stub/HTTP in debug) |
+| | Remote (MQTT, and BLE or HTTP until the device reports this phone as validated) | Bluetooth (validated phone over BLE or HTTP; stub in debug) |
 |---|---|---|
 | Hero | Yes, behind the tiles | No (optional Car view tile) |
 | Header | Vehicle name, level row, status line, speed while driving | Small vehicle name, one slim level row |
@@ -41,7 +42,7 @@ Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connect
 | Editing | Locked for now | Edit tile at the end of the grid |
 | System commands (settings: device, advanced) | No | Yes |
 
-Gate on the transport type, never on the vehicle (see the transport gating in [Architecture](architecture.md)). Over MQTT, advanced tiles are left out, not shown disabled.
+Gate on the transport type, never on the vehicle (see the transport gating in [Architecture](architecture.md)). Over MQTT, advanced tiles are left out, not shown disabled. The tier only sets the dashboard's layout: the connection pill and the Bluetooth sections of settings follow the real link, so a phone that isn't validated still sees "Bluetooth" and can reach **Validate this phone**.
 
 ![Remote, light](ui/images/remote-light.png)
 ![Bluetooth, dark](ui/images/ble-dark.png)
@@ -148,7 +149,7 @@ A tile may show different content by state while keeping its place and size. The
 | Idle | Frosted surface |
 | On / active | Accent-container fill |
 | Pending | Border in the accent colour and a pulsing fade until the `CommandResponse` arrives (or the 15 s timeout). The connection pill spins too. |
-| Unavailable | Greyed out and does nothing, while the device reports the command unavailable ([command availability](architecture.md)) or it can't be sent over this transport. A tap gives the reason when the app knows it: control isn't approved, this phone isn't validated, or it needs Bluetooth. Otherwise it says "Not available right now", since the device reports no reason. |
+| Unavailable | Greyed out and does nothing, while the device reports the command unavailable ([command availability](architecture.md)) or it can't be sent over this transport. A tap opens the [phone validation](ui-screens.md#phone-validation) when that is what's missing. Otherwise it gives the reason when the app knows it: control isn't approved, or it needs Bluetooth. Otherwise it says "Not available right now", since the device reports no reason. |
 | Error | The tile flashes red and shakes, and a snackbar gives the reason. Not mocked. With reduced motion it holds a red border briefly instead of shaking. |
 
 *Titled* (default) and *icon-only* buttons are both supported, per platform with a user override in settings. Icon-only buttons still need an accessible label that includes the state (for example "Doors, locked").
@@ -212,7 +213,6 @@ The screenshot predates the single controls tile and the sheet.
 ![Driving](ui/images/driving.png)
 ![Offline](ui/images/offline.png)
 ![Control not approved](ui/images/ble-approval-needed.png)
-![Phone not validated](ui/images/ble-validation-needed.png)
 
 ## Vehicle description
 Each platform declares what the shared screen shows, in its `VehicleDefinition` (see [Architecture](architecture.md#vehicledefinition-libmodelsvehicle_definitiondart)):
