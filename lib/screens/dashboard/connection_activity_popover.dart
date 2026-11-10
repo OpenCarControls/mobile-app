@@ -41,23 +41,48 @@ final shareTextProvider = Provider<Future<void> Function(String text)>(
   },
 );
 
+/// Where the connection pill is on the screen. The pill keeps this current,
+/// because it moves when the dashboard changes layout with the popover open.
+class _PillPosition extends Notifier<Rect?> {
+  @override
+  Rect? build() => null;
+
+  void set(Rect position) {
+    if (position != state) state = position;
+  }
+}
+
+final _pillPositionProvider = NotifierProvider<_PillPosition, Rect?>(
+  _PillPosition.new,
+);
+
+/// Records where the pill whose context is [pill] is. Call after layout.
+void reportConnectionPillPosition(BuildContext pill, WidgetRef ref) {
+  final box = pill.findRenderObject();
+  if (box is! RenderBox || !box.hasSize) return;
+  // The pill is centred in a box that can be taller than its touch target.
+  ref
+      .read(_pillPositionProvider.notifier)
+      .set(
+        Rect.fromCenter(
+          center: box.localToGlobal(box.size.center(Offset.zero)),
+          width: box.size.width,
+          height: kMinTouchTarget,
+        ),
+      );
+}
+
 /// Opens the connection activity, anchored to the connection pill whose
 /// context is [pill]. See "Connection activity" in `docs/ui-screens.md`.
-Future<void> showConnectionActivity(BuildContext pill) {
-  final box = pill.findRenderObject()! as RenderBox;
-  // The pill is centred in a box that can be taller than its touch target.
-  final anchor = Rect.fromCenter(
-    center: box.localToGlobal(box.size.center(Offset.zero)),
-    width: box.size.width,
-    height: kMinTouchTarget,
-  );
+Future<void> showConnectionActivity(BuildContext pill, WidgetRef ref) {
+  reportConnectionPillPosition(pill, ref);
   return showGeneralDialog<void>(
     context: pill,
     barrierDismissible: true,
     barrierLabel: 'Close connection activity',
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 150),
-    pageBuilder: (_, _, _) => _Popover(anchor: anchor),
+    pageBuilder: (_, _, _) => const _Popover(),
   );
 }
 
@@ -78,14 +103,13 @@ String connectionActivityDayHeading(
   };
 }
 
-class _Popover extends StatelessWidget {
-  const _Popover({required this.anchor});
-
-  /// Where the pill is on the screen.
-  final Rect anchor;
+class _Popover extends ConsumerWidget {
+  const _Popover();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final anchor = ref.watch(_pillPositionProvider);
+    if (anchor == null) return const SizedBox.shrink();
     final tokens = context.tokens;
     final size = MediaQuery.sizeOf(context);
     final width = math.min(size.width - 2 * _gutter, _maxWidth);

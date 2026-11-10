@@ -533,6 +533,10 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
 
   @override
   Widget build(BuildContext context) {
+    // The popover follows the pill when the dashboard changes layout.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) reportConnectionPillPosition(context, ref);
+    });
     final tokens = context.tokens;
     // The real link, whichever tier the dashboard shows.
     final link = dashboardTierFor(ref.watch(transportTypeProvider));
@@ -577,11 +581,11 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
     return Semantics(
       label: [label, if (pending) 'sending a command'].join(', '),
       button: true,
-      onTap: () => showConnectionActivity(context),
+      onTap: () => showConnectionActivity(context, ref),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => showConnectionActivity(context),
+        onTap: () => showConnectionActivity(context, ref),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: kMinTouchTarget),
           child: Center(

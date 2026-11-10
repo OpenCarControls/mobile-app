@@ -285,6 +285,61 @@ void main() {
     expect(find.text('Connection'), findsNothing);
   });
 
+  testWidgets('follows the pill when the layout moves it', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final top = ValueNotifier<double>(20);
+    addTearDown(top.dispose);
+    final snapshot = _snapshot(live: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          initialPairedVehicleConfigProvider.overrideWithValue(_config),
+          selectedVehicleProvider.overrideWithValue(
+            const VirtualCarDefinition(),
+          ),
+          carTransportProvider.overrideWithValue(
+            const _Transport(TransportType.ble),
+          ),
+          vehicleStateProvider.overrideWith(() => _FakeState(snapshot)),
+          bleConnectionProvider.overrideWith(() => ble),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(defaultSkin, Brightness.light),
+          home: Scaffold(
+            body: ValueListenableBuilder(
+              valueListenable: top,
+              builder: (_, value, _) => Padding(
+                padding: EdgeInsets.only(top: value),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: SizedBox(
+                    height: 44,
+                    // A new pill, as when the dashboard switches layout.
+                    child: ConnectionPill(
+                      key: ValueKey(value),
+                      snapshot: snapshot,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ConnectionPill));
+    await tester.pumpAndSettle();
+    final before = tester.getTopLeft(find.text('Connection')).dy;
+
+    top.value = 78;
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(find.text('Connection')).dy, before + 58);
+    await finish(tester);
+  });
+
   group('connectedSince', () {
     final time = DateTime(2026, 11, 9, 12);
 
