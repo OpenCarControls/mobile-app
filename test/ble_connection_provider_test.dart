@@ -10,7 +10,9 @@ import 'package:open_car_app/cars/egmp/constants.g.dart' as egmp;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/providers/ble_connection_provider.dart';
 import 'package:open_car_app/providers/ble_provider.dart';
+import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/transport/car_transport.dart';
 
 const _remoteId = '00:11:22:33:44:55';
 
@@ -392,6 +394,42 @@ void main() {
     await tester.pump(const Duration(seconds: 25));
     expect(ble.connectCalls, 2);
     container.dispose();
+  });
+
+  testWidgets('learning the MQTT client ID keeps the link', (tester) async {
+    final ble = _FakeBle(hasCarService: true);
+    final container = _container(ble);
+    container.listen(bleConnectionProvider, (_, _) {});
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(bleConnectionProvider), isA<BleReady>());
+
+    await tester.runAsync(
+      () => container
+          .read(pairedVehicleProvider.notifier)
+          .setMqttClientId('dev-car'),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(container.read(bleConnectionProvider), isA<BleReady>());
+    expect(ble.connectCalls, 1);
+    expect(ble.disconnects, 0);
+    container.dispose();
+  });
+
+  testWidgets('no MQTT until the device has reported its client ID', (
+    tester,
+  ) async {
+    final ble = _FakeBle(refuseAfter: const Duration(seconds: 1));
+    final container = _container(ble);
+    container.listen(carTransportProvider, (_, _) {});
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      container.read(carTransportProvider).transportType,
+      TransportType.stub,
+    );
+    container.dispose();
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('pull-to-refresh does nothing for a vehicle paired over HTTP', (

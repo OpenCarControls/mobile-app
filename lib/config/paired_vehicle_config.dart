@@ -41,6 +41,10 @@ class PairedVehicleConfig {
   final String? mqttUsername;
   final String? mqttPassword;
 
+  /// The device's MQTT client ID, which names its topics. Reported by the
+  /// device over BLE; null until it has, and MQTT stays off until then.
+  final String? mqttClientId;
+
   const PairedVehicleConfig({
     required this.vehicleId,
     required this.bleRemoteId,
@@ -51,7 +55,21 @@ class PairedVehicleConfig {
     this.mqttBrokerPort,
     this.mqttUsername,
     this.mqttPassword,
+    this.mqttClientId,
   });
+
+  PairedVehicleConfig withMqttClientId(String id) => PairedVehicleConfig(
+    vehicleId: vehicleId,
+    bleRemoteId: bleRemoteId,
+    transportPreference: transportPreference,
+    httpHost: httpHost,
+    httpPort: httpPort,
+    mqttBrokerHost: mqttBrokerHost,
+    mqttBrokerPort: mqttBrokerPort,
+    mqttUsername: mqttUsername,
+    mqttPassword: mqttPassword,
+    mqttClientId: id,
+  );
 
   /// Keys what is stored per vehicle (saved layouts, unsupported commands).
   /// The platform name for now: with one paired vehicle it is enough.
@@ -96,6 +114,7 @@ class PairedVehicleConfig {
     if (mqttBrokerPort != null) 'mqttBrokerPort': mqttBrokerPort,
     if (mqttUsername != null) 'mqttUsername': mqttUsername,
     if (mqttPassword != null) 'mqttPassword': mqttPassword,
+    if (mqttClientId != null) 'mqttClientId': mqttClientId,
   };
 
   factory PairedVehicleConfig._fromJson(Map<String, dynamic> j) =>
@@ -111,5 +130,6 @@ class PairedVehicleConfig {
         mqttBrokerPort: j['mqttBrokerPort'] as int?,
         mqttUsername: j['mqttUsername'] as String?,
         mqttPassword: j['mqttPassword'] as String?,
+        mqttClientId: j['mqttClientId'] as String?,
       );
 }

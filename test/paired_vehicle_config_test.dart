@@ -15,6 +15,7 @@ void main() {
       transportPreference: TransportPreference.http,
       httpHost: '192.168.4.1',
       httpPort: 4242,
+      mqttClientId: 'dev-car',
     );
 
     await original.save();
@@ -25,6 +26,7 @@ void main() {
     expect(loaded.bleRemoteId, original.bleRemoteId);
     expect(loaded.transportPreference, original.transportPreference);
     expect(loaded.httpHost, original.httpHost);
+    expect(loaded.mqttClientId, 'dev-car');
     expect(loaded.httpPort, original.httpPort);
 
     await PairedVehicleConfig.clear();

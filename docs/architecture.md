@@ -26,7 +26,7 @@ abstract class CarTransport {
 *   `ble` / `stub` / `http` — full access (basic + advanced state/commands).
 *   `mqtt` — basic state/commands only; `advanced_command_bytes` and `system_command` are BLE-only.
 
-**Selection order (debug):** HTTP (if `transportPreference == http` in `pairedVehicleProvider`) → BLE (if `BleReady`) → MQTT. The HTTP branch is compiled away in release builds via `kDebugMode`. Android allows cleartext (plain HTTP) traffic only in debug builds: `android:usesCleartextTraffic` lives in `android/app/src/debug/AndroidManifest.xml`, not the main manifest. `vehicleStateProvider` uses `ref.watch(carTransportProvider)` to re-subscribe on transport switch.
+**Selection order (debug):** HTTP (if `transportPreference == http` in `pairedVehicleProvider`) → BLE (if `BleReady`) → MQTT, once the device has reported its `mqtt_client_id` over a local link. That ID fills the `{client_id}` of the topic templates and is stored with the pairing; the app connects to the broker under its own ID. The HTTP branch is compiled away in release builds via `kDebugMode`. Android allows cleartext (plain HTTP) traffic only in debug builds: `android:usesCleartextTraffic` lives in `android/app/src/debug/AndroidManifest.xml`, not the main manifest. `vehicleStateProvider` uses `ref.watch(carTransportProvider)` to re-subscribe on transport switch.
 
 ## UI architecture
 Every vehicle shares one dashboard, built from its description; the design is in [UI design](ui.md). Support for several paired vehicles (which changes the single-vehicle pairing state described here) is specified in [Other screens](ui-screens.md#vehicles).

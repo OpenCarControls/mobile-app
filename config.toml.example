@@ -7,11 +7,6 @@ port     = 1883
 username = "your_username"
 password = "your_password"
 
-[client]
-# Unique identifier for this app instance.  Used as the {client_id} token in
-# MQTT topic templates (opencar/{client_id}/cmd and opencar/{client_id}/data).
-client_id = "dev-phone"
-
 [debug_server]
 # HTTP server on the device used for debug/testing in place of BLE.
 # Only active when the HTTP debug toggle is enabled inside the app (debug builds only).

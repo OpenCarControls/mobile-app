@@ -82,6 +82,17 @@ const _kEarlyDropWindow = Duration(seconds: 10);
 /// fails at the 30 s connection timeout.
 const _kRefusedConnectWindow = Duration(seconds: 5);
 
+/// The BLE device of the pairing, null when it isn't reached over BLE. All the
+/// link depends on: it must survive any other change to the pairing, like
+/// learning the MQTT client ID while connected.
+final _pairedBleDeviceProvider = Provider<String?>(
+  (ref) => ref.watch(
+    pairedVehicleProvider.select(
+      (c) => c != null && c.usesBle ? c.bleRemoteId : null,
+    ),
+  ),
+);
+
 /// Early drops in a row after which the device probably no longer has this
 /// phone's bond.
 const _kEarlyDropsForLostBond = 2;
@@ -94,7 +105,7 @@ const _kEarlyDropsForLostBond = 2;
 class BleBondLostNotifier extends Notifier<bool> {
   @override
   bool build() {
-    ref.watch(pairedVehicleProvider);
+    ref.watch(_pairedBleDeviceProvider);
     return false;
   }
 
@@ -127,17 +138,15 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
 
   @override
   BleConnectionState build() {
-    final config = ref.watch(pairedVehicleProvider);
+    final remoteId = ref.watch(_pairedBleDeviceProvider);
 
     // No paired device, or user prefers HTTP — BLE not needed.
-    if (config == null || !config.usesBle) {
-      return const BleDisconnected();
-    }
+    if (remoteId == null) return const BleDisconnected();
 
     _disposed = false;
     ref.onDispose(_cleanup);
-    unawaited(_initConnection(config.bleRemoteId));
-    return BleConnecting(config.bleRemoteId);
+    unawaited(_initConnection(remoteId));
+    return BleConnecting(remoteId);
   }
 
   Future<void> _initConnection(String remoteId) async {
