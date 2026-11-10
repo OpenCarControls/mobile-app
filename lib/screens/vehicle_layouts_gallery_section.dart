@@ -8,6 +8,7 @@ import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/models/vehicle_history.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
@@ -36,6 +37,9 @@ class VehicleLayoutsGallerySection extends ConsumerWidget {
           await Future<void>.delayed(_fakeCommandDelay);
           return null;
         }),
+        connectionActivityLogsProvider.overrideWith(
+          DiscardedConnectionActivity.new,
+        ),
       ],
       child: VehicleLayoutsGallery(
         vehicles: ref.watch(availableVehiclesProvider),

@@ -12,6 +12,7 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/can_access_provider.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
@@ -351,6 +352,7 @@ void main() {
                       () => ref
                           .read(vehicleStateProvider.notifier)
                           .sendBasicCommand(const [1]),
+                      activityName: 'Lock doors',
                     ),
                     child: const Text('Lock'),
                   );
@@ -370,6 +372,8 @@ void main() {
           commandResponse: CommandResponse(
             messageId: transport.sent.single.messageId,
             success: false,
+            statusCode:
+                CommandStatusCode.COMMAND_STATUS_CODE_REJECTED_UNAVAILABLE,
             errorMessage:
                 'command rejected: the device is read-only: control is not '
                 'approved for this car',
@@ -386,6 +390,10 @@ void main() {
         findsOneWidget,
       );
       expect(find.widgetWithText(SnackBarAction, 'Review'), findsOneWidget);
+      final logged = ProviderScope.containerOf(
+        tester.element(find.text('Lock')),
+      ).read(connectionActivityProvider);
+      expect(logged.single.detail, 'Needs approval');
 
       // Dispose the providers, which cancels the state liveness timer.
       await tester.pumpWidget(const SizedBox());

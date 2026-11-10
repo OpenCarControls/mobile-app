@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:open_car_app/models/connection_activity.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/pending_command_controls_provider.dart';
 import 'package:open_car_app/screens/phone_validation_screen.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
@@ -37,6 +39,7 @@ class CommandControl extends ConsumerStatefulWidget {
     required this.id,
     required this.command,
     required this.send,
+    required this.activityName,
     required this.semanticLabel,
     required this.shape,
     required this.child,
@@ -52,6 +55,10 @@ class CommandControl extends ConsumerStatefulWidget {
   /// Sends the command. Completes when the vehicle answers and throws if it
   /// doesn't accept it.
   final Future<Object?> Function() send;
+
+  /// What a tap does, for the connection activity ("Unlock doors"). A tap the
+  /// app refuses is recorded too.
+  final String activityName;
 
   /// The label for screen readers, including the state ("Doors, locked").
   final String semanticLabel;
@@ -84,10 +91,18 @@ class _CommandControlState extends ConsumerState<CommandControl>
   Future<void> _onTap() async {
     if (ref.read(commandUiStateProvider(widget.command)) !=
         CommandUiState.enabled) {
+      final log = ref.read(connectionActivityLogsProvider.notifier);
       if (ref.read(commandNeedsValidationProvider)) {
+        log.recordCommand(widget.activityName, CommandOutcome.notValidated);
         await PhoneValidationScreen.open(context);
         return;
       }
+      log.recordCommand(
+        widget.activityName,
+        commandNeedsApproval(ref)
+            ? CommandOutcome.needsApproval
+            : CommandOutcome.vehicleUnavailable,
+      );
       showVehicleCommandMessage(
         context,
         ref,
@@ -100,7 +115,12 @@ class _CommandControlState extends ConsumerState<CommandControl>
     if (!pending.begin(id)) return;
     final bool sent;
     try {
-      sent = await sendVehicleCommand(context, ref, widget.send);
+      sent = await sendVehicleCommand(
+        context,
+        ref,
+        widget.send,
+        activityName: widget.activityName,
+      );
     } finally {
       pending.end(id);
     }

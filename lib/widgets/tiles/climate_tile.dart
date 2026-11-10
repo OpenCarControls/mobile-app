@@ -84,6 +84,7 @@ class ClimateTile extends ConsumerWidget {
                   icon: Symbols.power_settings_new,
                   label: '${tile.accessibleLabel}, ${on ? 'on' : 'off'}',
                   filled: on,
+                  activityName: '${tile.label} ${on ? 'off' : 'on'}',
                   send: () => sendMessage(climate.power(snapshot, !on)),
                 ),
               ],
@@ -171,6 +172,9 @@ class _TargetStepper extends StatelessWidget {
         icon: icon,
         label: label,
         flat: true,
+        activityName:
+            'Set temperature to '
+            '${climate.formatTarget(next, data.units.temperature)}',
         send: () => send(climate.setTarget(snapshot, next)),
       );
     }
@@ -224,6 +228,7 @@ class _ExtraButton extends StatelessWidget {
       int? level,
       String state,
       Future<Object?> Function() tap,
+      String activityName,
     ) = switch (extra) {
       ToggleClimateExtra(:final isOn, :final command) => () {
         final value = isOn(snapshot);
@@ -232,6 +237,7 @@ class _ExtraButton extends StatelessWidget {
           null,
           value == null ? 'unknown' : (value ? 'on' : 'off'),
           () => send(command(snapshot, !(value ?? false))),
+          '${extra.label} ${value ?? false ? 'off' : 'on'}',
         );
       }(),
       LeveledClimateExtra(
@@ -242,6 +248,7 @@ class _ExtraButton extends StatelessWidget {
       ) =>
         () {
           final value = level(snapshot);
+          final target = next(value);
           return (
             (value ?? 0) > 0,
             value,
@@ -250,7 +257,8 @@ class _ExtraButton extends StatelessWidget {
                 : value == 0
                 ? 'off'
                 : 'level $value of $levels',
-            () => send(command(snapshot, next(value))),
+            () => send(command(snapshot, target)),
+            '${extra.label} ${target == 0 ? 'off' : 'level $target'}',
           );
         }(),
     };
@@ -266,6 +274,7 @@ class _ExtraButton extends StatelessWidget {
       id: id,
       command: climate.command,
       send: tap,
+      activityName: activityName,
       semanticLabel: '${extra.label}, $state',
       shape: shape,
       child: Container(
@@ -328,6 +337,7 @@ class _RoundButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.send,
+    required this.activityName,
     this.filled = false,
     this.flat = false,
   });
@@ -337,6 +347,7 @@ class _RoundButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Future<Object?> Function() send;
+  final String activityName;
   final bool filled;
 
   /// No fill or border, inside the stepper.
@@ -350,6 +361,7 @@ class _RoundButton extends StatelessWidget {
       id: id,
       command: climate.command,
       send: send,
+      activityName: activityName,
       semanticLabel: label,
       shape: shape,
       child: Container(

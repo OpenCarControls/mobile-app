@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:open_car_app/providers/command_availability_provider.dart';
+import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/widgets/tiles/command_control.dart';
@@ -48,6 +49,9 @@ class TileGallerySection extends StatelessWidget {
       overrides: [
         commandUiStateProvider.overrideWith(
           (ref, key) => ref.watch(_fakeAvailabilityProvider),
+        ),
+        connectionActivityLogsProvider.overrideWith(
+          DiscardedConnectionActivity.new,
         ),
       ],
       child: const _Sandbox(),
@@ -319,6 +323,7 @@ class _FakeToggleTileState extends State<_FakeToggleTile> {
       id: widget.id,
       command: widget.command,
       send: _send,
+      activityName: widget.title,
       on: _on,
       semanticLabel: '${widget.title}, $state',
       child: widget.iconOnly
@@ -518,6 +523,7 @@ class _RoundButton extends StatelessWidget {
       // The extras are all part of one command.
       command: _climate,
       send: send,
+      activityName: label,
       semanticLabel: label,
       shape: shape,
       child: Container(

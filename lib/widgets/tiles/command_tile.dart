@@ -13,6 +13,7 @@ class CommandTile extends StatelessWidget {
     required this.id,
     required this.command,
     required this.send,
+    required this.activityName,
     required this.semanticLabel,
     required this.child,
     this.on = false,
@@ -22,6 +23,7 @@ class CommandTile extends StatelessWidget {
   final String id;
   final CommandKey command;
   final Future<Object?> Function() send;
+  final String activityName;
   final String semanticLabel;
   final Widget child;
   final bool on;
@@ -32,6 +34,7 @@ class CommandTile extends StatelessWidget {
       id: id,
       command: command,
       send: send,
+      activityName: activityName,
       semanticLabel: semanticLabel,
       shape: context.tokens.radiusMedium.shape(),
       child: TileSurface(on: on, child: child),

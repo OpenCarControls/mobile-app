@@ -2,7 +2,7 @@
 
 The screens around the [dashboard](ui.md): the setup wizard, phone validation, the connection activity popover, settings and the paired phones, and vehicle switching and management. They share the dashboard's components, tokens and [skin](ui-theming.md). The mockups are in [`ui/mockups`](ui/mockups/README.md).
 
-> **Status:** the setup wizard, phone validation and settings are built; the rest are designs, not the current behaviour. The wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval shown here.
+> **Status:** the setup wizard, phone validation, the connection activity and settings are built; the rest are designs, not the current behaviour. The wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval shown here.
 
 ## Setup wizard
 The wizard (`PairingWizardScreen`) pairs a vehicle and then sets it up (see [BLE & pairing](ble.md)). After pairing it waits for the device to report its CAN access, up to 20 s, and shows the approval only if this car needs it and this phone may give it. If the car isn't identified in that time, or the app is closed, the dashboard's banners offer the same steps.
@@ -53,7 +53,7 @@ The flow is a full-screen modal with a close button, the vehicle name and, while
 Tapping the connection pill on the dashboard opens a small popover anchored to it (the dashboard is dimmed behind). It answers "what is the app doing with my car?" in plain words.
 
 *   **Header:** the current state (for example "Connected over Bluetooth") and how long it has been connected and when the last update came, plus a close button.
-*   **Actions:** **Reconnect Bluetooth** (the same action as pull-to-refresh) and **Share log**.
+*   **Actions:** **Reconnect Bluetooth** (the same action as pull-to-refresh; off while Bluetooth is connected) and **Share log**.
 *   **The log:** newest first, grouped by day, each entry an icon, a short title, an optional detail line and the time.
 
 | Logged | Example |
@@ -66,10 +66,12 @@ Tapping the connection pill on the dashboard opens a small popover anchored to i
 *   It is not a technical log: no UUIDs, message ids or error codes in the list.
 *   A footer states what is and is not listed.
 
-Open decisions:
-*   **Share log:** what it contains. It should be plain text and exclude identifiers such as the device id, the broker address and credentials.
-*   **Retention:** how many entries or how long are kept, and whether they survive an app restart.
-*   It could also show commands whose result is unknown after a transport change, which overlaps with [Resend or report pending commands when the transport changes](https://github.com/OpenCarControls/mobile-app/issues/23).
+*   **Remote connected** means the vehicle answered over MQTT, the moment the pill changes to "Remote", not that the broker was reached. It is logged again when the vehicle comes back after going quiet.
+*   **Commands** are logged by what the tap asked for ("Unlock doors"), when the result is known. Tapping a greyed-out control is logged as refused, since nothing was sent.
+*   **Local to this phone:** the log records only what this phone saw and did. It is not synced with the vehicle or other phones, so a command from another phone or something done in the car doesn't appear.
+*   **Retention:** the last 200 entries per vehicle. They survive an app restart and are deleted when the vehicle is unpaired.
+*   **Share log:** plain text with the listed lines and their dates and times, the app version and the vehicle's platform name. It leaves out the custom vehicle name, device id, broker address, credentials and raw error text.
+*   Commands whose result is unknown after a transport change can be added as another result once [Resend or report pending commands when the transport changes](https://github.com/OpenCarControls/mobile-app/issues/23) is done.
 
 ![Connection activity](ui/images/connection-activity.png)
 

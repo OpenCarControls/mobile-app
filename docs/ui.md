@@ -2,7 +2,7 @@
 
 The target design for the dashboard: one shared look and structure for every vehicle platform, built from tiles, with a remote (basic) tier and a Bluetooth (basic + advanced) tier. Platforms choose the tiles, their default layout and a skin. They never provide their own screen.
 
-> **Status:** the shared dashboard is built (see [Architecture](architecture.md#dashboard-libscreensdashboard)) with each platform's default layouts. Not built yet: the connection activity popover ([#72](https://github.com/OpenCarControls/mobile-app/issues/72); the pill does nothing on tap), the vehicle switcher ([#74](https://github.com/OpenCarControls/mobile-app/issues/74); the chevron does nothing), and the 3D renderer ([#75](https://github.com/OpenCarControls/mobile-app/issues/75); E-GMP keeps its WebView viewer behind the hero interface, the virtual car uses the placeholder).
+> **Status:** the shared dashboard is built (see [Architecture](architecture.md#dashboard-libscreensdashboard)) with each platform's default layouts. Not built yet: the vehicle switcher ([#74](https://github.com/OpenCarControls/mobile-app/issues/74); the chevron does nothing), and the 3D renderer ([#75](https://github.com/OpenCarControls/mobile-app/issues/75); E-GMP keeps its WebView viewer behind the hero interface, the virtual car uses the placeholder).
 
 Related: [Other screens](ui-screens.md) (setup wizard, phone validation, connection activity, settings, vehicles) · [Theming & skins](ui-theming.md) · [3D hero](ui-hero.md) · [Mockups](ui/mockups/README.md) · [Architecture](architecture.md)
 

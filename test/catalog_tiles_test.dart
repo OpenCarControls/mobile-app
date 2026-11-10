@@ -15,6 +15,7 @@ import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/theme/app_theme.dart';
 import 'package:open_car_app/theme/vehicle_skin.dart';
 import 'package:open_car_app/widgets/tiles/catalog_tile.dart';
+import 'package:open_car_app/widgets/tiles/command_control.dart';
 import 'package:open_car_app/widgets/tiles/tile_context.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 import 'package:open_car_app/widgets/tiles/tile_icon.dart';
@@ -34,6 +35,7 @@ final _doors = CommandTileDefinition(
     build: (s) => BasicCommand(
       doorLockCommand: DoorLockCommand(lock: !_basic(s).areDoorsLocked),
     ),
+    activityName: (_) => 'Lock doors',
   ),
   state: (s) => _basic(s).areDoorsLocked
       ? const TileState(on: true, caption: 'Locked')
@@ -330,6 +332,29 @@ void main() {
       await tester.pumpAndSettle();
       final command = (sent.single.$2 as BasicCommand).climateControlCommand;
       expect(command.targetTemperature, 21.5);
+    });
+
+    testWidgets('names what each button does for the activity log', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        BasicState(isClimateOn: true, targetClimateTemperature: 21),
+        tileId: 'climate',
+        span: const TileSpan(4, 1),
+      );
+      String activity(String semanticLabel) => tester
+          .widgetList<CommandControl>(find.byType(CommandControl))
+          .firstWhere((control) => control.semanticLabel == semanticLabel)
+          .activityName;
+
+      expect(activity('Climate, on'), 'Climate off');
+      expect(activity('Warmer, target 21.0°'), 'Set temperature to 21.5°');
+      expect(activity('Colder, target 21.0°'), 'Set temperature to 20.5°');
+      expect(
+        activity('Driver seat heating, level 2 of 3'),
+        'Driver seat heating level 1',
+      );
     });
 
     testWidgets('can\'t step past the range', (tester) async {

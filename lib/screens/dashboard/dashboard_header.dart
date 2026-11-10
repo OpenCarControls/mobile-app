@@ -12,6 +12,7 @@ import 'package:open_car_app/models/vehicle_description.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/pending_command_controls_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/screens/dashboard/connection_activity_popover.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
     show dashboardTierFor;
 import 'package:open_car_app/theme/app_text_styles.dart';
@@ -485,8 +486,8 @@ class SettingsButton extends StatelessWidget {
 
 /// How the app reaches the vehicle: `Remote`, `Bluetooth`, or `Offline` with
 /// the time of the last update. The dot spins while a command is being sent.
-/// See "Connection pill" in `docs/ui.md`. Tapping it will open the connection
-/// activity (#72).
+/// See "Connection pill" in `docs/ui.md`. Tapping it opens the connection
+/// activity.
 class ConnectionPill extends ConsumerStatefulWidget {
   const ConnectionPill({super.key, required this.snapshot});
 
@@ -532,6 +533,10 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
 
   @override
   Widget build(BuildContext context) {
+    // The popover follows the pill when the dashboard changes layout.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) reportConnectionPillPosition(context, ref);
+    });
     final tokens = context.tokens;
     // The real link, whichever tier the dashboard shows.
     final link = dashboardTierFor(ref.watch(transportTypeProvider));
@@ -575,36 +580,42 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
 
     return Semantics(
       label: [label, if (pending) 'sending a command'].join(', '),
+      button: true,
+      onTap: () => showConnectionActivity(context, ref),
       excludeSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: kMinTouchTarget),
-        child: Center(
-          widthFactor: 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: ShapeDecoration(
-              color: tokens.surface,
-              shape: tokens.radiusPill.shape(
-                side: BorderSide(color: tokens.outline),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showConnectionActivity(context, ref),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: kMinTouchTarget),
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: ShapeDecoration(
+                color: tokens.surface,
+                shape: tokens.radiusPill.shape(
+                  side: BorderSide(color: tokens.outline),
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: [
-                dot,
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption.copyWith(
-                      color: tokens.text,
-                      fontWeight: FontWeight.w700,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  dot,
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        color: tokens.text,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
