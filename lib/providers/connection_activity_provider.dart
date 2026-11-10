@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:open_car_app/config/connection_activity_config.dart';
 import 'package:open_car_app/models/connection_activity.dart';
+import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/transport/car_transport.dart';
 
 /// Holds the logs loaded before [runApp]. Overridden in [ProviderScope] at app
 /// startup; never reads storage itself.
@@ -68,6 +72,32 @@ final connectionActivityLogsProvider =
     NotifierProvider<ConnectionActivityNotifier, ConnectionActivityLogs>(
       ConnectionActivityNotifier.new,
     );
+
+/// Records the current vehicle's connection changes. Listened to for as long
+/// as the app runs.
+///
+/// Remote counts as connected once the vehicle answers, not when the broker
+/// is reached, so the log agrees with the connection pill. Going live over
+/// MQTT always follows a transport change or a silence from the vehicle:
+/// [VehicleStateNotifier] resets the liveness on every transport change.
+final connectionActivityRecorderProvider = Provider<void>((ref) {
+  if (ref.watch(selectedVehicleProvider) == null) return;
+  final log = ref.read(connectionActivityLogsProvider.notifier);
+
+  ref.listen(transportTypeProvider, (previous, next) {
+    if (next == TransportType.ble) {
+      log.recordConnection(ConnectionChange.bluetoothConnected);
+    } else if (previous == TransportType.ble && next == TransportType.mqtt) {
+      log.recordConnection(ConnectionChange.bluetoothLost);
+    }
+  });
+
+  ref.listen(vehicleStateProvider.select((s) => s.isStateLive), (_, live) {
+    if (live && ref.read(transportTypeProvider) == TransportType.mqtt) {
+      log.recordConnection(ConnectionChange.remoteConnected);
+    }
+  });
+});
 
 /// The current vehicle's log, newest first.
 final connectionActivityProvider = Provider<List<ConnectionActivityEntry>>((

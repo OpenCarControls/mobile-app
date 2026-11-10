@@ -90,6 +90,7 @@ class AppEntryRouter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(connectionActivityRecorderProvider, (_, _) {});
     final vehicle = ref.watch(selectedVehicleProvider);
     final setupPending = ref.watch(wizardSetupPendingProvider);
     if (vehicle == null || setupPending) return const PairingWizardScreen();
