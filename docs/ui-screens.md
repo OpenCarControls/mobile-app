@@ -2,7 +2,7 @@
 
 The screens around the [dashboard](ui.md): the setup wizard, phone validation, the connection activity popover, settings and the paired phones, and vehicle switching and management. They share the dashboard's components, tokens and [skin](ui-theming.md). The mockups are in [`ui/mockups`](ui/mockups/README.md).
 
-> **Status:** the setup wizard, phone validation and settings are built; the rest are designs, not the current behaviour. The wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval shown here.
+> **Status:** the setup wizard, phone validation, the connection activity and settings are built; the rest are designs, not the current behaviour. The wizard's overhaul ([#27](https://github.com/OpenCarControls/mobile-app/issues/27)) will add more set-up steps than the approval shown here.
 
 ## Setup wizard
 The wizard (`PairingWizardScreen`) pairs a vehicle and then sets it up (see [BLE & pairing](ble.md)). After pairing it waits for the device to report its CAN access, up to 20 s, and shows the approval only if this car needs it and this phone may give it. If the car isn't identified in that time, or the app is closed, the dashboard's banners offer the same steps.

@@ -57,6 +57,37 @@ final class ConnectionChangeEntry extends ConnectionActivityEntry {
   bool get isFailure => false;
 }
 
+/// When the current connection started, from [entries] (newest first), or
+/// null after losing it. Only meaningful while the vehicle state is live.
+DateTime? connectedSince(List<ConnectionActivityEntry> entries) {
+  for (final entry in entries) {
+    if (entry is ConnectionChangeEntry) {
+      return entry.change == ConnectionChange.bluetoothLost ? null : entry.time;
+    }
+  }
+  return null;
+}
+
+/// The text of Share log: the listed lines with their dates and times, and
+/// nothing that identifies the device, the broker or the phone.
+String formatConnectionActivityForSharing(
+  List<ConnectionActivityEntry> entries, {
+  required String appVersion,
+  required String platformName,
+}) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  String stamp(DateTime t) =>
+      '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+  return [
+    'Open Car connection activity',
+    'App version: $appVersion',
+    'Vehicle platform: $platformName',
+    '',
+    for (final entry in entries)
+      '${stamp(entry.time)}  ${[entry.title, ?entry.detail].join(' · ')}',
+  ].join('\n');
+}
+
 final class CommandEntry extends ConnectionActivityEntry {
   const CommandEntry(
     super.time, {
