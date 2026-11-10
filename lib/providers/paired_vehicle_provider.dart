@@ -17,6 +17,16 @@ class PairedVehicleNotifier extends Notifier<PairedVehicleConfig?> {
     state = config;
   }
 
+  /// Remembers the MQTT client ID the device reported. The device repeats it,
+  /// so this does nothing unless it changed.
+  Future<void> setMqttClientId(String id) async {
+    final current = state;
+    if (current == null || current.mqttClientId == id) return;
+    final updated = current.withMqttClientId(id);
+    state = updated;
+    await updated.save();
+  }
+
   Future<void> unpair() async {
     final vehicleKey = state?.storageKey;
     await PairedVehicleConfig.clear();

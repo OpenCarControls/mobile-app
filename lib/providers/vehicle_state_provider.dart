@@ -12,6 +12,7 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
+import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/transport/car_transport.dart';
@@ -267,6 +268,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
         ..mergeFromMessage(current.system ?? SystemState())
         ..mergeFromMessage(update.systemState);
       current = current.copyWith(system: merged);
+      _rememberMqttClientId(update.systemState);
     }
 
     current = current.copyWith(lastUpdated: DateTime.now(), isStateLive: true);
@@ -282,6 +284,18 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     }
 
     _saveCachedState(current, vehicle);
+  }
+
+  /// Keeps the MQTT client ID for when the device is out of Bluetooth range.
+  /// Trusted only from the local link: it is what the phone will connect to.
+  void _rememberMqttClientId(SystemState system) {
+    if (!system.hasMqttClientId() || system.mqttClientId.isEmpty) return;
+    if (ref.read(transportTypeProvider) == TransportType.mqtt) return;
+    unawaited(
+      ref
+          .read(pairedVehicleProvider.notifier)
+          .setMqttClientId(system.mqttClientId),
+    );
   }
 
   Future<void> _loadCachedState(

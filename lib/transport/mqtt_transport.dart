@@ -13,6 +13,11 @@ import 'package:typed_data/typed_data.dart' as typed;
 
 import 'car_transport.dart';
 
+/// A topic of the device with [deviceClientId], from a contract template. The
+/// templates name the device, not the app that connects to it.
+String mqttDeviceTopic(String template, String deviceClientId) =>
+    template.replaceAll('{client_id}', deviceClientId);
+
 class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
   final _controller = StreamController<DeviceToApp>.broadcast();
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>?
@@ -39,14 +44,15 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
   MqttCarTransport({
     required String commandTopicTemplate,
     required String dataTopicTemplate,
+    required String deviceClientId,
     required String connectionClientId,
     required int platformId,
     required List<int> sourceDeviceId,
   }) {
     _platformId = platformId;
     _sourceDeviceId = sourceDeviceId;
-    _cmdTopic = commandTopicTemplate.replaceAll('{client_id}', kMqttClientId);
-    _dataTopic = dataTopicTemplate.replaceAll('{client_id}', kMqttClientId);
+    _cmdTopic = mqttDeviceTopic(commandTopicTemplate, deviceClientId);
+    _dataTopic = mqttDeviceTopic(dataTopicTemplate, deviceClientId);
 
     _client = MqttServerClient(kMqttBrokerHost, connectionClientId)
       ..port = kMqttBrokerPort

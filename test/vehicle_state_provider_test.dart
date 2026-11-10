@@ -8,21 +8,25 @@ import 'package:open_car_app/cars/virtual_car/constants.g.dart' as virtual_car;
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/generated/opencar/cars/virtual_car/v1/virtual_car.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
+import 'package:open_car_app/generated/opencar/core/v1/system.pb.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/transport/car_transport.dart';
+import 'package:open_car_app/transport/mqtt_transport.dart';
 
 class _FakeTransport implements CarTransport {
+  _FakeTransport([this.transportType = TransportType.stub]);
+
   final _controller = StreamController<DeviceToApp>.broadcast();
   final sent = <AppToDevice>[];
 
   void emit(DeviceToApp msg) => _controller.add(msg);
 
   @override
-  TransportType get transportType => TransportType.stub;
+  final TransportType transportType;
 
   @override
   Stream<DeviceToApp> get messages => _controller.stream;
@@ -49,6 +53,11 @@ DeviceToApp _stateUpdate({required int platformId, required int odometer}) =>
         ),
       ),
     );
+
+DeviceToApp _mqttClientIdUpdate({required int platformId}) => DeviceToApp(
+  platformId: platformId,
+  stateUpdate: StateUpdate(systemState: SystemState(mqttClientId: 'dev-car')),
+);
 
 void main() {
   late _FakeTransport transport;
@@ -135,6 +144,53 @@ void main() {
           'Door is open',
         ),
       ),
+    );
+  });
+
+  group('the device\'s MQTT client ID', () {
+    test('is remembered from the local link and stored', () async {
+      transport.emit(_mqttClientIdUpdate(platformId: virtual_car.kPlatformId));
+      await pumpEventQueue();
+
+      expect(container.read(pairedVehicleProvider)?.mqttClientId, 'dev-car');
+      expect((await PairedVehicleConfig.load())?.mqttClientId, 'dev-car');
+    });
+
+    test('is ignored from a device on another platform', () async {
+      transport.emit(
+        _mqttClientIdUpdate(platformId: virtual_car.kPlatformId + 1),
+      );
+      await pumpEventQueue();
+
+      expect(container.read(pairedVehicleProvider)?.mqttClientId, isNull);
+    });
+
+    test('is ignored over MQTT', () async {
+      final mqtt = _FakeTransport(TransportType.mqtt);
+      final c = ProviderContainer(
+        overrides: [
+          bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
+          initialPairedVehicleConfigProvider.overrideWithValue(
+            _config(virtual_car.kPlatformName),
+          ),
+          carTransportProvider.overrideWithValue(mqtt),
+        ],
+      );
+      addTearDown(c.dispose);
+      addTearDown(mqtt.dispose);
+      c.listen(vehicleStateProvider, (_, _) {});
+
+      mqtt.emit(_mqttClientIdUpdate(platformId: virtual_car.kPlatformId));
+      await pumpEventQueue();
+
+      expect(c.read(pairedVehicleProvider)?.mqttClientId, isNull);
+    });
+  });
+
+  test('MQTT topics name the device', () {
+    expect(
+      mqttDeviceTopic('opencar/{client_id}/cmd', 'dev-car'),
+      'opencar/dev-car/cmd',
     );
   });
 

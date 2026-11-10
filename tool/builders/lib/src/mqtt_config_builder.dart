@@ -25,14 +25,12 @@ class MqttConfigBuilder implements Builder {
     final config = doc.toMap();
 
     final broker = _map(config['broker'], 'broker');
-    final client = _map(config['client'], 'client');
     final debugServer = _map(config['debug_server'], 'debug_server');
 
     final host = _string(broker['host'], 'broker.host');
     final port = _int(broker['port'], 'broker.port');
     final username = _string(broker['username'], 'broker.username');
     final password = _string(broker['password'], 'broker.password');
-    final clientId = _string(client['client_id'], 'client.client_id');
     final debugHost = _string(debugServer['host'], 'debug_server.host');
     final debugPort = _int(debugServer['port'], 'debug_server.port');
     final debugPollingIntervalMs = _int(
@@ -53,7 +51,6 @@ class MqttConfigBuilder implements Builder {
       ..writeln('const int kMqttBrokerPort = $port;')
       ..writeln('const String kMqttUsername = ${jsonEncode(username)};')
       ..writeln('const String kMqttPassword = ${jsonEncode(password)};')
-      ..writeln('const String kMqttClientId = ${jsonEncode(clientId)};')
       ..writeln()
       ..writeln('// Debug HTTP server (used only in debug builds).')
       ..writeln('const String kDebugServerHost = ${jsonEncode(debugHost)};')
