@@ -46,10 +46,18 @@ enum TileKind {
 /// from the state when tapped (a lock tile locks when unlocked).
 @immutable
 class TileCommand {
-  const TileCommand({required this.key, required this.build});
+  const TileCommand({
+    required this.key,
+    required this.build,
+    required this.activityName,
+  });
 
   final CommandKey key;
   final GeneratedMessage Function(VehicleSnapshot snapshot) build;
+
+  /// What tapping does, for the connection activity, like "Unlock doors".
+  /// Follows the same state as [build].
+  final String Function(VehicleSnapshot snapshot) activityName;
 }
 
 /// The state a tile shows, from the vehicle state.

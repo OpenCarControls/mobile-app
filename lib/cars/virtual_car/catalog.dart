@@ -46,6 +46,8 @@ final virtualCarTiles = <TileDefinition>[
       build: (s) => BasicCommand(
         doorLock: DoorLockCommand(lock: !_basic(s).areDoorsLocked),
       ),
+      activityName: (s) =>
+          _basic(s).areDoorsLocked ? 'Unlock doors' : 'Lock doors',
     ),
     state: (s) => !_basic(s).hasAreDoorsLocked()
         ? kUnknownTileState
@@ -66,6 +68,7 @@ final virtualCarTiles = <TileDefinition>[
       key: kToggleCustomState1Command,
       build: (_) =>
           AdvancedCommand(toggleCustomState1: ToggleCustomState1Command()),
+      activityName: (_) => 'Toggle custom state 1',
     ),
     state: (s) => switch (_advanced(s)) {
       final a? when a.hasCustomState1() =>

@@ -41,6 +41,7 @@ class CatalogCommandTile extends ConsumerWidget {
         tile.command.key,
         tile.command.build(snapshot),
       ),
+      activityName: tile.command.activityName(snapshot),
       on: state.on,
       semanticLabel: '${tile.accessibleLabel}, ${state.caption.toLowerCase()}',
       child: data.iconOnly && !wide

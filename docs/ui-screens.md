@@ -67,6 +67,7 @@ Tapping the connection pill on the dashboard opens a small popover anchored to i
 *   A footer states what is and is not listed.
 
 *   **Remote connected** means the vehicle answered over MQTT, the moment the pill changes to "Remote", not that the broker was reached. It is logged again when the vehicle comes back after going quiet.
+*   **Commands** are logged by what the tap asked for ("Unlock doors"), when the result is known. Tapping a greyed-out control is logged as refused, since nothing was sent.
 *   **Local to this phone:** the log records only what this phone saw and did. It is not synced with the vehicle or other phones, so a command from another phone or something done in the car doesn't appear.
 *   **Retention:** the last 200 entries per vehicle. They survive an app restart and are deleted when the vehicle is unpaired.
 *   **Share log:** plain text with the listed lines and their dates and times, the app version and the vehicle's platform name. It leaves out the custom vehicle name, device id, broker address, credentials and raw error text.

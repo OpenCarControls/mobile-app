@@ -386,6 +386,8 @@ final egmpTiles = <TileDefinition>[
       build: (s) => BasicCommand(
         doorLockCommand: DoorLockCommand(lock: !_basic(s).areDoorsLocked),
       ),
+      activityName: (s) =>
+          _basic(s).areDoorsLocked ? 'Unlock doors' : 'Lock doors',
     ),
     state: (s) => switch (_flag(
       _basic(s).hasAreDoorsLocked(),
@@ -409,6 +411,10 @@ final egmpTiles = <TileDefinition>[
           open: _basic(s).chargePortState != _Port.CHARGE_PORT_STATE_OPEN,
         ),
       ),
+      activityName: (s) =>
+          _basic(s).chargePortState != _Port.CHARGE_PORT_STATE_OPEN
+          ? 'Open charge port'
+          : 'Close charge port',
     ),
     state: _chargePortState,
   ),
@@ -421,6 +427,7 @@ final egmpTiles = <TileDefinition>[
     command: TileCommand(
       key: kFlashLightsCommand,
       build: (_) => BasicCommand(flashLightsCommand: FlashLightsCommand()),
+      activityName: (_) => 'Flash lights',
     ),
     // Flashing is momentary: there is no on state to show.
     state: (_) => const TileState(on: false, caption: 'Flash'),
@@ -440,6 +447,8 @@ final egmpTiles = <TileDefinition>[
               : WindowCommand_WindowAction.WINDOW_ACTION_VENT,
         ),
       ),
+      activityName: (s) =>
+          _anyWindowOpen(_basic(s)) ?? false ? 'Close windows' : 'Vent windows',
     ),
     state: (s) => _openClosed(_anyWindowOpen(_basic(s))),
   ),

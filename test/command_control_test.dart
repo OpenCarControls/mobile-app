@@ -61,6 +61,7 @@ void main() {
                     id: 'tile',
                     command: _command,
                     send: harness.send,
+                    activityName: 'Lock doors',
                     semanticLabel: 'Doors, locked',
                     child: const Text('Doors'),
                   ),
@@ -254,6 +255,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     Widget control(String id) => CommandControl(
+      activityName: 'Test',
       id: id,
       command: _command,
       send: harness.send,

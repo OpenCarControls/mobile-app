@@ -68,6 +68,13 @@ class ConnectionActivityNotifier extends Notifier<ConnectionActivityLogs> {
   }
 }
 
+/// Keeps the galleries' fake commands out of the log, when overriding
+/// [connectionActivityLogsProvider] in their scope.
+class DiscardedConnectionActivity extends ConnectionActivityNotifier {
+  @override
+  void _add(ConnectionActivityEntry Function(DateTime time) entry) {}
+}
+
 final connectionActivityLogsProvider =
     NotifierProvider<ConnectionActivityNotifier, ConnectionActivityLogs>(
       ConnectionActivityNotifier.new,
