@@ -44,10 +44,13 @@ class _Transport implements CarTransport {
 }
 
 class _FakeBle extends BleConnectionNotifier {
+  _FakeBle({this.link = const BleDisconnected()});
+
+  final BleConnectionState link;
   int refreshes = 0;
 
   @override
-  BleConnectionState build() => const BleDisconnected();
+  BleConnectionState build() => link;
 
   @override
   Future<void> pullToRefresh() async => refreshes++;
@@ -219,6 +222,17 @@ void main() {
     await tester.pump();
 
     expect(ble.refreshes, 1);
+    await finish(tester);
+  });
+
+  testWidgets('Reconnect Bluetooth is off while connected', (tester) async {
+    ble = _FakeBle(link: const BleReady(_remoteId, attMtu: 247));
+    await open(tester, snapshot: _snapshot(live: true), entries: const []);
+
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Reconnect Bluetooth'),
+    );
+    expect(button.onPressed, isNull);
     await finish(tester);
   });
 

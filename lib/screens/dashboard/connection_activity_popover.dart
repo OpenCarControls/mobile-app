@@ -284,9 +284,14 @@ class _ContentState extends ConsumerState<_Content> {
             runSpacing: 8,
             children: [
               FilledButton(
-                onPressed: () => unawaited(
-                  ref.read(bleConnectionProvider.notifier).pullToRefresh(),
-                ),
+                // Nothing to reconnect while the link is up.
+                onPressed: ref.watch(bleConnectionProvider) is BleReady
+                    ? null
+                    : () => unawaited(
+                        ref
+                            .read(bleConnectionProvider.notifier)
+                            .pullToRefresh(),
+                      ),
                 child: const Text('Reconnect Bluetooth'),
               ),
               OutlinedButton(

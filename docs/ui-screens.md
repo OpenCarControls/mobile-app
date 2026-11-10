@@ -53,7 +53,7 @@ The flow is a full-screen modal with a close button, the vehicle name and, while
 Tapping the connection pill on the dashboard opens a small popover anchored to it (the dashboard is dimmed behind). It answers "what is the app doing with my car?" in plain words.
 
 *   **Header:** the current state (for example "Connected over Bluetooth") and how long it has been connected and when the last update came, plus a close button.
-*   **Actions:** **Reconnect Bluetooth** (the same action as pull-to-refresh) and **Share log**.
+*   **Actions:** **Reconnect Bluetooth** (the same action as pull-to-refresh; off while Bluetooth is connected) and **Share log**.
 *   **The log:** newest first, grouped by day, each entry an icon, a short title, an optional detail line and the time.
 
 | Logged | Example |
