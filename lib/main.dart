@@ -7,6 +7,7 @@ import 'package:open_car_app/config/button_style_config.dart';
 import 'package:open_car_app/config/connection_activity_config.dart';
 import 'package:open_car_app/config/device_identity.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
+import 'package:open_car_app/config/vehicle_state_cache_config.dart';
 import 'package:open_car_app/config/saved_layouts_config.dart';
 import 'package:open_car_app/config/theme_mode_config.dart';
 import 'package:open_car_app/config/unsupported_commands_config.dart';
@@ -15,6 +16,7 @@ import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/dashboard_layout_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
+import 'package:open_car_app/providers/vehicle_summary_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/theme_provider.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_screen.dart';
@@ -33,10 +35,10 @@ void main() async {
     name: 'AppBootstrap',
   );
 
-  final pairedConfig = await PairedVehicleConfig.load();
+  final pairedVehicles = await PairedVehicles.load();
   dev.log(
-    pairedConfig != null
-        ? 'Paired vehicle loaded: ${pairedConfig.vehicleId}'
+    pairedVehicles.vehicles.isNotEmpty
+        ? 'Paired vehicles loaded: ${pairedVehicles.vehicles.length}'
         : 'No paired vehicle — wizard will be shown',
     name: 'AppBootstrap',
   );
@@ -46,12 +48,14 @@ void main() async {
   final savedLayouts = await loadSavedLayouts();
   final unsupportedCommands = await loadUnsupportedCommands();
   final connectionActivity = await loadConnectionActivity();
+  final vehicleSummaries = await loadVehicleSummaries();
 
   runApp(
     ProviderScope(
       overrides: [
         bleSourceDeviceIdProvider.overrideWithValue(deviceId),
-        initialPairedVehicleConfigProvider.overrideWithValue(pairedConfig),
+        initialPairedVehiclesProvider.overrideWithValue(pairedVehicles),
+        initialVehicleSummariesProvider.overrideWithValue(vehicleSummaries),
         initialThemeModeProvider.overrideWithValue(themeMode),
         initialButtonStyleProvider.overrideWithValue(buttonStyle),
         initialSavedLayoutsProvider.overrideWithValue(savedLayouts),

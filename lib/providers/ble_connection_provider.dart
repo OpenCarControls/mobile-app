@@ -82,9 +82,9 @@ const _kEarlyDropWindow = Duration(seconds: 10);
 /// fails at the 30 s connection timeout.
 const _kRefusedConnectWindow = Duration(seconds: 5);
 
-/// The BLE device of the pairing, null when it isn't reached over BLE. All the
-/// link depends on: it must survive any other change to the pairing, like
-/// learning the MQTT client ID while connected.
+/// The current vehicle's BLE device, null when it isn't reached over BLE. All
+/// the link depends on: it must survive any other change to the pairing, like
+/// a rename or learning the MQTT client ID while connected.
 final _pairedBleDeviceProvider = Provider<String?>(
   (ref) => ref.watch(
     pairedVehicleProvider.select(
@@ -135,6 +135,11 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   // Running while a drop of the current attempt or link counts as early.
   Timer? _earlyDropTimer;
   int _earlyDrops = 0;
+  // The previous vehicle's link going down, for the next one to wait for.
+  Future<void>? _linkTeardown;
+  // Which build's connection is the latest, so one started before a vehicle
+  // change gives up.
+  int _initGeneration = 0;
 
   @override
   BleConnectionState build() {
@@ -150,9 +155,16 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
   }
 
   Future<void> _initConnection(String remoteId) async {
+    final generation = ++_initGeneration;
+    // End the previous vehicle's link before starting this one.
+    try {
+      await _linkTeardown;
+    } catch (e) {
+      dev.log('Ending the previous link failed: $e', name: 'BleConnection');
+    }
     final granted = await _requestPermissions();
     // Riverpod 3 throws when a disposed Ref is used after an await.
-    if (!ref.mounted) return;
+    if (!ref.mounted || generation != _initGeneration) return;
     if (!granted) {
       dev.log('Bluetooth permission denied', name: 'BleConnection');
       state = const BleDisconnected(
@@ -466,9 +478,12 @@ class BleConnectionNotifier extends Notifier<BleConnectionState> {
     _retryTimer = null;
     _statusSubscription?.cancel();
     _statusSubscription = null;
-    _connectionSubscription?.cancel();
+    final teardown = _connectionSubscription?.cancel();
+    if (teardown != null) _linkTeardown = teardown;
     _connectionSubscription = null;
     _connecting = false;
+    // Early drops say something about one device's bond.
+    _earlyDrops = 0;
   }
 }
 

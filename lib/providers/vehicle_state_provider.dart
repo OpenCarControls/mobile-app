@@ -14,7 +14,10 @@ import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
+import 'package:open_car_app/providers/vehicle_summary_provider.dart';
+import 'package:open_car_app/config/vehicle_state_cache_config.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
+import 'package:open_car_app/models/vehicle_summary.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 
 class VehicleSnapshot {
@@ -134,24 +137,30 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   // Cached across rebuilds so teardown races (vehicle → null before
   // this notifier is disposed) don't crash build().
   VehicleDefinition? _vehicle;
+  // Keys this vehicle's cached state; cached for the same reason.
+  String? _vehicleKey;
   // Preserved across transport switches so the UI doesn't flash blank
   // while waiting for the first state update on the new transport.
   VehicleSnapshot? _lastSnapshot;
   // Used to discard async cache loads that complete after a vehicle change.
   int _buildGeneration = 0;
 
-  static const _kStateCacheKeyPrefix = 'vehicle_state_';
-
   @override
   VehicleSnapshot build() {
     final latestVehicle = ref.read(selectedVehicleProvider);
-    // Discard stale cache when the paired vehicle changes.
+    final latestKey = ref.watch(
+      pairedVehicleProvider.select((c) => c?.storageKey),
+    );
+    // Discard stale cache when the current vehicle changes, even to another
+    // of the same platform.
     if (latestVehicle != null &&
-        latestVehicle.platformName != _vehicle?.platformName) {
+        (latestVehicle.platformName != _vehicle?.platformName ||
+            (latestKey != null && latestKey != _vehicleKey))) {
       _lastSnapshot = null;
     }
     if (latestVehicle != null) _vehicle = latestVehicle;
     final vehicle = _vehicle!;
+    final vehicleKey = _vehicleKey = latestKey ?? vehicle.platformName;
     final transport = ref.watch(carTransportProvider);
 
     _subscription = transport.messages.listen(_onMessage);
@@ -171,7 +180,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     // load from a previous vehicle doesn't overwrite a newer one.
     final generation = ++_buildGeneration;
     if (_lastSnapshot == null) {
-      _loadCachedState(vehicle, generation);
+      _loadCachedState(vehicle, vehicleKey, generation);
     }
 
     // Restore the last known state on transport switches so the UI doesn't
@@ -283,7 +292,11 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
       );
     }
 
-    _saveCachedState(current, vehicle);
+    final vehicleKey = _vehicleKey!;
+    ref
+        .read(vehicleSummariesProvider.notifier)
+        .update(vehicleKey, _summaryOf(vehicle, current));
+    _saveCachedState(current, vehicle, vehicleKey);
   }
 
   /// Keeps the MQTT client ID for when the device is out of Bluetooth range.
@@ -293,20 +306,19 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     if (ref.read(transportTypeProvider) == TransportType.mqtt) return;
     unawaited(
       ref
-          .read(pairedVehicleProvider.notifier)
+          .read(pairedVehiclesProvider.notifier)
           .setMqttClientId(system.mqttClientId),
     );
   }
 
   Future<void> _loadCachedState(
     VehicleDefinition vehicle,
+    String vehicleKey,
     int generation,
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(
-        '$_kStateCacheKeyPrefix${vehicle.platformName}',
-      );
+      final raw = prefs.getString('$kVehicleStateCachePrefix$vehicleKey');
       if (raw == null) return;
       final json = jsonDecode(raw) as Map<String, dynamic>;
       final basicState = vehicle.decodeBasicState(
@@ -344,9 +356,11 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   Future<void> _saveCachedState(
     VehicleSnapshot snapshot,
     VehicleDefinition vehicle,
+    String vehicleKey,
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final summary = _summaryOf(vehicle, snapshot);
       final json = <String, dynamic>{
         'basicStateBytes': base64Encode(snapshot.basicState.writeToBuffer()),
         'advancedStateBytes': base64Encode(
@@ -356,9 +370,10 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
           'systemStateBytes': base64Encode(snapshot.system!.writeToBuffer()),
         if (snapshot.lastUpdated != null)
           'lastUpdated': snapshot.lastUpdated!.toUtc().toIso8601String(),
+        ...summary.toCacheJson(),
       };
       await prefs.setString(
-        '$_kStateCacheKeyPrefix${vehicle.platformName}',
+        '$kVehicleStateCachePrefix$vehicleKey',
         jsonEncode(json),
       );
     } catch (e) {
@@ -496,7 +511,20 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
   void debugOverrideBasicState(GeneratedMessage basicState) {
     assert(kDebugMode, 'debugOverrideBasicState is debug-only');
     state = state.copyWith(basicState: basicState);
-    _saveCachedState(state, vehicle);
+    _saveCachedState(state, vehicle, _vehicleKey!);
+  }
+
+  /// What the vehicle lists show of [snapshot]: its first energy store.
+  VehicleSummary _summaryOf(
+    VehicleDefinition vehicle,
+    VehicleSnapshot snapshot,
+  ) {
+    final energy = vehicle.energy.firstOrNull;
+    return VehicleSummary(
+      levelPercent: energy?.levelPercent(snapshot),
+      rangeKm: energy?.rangeKm(snapshot),
+      lastUpdated: snapshot.lastUpdated,
+    );
   }
 }
 

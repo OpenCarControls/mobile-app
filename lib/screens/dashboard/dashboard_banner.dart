@@ -46,7 +46,7 @@ class DashboardBannerSlot extends ConsumerWidget {
         actions: [
           (
             label: 'Unpair',
-            onPressed: () => ref.read(pairedVehicleProvider.notifier).unpair(),
+            onPressed: () => ref.read(pairedVehiclesProvider.notifier).unpair(),
           ),
         ],
       );
@@ -62,7 +62,7 @@ class DashboardBannerSlot extends ConsumerWidget {
           (label: 'Help', onPressed: () => HelpScreen.open(context)),
           (
             label: 'Unpair and pair again',
-            onPressed: () => ref.read(pairedVehicleProvider.notifier).unpair(),
+            onPressed: () => ref.read(pairedVehiclesProvider.notifier).unpair(),
           ),
         ],
       );

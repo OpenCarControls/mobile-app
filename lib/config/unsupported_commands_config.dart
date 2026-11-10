@@ -16,6 +16,11 @@ Future<UnsupportedCommands> loadUnsupportedCommands() async {
   };
 }
 
+Future<void> clearUnsupportedCommands(String vehicleKey) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('$_kPrefsPrefix$vehicleKey');
+}
+
 Future<void> saveUnsupportedCommands(
   String vehicleKey,
   Set<String> commands,

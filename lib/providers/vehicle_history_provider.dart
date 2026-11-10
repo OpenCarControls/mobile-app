@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/models/vehicle_history.dart';
+import 'package:open_car_app/providers/paired_vehicle_provider.dart';
 import 'package:open_car_app/providers/selected_vehicle_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 
@@ -20,6 +21,8 @@ class VehicleHistoryNotifier
   @override
   Map<String, List<HistorySample>> build() {
     final vehicle = ref.watch(selectedVehicleProvider);
+    // Two vehicles can share a platform and so a definition.
+    ref.watch(pairedVehicleProvider.select((c) => c?.storageKey));
     _buffers.clear();
     if (vehicle == null) return const {};
     final series = vehicle.historySeries;

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -52,11 +55,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          initialPairedVehicleConfigProvider.overrideWithValue(
-            const PairedVehicleConfig(
-              vehicleId: virtual_car.kPlatformName,
-              bleRemoteId: '00:11:22:33:44:55',
-              transportPreference: TransportPreference.ble,
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles.of(
+              const PairedVehicleConfig(
+                vehicleId: virtual_car.kPlatformName,
+                bleRemoteId: '00:11:22:33:44:55',
+                transportPreference: TransportPreference.ble,
+              ),
             ),
           ),
           carTransportProvider.overrideWithValue(stubTransport),
@@ -73,5 +78,48 @@ void main() {
     expect(find.text('Odometer'), findsOneWidget);
     expect(find.text('Driving'), findsOneWidget);
     expect(find.byTooltip('Settings'), findsOneWidget);
+  });
+
+  testWidgets('the wizard appears only when no vehicle is left', (
+    tester,
+  ) async {
+    final stubTransport = StubCarTransport();
+    addTearDown(stubTransport.dispose);
+    PairedVehicleConfig vehicle(String id) => PairedVehicleConfig(
+      id: id,
+      vehicleId: virtual_car.kPlatformName,
+      bleRemoteId: id,
+      transportPreference: TransportPreference.ble,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles(
+              vehicles: [vehicle('a'), vehicle('b')],
+              currentId: 'a',
+            ),
+          ),
+          carTransportProvider.overrideWithValue(stubTransport),
+        ],
+        child: const OpenCarApp(),
+      ),
+    );
+    await tester.pump();
+    final paired = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    ).read(pairedVehiclesProvider.notifier);
+
+    unawaited(paired.unpair('a'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Pair your vehicle'), findsNothing);
+    expect(find.text('Virtual car'), findsOneWidget);
+
+    unawaited(paired.unpair('b'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Pair your vehicle'), findsOneWidget);
   });
 }

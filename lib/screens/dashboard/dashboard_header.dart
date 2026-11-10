@@ -37,11 +37,15 @@ class DashboardHeader extends StatelessWidget {
     required this.snapshot,
     required this.tier,
     required this.onSettings,
+    this.name,
     this.onNameLongPress,
     this.blur = true,
   });
 
   final VehicleDefinition vehicle;
+
+  /// The name to show; null shows the platform's.
+  final String? name;
   final VehicleSnapshot snapshot;
   final DashboardTier tier;
   final VoidCallback onSettings;
@@ -70,12 +74,14 @@ class DashboardHeader extends StatelessWidget {
           child: switch (tier) {
             DashboardTier.remote => _RemoteHeaderContent(
               vehicle: vehicle,
+              name: name ?? vehicle.displayName,
               snapshot: snapshot,
               onSettings: onSettings,
               onNameLongPress: onNameLongPress,
             ),
             DashboardTier.bluetooth => _BluetoothHeaderContent(
               vehicle: vehicle,
+              name: name ?? vehicle.displayName,
               snapshot: snapshot,
               onSettings: onSettings,
               onNameLongPress: onNameLongPress,
@@ -97,12 +103,14 @@ class DashboardHeader extends StatelessWidget {
 class _RemoteHeaderContent extends StatelessWidget {
   const _RemoteHeaderContent({
     required this.vehicle,
+    required this.name,
     required this.snapshot,
     required this.onSettings,
     this.onNameLongPress,
   });
 
   final VehicleDefinition vehicle;
+  final String name;
   final VehicleSnapshot snapshot;
   final VoidCallback onSettings;
   final VoidCallback? onNameLongPress;
@@ -122,7 +130,7 @@ class _RemoteHeaderContent extends StatelessWidget {
           children: [
             Expanded(
               child: VehicleNameButton(
-                name: vehicle.displayName,
+                name: name,
                 style: AppTextStyles.vehicleName.copyWith(color: tokens.text),
                 onLongPress: onNameLongPress,
               ),
@@ -170,12 +178,14 @@ class _RemoteHeaderContent extends StatelessWidget {
 class _BluetoothHeaderContent extends StatelessWidget {
   const _BluetoothHeaderContent({
     required this.vehicle,
+    required this.name,
     required this.snapshot,
     required this.onSettings,
     this.onNameLongPress,
   });
 
   final VehicleDefinition vehicle;
+  final String name;
   final VehicleSnapshot snapshot;
   final VoidCallback onSettings;
   final VoidCallback? onNameLongPress;
@@ -194,7 +204,7 @@ class _BluetoothHeaderContent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         VehicleNameButton(
-          name: vehicle.displayName,
+          name: name,
           style: AppTextStyles.caption.copyWith(
             color: tokens.textSecondary,
             fontWeight: FontWeight.w700,

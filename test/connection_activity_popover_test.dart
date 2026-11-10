@@ -101,7 +101,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          initialPairedVehicleConfigProvider.overrideWithValue(_config),
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles.of(_config),
+          ),
           initialConnectionActivityProvider.overrideWithValue({
             _config.storageKey: entries,
           }),
@@ -294,7 +296,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          initialPairedVehicleConfigProvider.overrideWithValue(_config),
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles.of(_config),
+          ),
           selectedVehicleProvider.overrideWithValue(
             const VirtualCarDefinition(),
           ),

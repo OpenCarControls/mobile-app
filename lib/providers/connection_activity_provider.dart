@@ -89,9 +89,17 @@ final connectionActivityLogsProvider =
 /// [VehicleStateNotifier] resets the liveness on every transport change.
 final connectionActivityRecorderProvider = Provider<void>((ref) {
   if (ref.watch(selectedVehicleProvider) == null) return;
+  final vehicleKey = ref.watch(
+    pairedVehicleProvider.select((c) => c?.storageKey),
+  );
   final log = ref.read(connectionActivityLogsProvider.notifier);
 
+  // A switch of vehicle changes the link too, which is no event of either
+  // vehicle's connection.
+  bool switched() => ref.read(pairedVehicleProvider)?.storageKey != vehicleKey;
+
   ref.listen(transportTypeProvider, (previous, next) {
+    if (switched()) return;
     if (next == TransportType.ble) {
       log.recordConnection(ConnectionChange.bluetoothConnected);
     } else if (previous == TransportType.ble && next == TransportType.mqtt) {
@@ -100,6 +108,7 @@ final connectionActivityRecorderProvider = Provider<void>((ref) {
   });
 
   ref.listen(vehicleStateProvider.select((s) => s.isStateLive), (_, live) {
+    if (switched()) return;
     if (live && ref.read(transportTypeProvider) == TransportType.mqtt) {
       log.recordConnection(ConnectionChange.remoteConnected);
     }

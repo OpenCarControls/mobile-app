@@ -351,6 +351,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
 
       await _savePairing(
         PairedVehicleConfig(
+          id: newPairedVehicleId(),
           vehicleId: actualVehicle.platformName,
           bleRemoteId: deviceId,
           transportPreference: TransportPreference.ble,
@@ -460,6 +461,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
 
       await _savePairing(
         PairedVehicleConfig(
+          id: newPairedVehicleId(),
           vehicleId: actualVehicle.platformName,
           bleRemoteId: '',
           transportPreference: TransportPreference.http,
@@ -511,7 +513,7 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
     if (!widget.addVehicle) {
       ref.read(wizardSetupPendingProvider.notifier).begin();
     }
-    await ref.read(pairedVehicleProvider.notifier).pair(config);
+    await ref.read(pairedVehiclesProvider.notifier).pair(config);
     if (!mounted) return;
 
     setState(() {

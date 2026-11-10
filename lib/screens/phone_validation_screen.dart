@@ -314,7 +314,7 @@ class _PhoneValidationScreenState extends ConsumerState<PhoneValidationScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(phoneAccessStateProvider, (_, next) => _onAccessChanged(next));
-    final name = ref.watch(selectedVehicleProvider)?.displayName ?? 'the car';
+    final name = ref.watch(currentVehicleNameProvider) ?? 'the car';
     final running = _stage == _Stage.session;
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {

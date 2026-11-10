@@ -35,11 +35,13 @@ class _NullCarTransport implements CarTransport {
 final carTransportProvider = Provider<CarTransport>((ref) {
   final vehicle = ref.watch(selectedVehicleProvider);
   if (vehicle == null) return const _NullCarTransport();
-  // Only what the link depends on: the links must survive any other change to
-  // the pairing, like learning the MQTT client ID while connected.
-  final (preference, httpHost, httpPort) = ref.watch(
+  // Only what the link depends on: a new link for each vehicle, but the links
+  // must survive any other change to the pairing, like a rename or learning
+  // the MQTT client ID while connected. Rebuilding disposes the previous
+  // vehicle's transport before this builds the next one.
+  final (_, preference, httpHost, httpPort) = ref.watch(
     pairedVehicleProvider.select(
-      (c) => (c?.transportPreference, c?.httpHost, c?.httpPort),
+      (c) => (c?.id, c?.transportPreference, c?.httpHost, c?.httpPort),
     ),
   );
 
