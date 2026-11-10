@@ -24,7 +24,9 @@ ProviderContainer _container({
 }) {
   final container = ProviderContainer(
     overrides: [
-      initialPairedVehicleConfigProvider.overrideWithValue(vehicle),
+      initialPairedVehiclesProvider.overrideWithValue(
+        PairedVehicles.of(vehicle),
+      ),
       initialConnectionActivityProvider.overrideWithValue(logs),
     ],
   );
@@ -211,7 +213,7 @@ void main() {
       _log(container).recordCommand('Lock doors', CommandOutcome.done);
       await pumpEventQueue();
 
-      await container.read(pairedVehicleProvider.notifier).unpair();
+      await container.read(pairedVehiclesProvider.notifier).unpair();
 
       expect(container.read(connectionActivityLogsProvider), isEmpty);
       expect(await loadConnectionActivity(), isEmpty);

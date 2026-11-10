@@ -98,7 +98,9 @@ ProviderContainer _container(_FakeTransport transport) {
   final container = ProviderContainer(
     overrides: [
       bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
-      initialPairedVehicleConfigProvider.overrideWithValue(_config),
+      initialPairedVehiclesProvider.overrideWithValue(
+        PairedVehicles.of(_config),
+      ),
       carTransportProvider.overrideWith((ref) => ref.watch(_transportProvider)),
     ],
   );

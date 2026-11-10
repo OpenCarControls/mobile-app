@@ -31,6 +31,7 @@ class _FakeBle implements FlutterReactiveBle {
     this.hasCarService = false,
     this.mtuGate,
     this.refuseAfter,
+    this.teardownGate,
   });
 
   final bool mtuFails;
@@ -38,6 +39,12 @@ class _FakeBle implements FlutterReactiveBle {
   final bool hasCarService;
   final Completer<void>? mtuGate;
   final Duration? refuseAfter;
+
+  /// Holds the end of a link until the test completes it.
+  final Completer<void>? teardownGate;
+
+  /// What happened to the links, in order.
+  final events = <String>[];
   int connectCalls = 0;
   int disconnects = 0;
   int discoverCalls = 0;
@@ -66,6 +73,7 @@ class _FakeBle implements FlutterReactiveBle {
     Duration? connectionTimeout,
   }) {
     connectCalls++;
+    events.add('connect $id');
     late final StreamController<ConnectionStateUpdate> controller;
     void emit(DeviceConnectionState connectionState) => controller.add(
       ConnectionStateUpdate(
@@ -91,6 +99,8 @@ class _FakeBle implements FlutterReactiveBle {
       onCancel: () {
         refusal?.cancel();
         disconnects++;
+        events.add('disconnect $id');
+        return teardownGate?.future;
       },
     );
     _link = controller;
@@ -157,16 +167,20 @@ class _FakeCharacteristic implements Characteristic {
 ProviderContainer _container(
   _FakeBle ble, {
   TransportPreference preference = TransportPreference.ble,
+  PairedVehicles? vehicles,
 }) {
   final container = ProviderContainer(
     overrides: [
       bleProvider.overrideWithValue(ble),
-      initialPairedVehicleConfigProvider.overrideWithValue(
-        PairedVehicleConfig(
-          vehicleId: egmp.kPlatformName,
-          bleRemoteId: _remoteId,
-          transportPreference: preference,
-        ),
+      initialPairedVehiclesProvider.overrideWithValue(
+        vehicles ??
+            PairedVehicles.of(
+              PairedVehicleConfig(
+                vehicleId: egmp.kPlatformName,
+                bleRemoteId: _remoteId,
+                transportPreference: preference,
+              ),
+            ),
       ),
     ],
   );
@@ -293,7 +307,7 @@ void main() {
     expect(container.read(bleBondLostProvider), isTrue);
 
     // Unpairing clears it.
-    await container.read(pairedVehicleProvider.notifier).unpair();
+    await container.read(pairedVehiclesProvider.notifier).unpair();
     expect(container.read(bleBondLostProvider), isFalse);
     container.dispose();
   });
@@ -396,6 +410,92 @@ void main() {
     container.dispose();
   });
 
+  group('with several vehicles', () {
+    PairedVehicleConfig vehicle(String id) => PairedVehicleConfig(
+      id: id,
+      vehicleId: egmp.kPlatformName,
+      bleRemoteId: id,
+      transportPreference: TransportPreference.ble,
+    );
+    final vehicles = PairedVehicles(
+      vehicles: [vehicle('A'), vehicle('B'), vehicle('C')],
+      currentId: 'A',
+    );
+
+    testWidgets('switching ends the link before starting the next one', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      final ble = _FakeBle(hasCarService: true, teardownGate: gate);
+      final container = _container(ble, vehicles: vehicles);
+      container.listen(bleConnectionProvider, (_, _) {});
+      await tester.pump(const Duration(seconds: 1));
+      expect(ble.events, ['connect A']);
+
+      unawaited(container.read(pairedVehiclesProvider.notifier).switchTo('B'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(ble.events, ['connect A', 'disconnect A']);
+
+      gate.complete();
+      await tester.pump(const Duration(seconds: 1));
+      expect(ble.events, ['connect A', 'disconnect A', 'connect B']);
+      container.dispose();
+    });
+
+    testWidgets('a quick second switch only connects the last vehicle', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      final ble = _FakeBle(hasCarService: true, teardownGate: gate);
+      final container = _container(ble, vehicles: vehicles);
+      container.listen(bleConnectionProvider, (_, _) {});
+      await tester.pump(const Duration(seconds: 1));
+
+      final paired = container.read(pairedVehiclesProvider.notifier);
+      unawaited(paired.switchTo('B'));
+      await tester.pump(const Duration(seconds: 1));
+      unawaited(paired.switchTo('C'));
+      await tester.pump(const Duration(seconds: 1));
+      gate.complete();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(ble.events, ['connect A', 'disconnect A', 'connect C']);
+      container.dispose();
+    });
+
+    testWidgets('renaming the current vehicle keeps the link', (tester) async {
+      final ble = _FakeBle(hasCarService: true);
+      final container = _container(ble, vehicles: vehicles);
+      container.listen(bleConnectionProvider, (_, _) {});
+      await tester.pump(const Duration(seconds: 1));
+
+      unawaited(
+        container.read(pairedVehiclesProvider.notifier).rename('A', 'Mine'),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(container.read(bleConnectionProvider), isA<BleReady>());
+      expect(ble.events, ['connect A']);
+      container.dispose();
+    });
+
+    testWidgets('early drops of one vehicle do not count for the next', (
+      tester,
+    ) async {
+      // Without the car's service, each link is dropped right after connecting.
+      final ble = _FakeBle();
+      final container = _container(ble, vehicles: vehicles);
+      container.listen(bleConnectionProvider, (_, _) {});
+      await tester.pump(const Duration(seconds: 1));
+
+      unawaited(container.read(pairedVehiclesProvider.notifier).switchTo('B'));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(container.read(bleBondLostProvider), isFalse);
+      container.dispose();
+    });
+  });
+
   testWidgets('learning the MQTT client ID keeps the link', (tester) async {
     final ble = _FakeBle(hasCarService: true);
     final container = _container(ble);
@@ -405,7 +505,7 @@ void main() {
 
     await tester.runAsync(
       () => container
-          .read(pairedVehicleProvider.notifier)
+          .read(pairedVehiclesProvider.notifier)
           .setMqttClientId('dev-car'),
     );
     await tester.pump(const Duration(seconds: 1));

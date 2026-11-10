@@ -257,7 +257,9 @@ void main() {
     ProviderContainer containerFor(PairedVehicleConfig? config) {
       final container = ProviderContainer(
         overrides: [
-          initialPairedVehicleConfigProvider.overrideWithValue(config),
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles.of(config),
+          ),
         ],
       );
       addTearDown(container.dispose);

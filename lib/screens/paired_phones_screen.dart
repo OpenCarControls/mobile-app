@@ -71,7 +71,7 @@ class _PairedPhonesScreenState extends ConsumerState<PairedPhonesScreen> {
     final phones = ref.watch(pairedPhonesProvider);
     final access = ref.watch(phoneAccessStateProvider);
     final outranked = access != null && isOutrankedByValidatedPhone(access);
-    final name = ref.watch(selectedVehicleProvider)?.displayName ?? 'the car';
+    final name = ref.watch(currentVehicleNameProvider) ?? 'the car';
     final note = Theme.of(
       context,
     ).textTheme.bodyMedium?.copyWith(color: tokens.textSecondary);

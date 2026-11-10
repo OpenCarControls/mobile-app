@@ -334,13 +334,16 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= kWideLayoutMinWidth;
-    Widget header({bool blur = true}) => DashboardHeader(
-      vehicle: data.vehicle,
-      snapshot: data.snapshot,
-      tier: tier,
-      onSettings: onSettings,
-      onNameLongPress: onNameLongPress,
-      blur: blur,
+    Widget header({bool blur = true}) => Consumer(
+      builder: (context, ref, _) => DashboardHeader(
+        vehicle: data.vehicle,
+        name: ref.watch(currentVehicleNameProvider),
+        snapshot: data.snapshot,
+        tier: tier,
+        onSettings: onSettings,
+        onNameLongPress: onNameLongPress,
+        blur: blur,
+      ),
     );
     Widget hero() => data.vehicle.buildHero(context, data.snapshot);
 

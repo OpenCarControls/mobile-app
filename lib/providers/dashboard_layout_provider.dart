@@ -36,6 +36,15 @@ class SavedLayoutsNotifier extends Notifier<SavedLayouts> {
   /// Puts every grid back to the platform's default on the current vehicle.
   void resetAll() => DashboardGrid.values.forEach(reset);
 
+  /// Deletes the layouts of an unpaired vehicle.
+  Future<void> forget(String vehicleKey) async {
+    final keys = [
+      for (final grid in DashboardGrid.values) savedLayoutKey(vehicleKey, grid),
+    ];
+    state = {...state}..removeWhere((key, _) => keys.contains(key));
+    await Future.wait(keys.map(clearLayout));
+  }
+
   String? _key(DashboardGrid grid) {
     final vehicleKey = ref.read(pairedVehicleProvider)?.storageKey;
     return vehicleKey == null ? null : savedLayoutKey(vehicleKey, grid);

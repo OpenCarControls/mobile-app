@@ -1,8 +1,15 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
-const _kPrefsKey = 'paired_vehicle_config';
+const _kPrefsKey = 'paired_vehicles';
+
+/// Where the single paired vehicle was stored before there could be several.
+const _kLegacyPrefsKey = 'paired_vehicle_config';
+
+/// A new id for a vehicle being paired.
+String newPairedVehicleId() => const Uuid().v4();
 
 /// How the app communicates with the paired device.
 enum TransportPreference {
@@ -13,11 +20,17 @@ enum TransportPreference {
   http,
 }
 
-/// Persisted pairing state for the one paired vehicle.
-///
-/// Saved to SharedPreferences as JSON on pairing completion and cleared on
-/// unpair. Loaded once at app startup before [runApp].
+/// One paired vehicle, stored as part of [PairedVehicles].
 class PairedVehicleConfig {
+  /// Identifies this vehicle in the app and keys what is stored for it. Unique
+  /// among the paired vehicles, even two of the same platform. A vehicle
+  /// migrated from the single-vehicle format has its platform name, so what
+  /// was already stored under that key stays its own.
+  final String id;
+
+  /// The name the user gave it; null shows the platform's.
+  final String? name;
+
   /// Matches [VehicleDefinition.platformName] — used to look up the vehicle.
   final String vehicleId;
 
@@ -46,6 +59,8 @@ class PairedVehicleConfig {
   final String? mqttClientId;
 
   const PairedVehicleConfig({
+    String? id,
+    this.name,
     required this.vehicleId,
     required this.bleRemoteId,
     required this.transportPreference,
@@ -56,9 +71,18 @@ class PairedVehicleConfig {
     this.mqttUsername,
     this.mqttPassword,
     this.mqttClientId,
-  });
+  }) : id = id ?? vehicleId;
 
-  PairedVehicleConfig withMqttClientId(String id) => PairedVehicleConfig(
+  /// A copy with the given fields replaced. [clearName] goes back to the
+  /// platform's name.
+  PairedVehicleConfig copyWith({
+    String? id,
+    String? name,
+    bool clearName = false,
+    String? mqttClientId,
+  }) => PairedVehicleConfig(
+    id: id ?? this.id,
+    name: clearName ? null : name ?? this.name,
     vehicleId: vehicleId,
     bleRemoteId: bleRemoteId,
     transportPreference: transportPreference,
@@ -68,43 +92,30 @@ class PairedVehicleConfig {
     mqttBrokerPort: mqttBrokerPort,
     mqttUsername: mqttUsername,
     mqttPassword: mqttPassword,
-    mqttClientId: id,
+    mqttClientId: mqttClientId ?? this.mqttClientId,
   );
 
-  /// Keys what is stored per vehicle (saved layouts, unsupported commands).
-  /// The platform name for now: with one paired vehicle it is enough.
-  String get storageKey => vehicleId;
+  /// Keys what is stored per vehicle (saved layouts, cached state, activity
+  /// log, unsupported commands).
+  String get storageKey => id;
+
+  /// Whether [other] is a pairing of the same device as this one.
+  bool isSameDevice(PairedVehicleConfig other) {
+    if (bleRemoteId.isNotEmpty) return bleRemoteId == other.bleRemoteId;
+    return other.bleRemoteId.isEmpty &&
+        vehicleId == other.vehicleId &&
+        httpHost == other.httpHost &&
+        httpPort == other.httpPort;
+  }
 
   /// Whether this vehicle is reached over BLE when in range: paired over BLE
   /// (not the HTTP debug path) with a bonded device to connect to.
   bool get usesBle =>
       transportPreference == TransportPreference.ble && bleRemoteId.isNotEmpty;
 
-  static Future<PairedVehicleConfig?> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_kPrefsKey);
-    if (raw == null) return null;
-    try {
-      return PairedVehicleConfig._fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
-    } catch (_) {
-      // Corrupt data — treat as unpaired.
-      return null;
-    }
-  }
-
-  Future<void> save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kPrefsKey, jsonEncode(_toJson()));
-  }
-
-  static Future<void> clear() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kPrefsKey);
-  }
-
   Map<String, dynamic> _toJson() => {
+    'id': id,
+    if (name != null) 'name': name,
     'vehicleId': vehicleId,
     'bleRemoteId': bleRemoteId,
     'transportPreference': transportPreference.name,
@@ -119,6 +130,8 @@ class PairedVehicleConfig {
 
   factory PairedVehicleConfig._fromJson(Map<String, dynamic> j) =>
       PairedVehicleConfig(
+        id: j['id'] as String?,
+        name: j['name'] as String?,
         vehicleId: j['vehicleId'] as String,
         bleRemoteId: j['bleRemoteId'] as String,
         transportPreference: TransportPreference.values.byName(
@@ -132,4 +145,75 @@ class PairedVehicleConfig {
         mqttPassword: j['mqttPassword'] as String?,
         mqttClientId: j['mqttClientId'] as String?,
       );
+}
+
+/// The paired vehicles and which one is current: the only one with live links.
+///
+/// Saved to SharedPreferences as JSON whenever it changes. Loaded once at app
+/// startup before [runApp].
+class PairedVehicles {
+  const PairedVehicles({this.vehicles = const [], this.currentId});
+
+  /// Just [vehicle], or nothing when it's null.
+  factory PairedVehicles.of(PairedVehicleConfig? vehicle) => vehicle == null
+      ? const PairedVehicles()
+      : PairedVehicles(vehicles: [vehicle], currentId: vehicle.id);
+
+  final List<PairedVehicleConfig> vehicles;
+  final String? currentId;
+
+  /// The current vehicle; null only when none is paired.
+  PairedVehicleConfig? get current {
+    for (final vehicle in vehicles) {
+      if (vehicle.id == currentId) return vehicle;
+    }
+    return vehicles.isEmpty ? null : vehicles.first;
+  }
+
+  /// Loads the stored vehicles, moving an install that still has the
+  /// single-vehicle format to this one. Corrupt data reads as nothing paired.
+  static Future<PairedVehicles> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kPrefsKey);
+    if (raw != null) {
+      try {
+        final json = jsonDecode(raw) as Map<String, dynamic>;
+        return PairedVehicles(
+          vehicles: [
+            for (final vehicle in json['vehicles'] as List)
+              PairedVehicleConfig._fromJson(vehicle as Map<String, dynamic>),
+          ],
+          currentId: json['currentId'] as String?,
+        );
+      } catch (_) {
+        return const PairedVehicles();
+      }
+    }
+
+    final legacy = prefs.getString(_kLegacyPrefsKey);
+    if (legacy == null) return const PairedVehicles();
+    try {
+      final migrated = PairedVehicles.of(
+        PairedVehicleConfig._fromJson(
+          jsonDecode(legacy) as Map<String, dynamic>,
+        ),
+      );
+      await migrated.save();
+      await prefs.remove(_kLegacyPrefsKey);
+      return migrated;
+    } catch (_) {
+      return const PairedVehicles();
+    }
+  }
+
+  Future<void> save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _kPrefsKey,
+      jsonEncode({
+        'vehicles': [for (final vehicle in vehicles) vehicle._toJson()],
+        if (currentId != null) 'currentId': currentId,
+      }),
+    );
+  }
 }

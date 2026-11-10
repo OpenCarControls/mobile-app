@@ -130,9 +130,9 @@ Unpair asks for confirmation in a dialog: "Unpair EV6?", that the vehicle is rem
 ![Unpair confirmation](ui/images/vehicles-unpair.png)
 
 ### What it means for the app
-This changes the app's model, which today holds one vehicle (see [Architecture](architecture.md)):
+The app's model behind this (see [Architecture](architecture.md)):
 
-*   Pairing state becomes a list of paired vehicles plus the id of the current one. `pairedVehicleProvider` and `selectedVehicleProvider` hold a single vehicle today, and the router shows the wizard only when the list is empty.
+*   Pairing state is a list of paired vehicles plus the id of the current one. `pairedVehicleProvider` and `selectedVehicleProvider` follow the current vehicle, and the router shows the wizard only when the list is empty.
 *   Only the current vehicle has a live transport and live state. The others show their last snapshot, kept per vehicle (for example in the paired-vehicle store); their level, range and update time feed the lists above. An MQTT subscription per vehicle would give fresher values but costs connections, so it is not assumed.
 *   The saved dashboard layouts (see [Tiles](ui.md#default-layouts-and-persistence)) are keyed by vehicle and tier.
 *   Each vehicle has a user-editable name and keeps its platform id; the existing platform-mismatch check applies per vehicle.

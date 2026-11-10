@@ -98,6 +98,12 @@ class UnsupportedCommandsNotifier extends Notifier<UnsupportedCommands> {
   @override
   UnsupportedCommands build() => ref.read(initialUnsupportedCommandsProvider);
 
+  /// Deletes what was remembered of an unpaired vehicle.
+  Future<void> forget(String vehicleKey) async {
+    state = {...state}..remove(vehicleKey);
+    await clearUnsupportedCommands(vehicleKey);
+  }
+
   /// Updates [vehicleKey]'s commands from a [report]. Only `AVAILABLE` takes a
   /// command back: the device also reports `UNAVAILABLE` for every command
   /// while the phone isn't validated, which says nothing about the car.

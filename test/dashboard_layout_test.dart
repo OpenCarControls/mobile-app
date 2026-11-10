@@ -41,7 +41,9 @@ TileDefinition _tileOf(TileTier tier, {bool resizable = false}) => _vehicle
 ProviderContainer _container(SavedLayouts saved) {
   final container = ProviderContainer(
     overrides: [
-      initialPairedVehicleConfigProvider.overrideWithValue(_config),
+      initialPairedVehiclesProvider.overrideWithValue(
+        PairedVehicles.of(_config),
+      ),
       initialSavedLayoutsProvider.overrideWithValue(saved),
     ],
   );

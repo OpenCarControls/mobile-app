@@ -128,7 +128,9 @@ Future<(_FakeTransport, ProviderContainer)> _pump(
     ProviderScope(
       overrides: [
         bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
-        initialPairedVehicleConfigProvider.overrideWithValue(_config),
+        initialPairedVehiclesProvider.overrideWithValue(
+          PairedVehicles.of(_config),
+        ),
         carTransportProvider.overrideWithValue(transport),
       ],
       child: MaterialApp(

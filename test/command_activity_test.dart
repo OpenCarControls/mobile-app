@@ -61,7 +61,9 @@ Future<ProviderContainer> _pump(
 }) async {
   final container = ProviderContainer(
     overrides: [
-      initialPairedVehicleConfigProvider.overrideWithValue(_config),
+      initialPairedVehiclesProvider.overrideWithValue(
+        PairedVehicles.of(_config),
+      ),
       carTransportProvider.overrideWithValue(_Transport(link)),
       commandUiStateProvider.overrideWith((ref, key) => availability),
       commandUnavailableReasonProvider.overrideWith((ref, key) => 'Reason'),

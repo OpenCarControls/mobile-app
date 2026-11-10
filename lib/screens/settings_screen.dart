@@ -280,7 +280,8 @@ class SettingsScreen extends ConsumerWidget {
   ) async {
     final confirmed = await confirmSettingsAction(
       context,
-      title: 'Unpair ${vehicle.displayName}?',
+      title:
+          'Unpair ${ref.read(currentVehicleNameProvider) ?? vehicle.displayName}?',
       message:
           'The vehicle is removed from this app. To use it again, put the '
           'device in pairing mode and pair again (see Help).',
@@ -289,7 +290,7 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     Navigator.of(context).pop(false);
-    await ref.read(pairedVehicleProvider.notifier).unpair();
+    await ref.read(pairedVehiclesProvider.notifier).unpair();
   }
 
   Future<void> _restart(BuildContext context, WidgetRef ref) async {
@@ -376,7 +377,11 @@ class _VehicleSummary extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 2,
                   children: [
-                    Text(vehicle.displayName, style: AppTextStyles.vehicleName),
+                    Text(
+                      ref.watch(currentVehicleNameProvider) ??
+                          vehicle.displayName,
+                      style: AppTextStyles.vehicleName,
+                    ),
                     Text(
                       vehicle.platformLabel,
                       style: AppTextStyles.caption.copyWith(

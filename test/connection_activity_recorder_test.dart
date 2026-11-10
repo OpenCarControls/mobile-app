@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,11 +43,11 @@ const _config = PairedVehicleConfig(
   transportPreference: TransportPreference.ble,
 );
 
-ProviderContainer _container({bool paired = true}) {
+ProviderContainer _container({bool paired = true, PairedVehicles? vehicles}) {
   final container = ProviderContainer(
     overrides: [
-      initialPairedVehicleConfigProvider.overrideWithValue(
-        paired ? _config : null,
+      initialPairedVehiclesProvider.overrideWithValue(
+        vehicles ?? PairedVehicles.of(paired ? _config : null),
       ),
       selectedVehicleProvider.overrideWithValue(
         paired ? const VirtualCarDefinition() : null,
@@ -147,5 +149,35 @@ void main() {
     container.link(TransportType.ble);
 
     expect(container.read(connectionActivityLogsProvider), isEmpty);
+  });
+
+  test('switching vehicle records no link change for either', () {
+    const a = PairedVehicleConfig(
+      id: 'a',
+      vehicleId: 'virtual',
+      bleRemoteId: 'A',
+      transportPreference: TransportPreference.ble,
+    );
+    const b = PairedVehicleConfig(
+      id: 'b',
+      vehicleId: 'virtual',
+      bleRemoteId: 'B',
+      transportPreference: TransportPreference.ble,
+    );
+    final container = _container(
+      vehicles: const PairedVehicles(vehicles: [a, b], currentId: 'a'),
+    );
+    container.link(TransportType.ble);
+    final before = container.lines;
+    expect(before, hasLength(1));
+
+    // The link changes with the vehicle, in the same update.
+    final paired = container.read(pairedVehiclesProvider.notifier);
+    unawaited(paired.switchTo('b'));
+    container.link(TransportType.mqtt);
+    expect(container.lines, isEmpty);
+
+    unawaited(paired.switchTo('a'));
+    expect(container.lines, before);
   });
 }

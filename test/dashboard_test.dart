@@ -134,7 +134,9 @@ class _Harness {
       ProviderScope(
         overrides: [
           bleSourceDeviceIdProvider.overrideWithValue(const [1, 2, 3]),
-          initialPairedVehicleConfigProvider.overrideWithValue(_config),
+          initialPairedVehiclesProvider.overrideWithValue(
+            PairedVehicles.of(_config),
+          ),
           carTransportProvider.overrideWith(
             (ref) => transports[ref.watch(typeProvider)]!,
           ),

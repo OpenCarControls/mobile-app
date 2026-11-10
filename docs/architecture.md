@@ -31,9 +31,11 @@ abstract class CarTransport {
 ## UI architecture
 Every vehicle shares one dashboard, built from its description; the design is in [UI design](ui.md). Support for several paired vehicles (which changes the single-vehicle pairing state described here) is specified in [Other screens](ui-screens.md#vehicles).
 
-Entry: `main.dart` loads `PairedVehicleConfig` and the device ID at startup, then `AppEntryRouter` routes to `PairingWizardScreen` (unpaired) or `DashboardScreen` (paired). It reacts to `pairedVehicleProvider`, so unpairing returns to the wizard automatically. The wizard connects using the shared BLE service UUIDs, then picks the vehicle whose `platformId` matches the device's first message that carries one, so the stored `vehicleId` is always a supported `platformName`. The first-run wizard stays up after pairing for its set-up steps (`wizardSetupPendingProvider`), and takes the vehicle's skin as soon as it is paired. If the stored `vehicleId` isn't supported by the build, `selectedVehicleProvider` is null and the wizard is shown.
+Entry: `main.dart` loads `PairedVehicles` and the device ID at startup, then `AppEntryRouter` routes to `PairingWizardScreen` (unpaired) or `DashboardScreen` (paired). It reacts to `pairedVehicleProvider`, so unpairing returns to the wizard automatically. The wizard connects using the shared BLE service UUIDs, then picks the vehicle whose `platformId` matches the device's first message that carries one, so the stored `vehicleId` is always a supported `platformName`. The first-run wizard stays up after pairing for its set-up steps (`wizardSetupPendingProvider`), and takes the vehicle's skin as soon as it is paired. If the stored `vehicleId` isn't supported by the build, `selectedVehicleProvider` is null and the wizard is shown.
 
 ### Platform mismatch
+**Several vehicles:** only the current vehicle has live links and live state. Switching rebuilds the providers that depend on its id, and each one ends the previous vehicle's link first: `bleConnectionProvider` waits for the old connection to be cancelled before connecting. Everything stored per vehicle is keyed by `storageKey`, which is the vehicle's id, so two vehicles of the same platform stay apart. An install from before several vehicles were supported migrates on first launch and keeps its platform name as its id, so what it had stored stays its own. Pairing a device that is already in the list replaces its entry, keeping its id and name. Unpairing deletes everything stored for that vehicle.
+
 If a paired device later reports a different non-zero `platform_id`, `vehicleStateProvider` ignores its messages and sets `VehicleSnapshot.mismatchedPlatformId`. The dashboard's banner slot then shows a banner that offers to unpair. The app never unpairs on its own.
 
 ### Key providers
@@ -42,8 +44,11 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 |---|---|
 | `availableVehiclesProvider` | All supported vehicles |
 | `selectedVehicleProvider` | Computed from `pairedVehicleProvider`; null when unpaired or the vehicle is unsupported |
-| `pairedVehicleProvider` | Source of truth for pairing state (`PairedVehicleConfig?`) |
-| `initialPairedVehicleConfigProvider` | Pre-loaded config override injected at startup |
+| `pairedVehiclesProvider` | Source of truth for pairing state (`PairedVehicles`: the list and the current vehicle's id); pairs, switches, renames and unpairs |
+| `pairedVehicleProvider` | The current vehicle's `PairedVehicleConfig?` |
+| `initialPairedVehiclesProvider` | Pre-loaded state injected at startup |
+| `currentVehicleNameProvider` | The user's name for the current vehicle, or its platform's |
+| `vehicleSummariesProvider` | Each vehicle's last known level, range and update, by `storageKey`, for the vehicle lists |
 | `bleConnectionProvider` | BLE connection lifecycle (`BleConnecting`/`BleReady`/`BleDisconnected`) |
 | `bleSourceDeviceIdProvider` | Stable per-device BLE ID (overridden at startup) |
 | `carTransportProvider` | Active transport instance |
@@ -103,7 +108,7 @@ The device decides which commands it accepts right now and reports it (firmware 
 `DashboardScreen` is the one screen for every vehicle. It reads the current vehicle's description and shows the layout from `dashboardLayoutProvider` (the user's, else `VehicleDefinition.defaultLayout`) for the tier from `dashboardTierProvider`: **remote** over MQTT and for a phone not reported as validated, **Bluetooth** for a validated phone over BLE or HTTP and for the stub. `dashboardTierFor` gives the link's own tier, which the connection pill and the settings sections follow. Gate on the transport type, never on the vehicle.
 
 *   **Tiles:** `catalogGridItems` turns the layout into `TileGrid` items. Over MQTT advanced tiles are left out; a tile whose command is `hidden` is left out on both tiers.
-*   **Saved layouts:** stored per vehicle and `DashboardGrid` under `PairedVehicleConfig.storageKey` (today the platform name, one vehicle at a time). They hold only tile ids and sizes; `sanitizeLayout` drops what the catalog no longer has when reading, and tiles a newer app adds are left to "Add a tile".
+*   **Saved layouts:** stored per vehicle and `DashboardGrid` under `PairedVehicleConfig.storageKey`, the vehicle's id. They hold only tile ids and sizes; `sanitizeLayout` drops what the catalog no longer has when reading, and tiles a newer app adds are left to "Add a tile".
 *   **Editing:** each `DashboardGrid` declares its `TileGridEditing`. `DashboardScreen` swaps in the edit controls (`tile_editing.dart`) and turns each edit into a saved layout. `TileGrid` handles the drag for items with `TileDragHandlers`, and items without them stay after those that have them.
 *   **Remote tier:** the hero (`VehicleDefinition.buildHero`) sits in a box between the header and the frosted tile layer. `MeasureSize` reports the header's and the layer's heights; the box takes what is left, down to `kHeroMinHeight`, after which the layer scrolls over the hero. It follows the layer's height frame by frame, so it moves with the grid's own resize animation. On wide screens (`kWideLayoutMinWidth`) the hero fills the left column and the tiles move to a side column.
 *   **Bluetooth tier:** a slim header over a full-screen grid, eight columns on wide screens.
