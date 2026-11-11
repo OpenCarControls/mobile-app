@@ -134,6 +134,14 @@ final _tiles = <TileDefinition>[
     describe: (data) => '7.2 kilowatts',
     builder: (context, data) => const Text('chart'),
   ),
+  CustomTileDefinition(
+    id: 'custom',
+    label: 'Custom',
+    tier: TileTier.basic,
+    sizes: const [TileSpan(2, 1)],
+    describe: (data) => 'odometer ${_basic(data.snapshot).odometer}',
+    builder: (context, data) => Text('Drawn ${data.span.columns} wide'),
+  ),
 ];
 
 class _TestCar extends EgmpDefinition {
@@ -229,6 +237,19 @@ void main() {
       expect(find.text('Doors'), findsNothing);
       expect(find.bySemanticsLabel('Doors, unlocked'), findsOneWidget);
     });
+  });
+
+  testWidgets('a custom tile draws itself and describes its values', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      BasicState(odometer: 12),
+      tileId: 'custom',
+      span: const TileSpan(2, 1),
+    );
+    expect(find.text('Drawn 2 wide'), findsOneWidget);
+    expect(find.bySemanticsLabel('Custom, odometer 12'), findsOneWidget);
   });
 
   group('state tile', () {

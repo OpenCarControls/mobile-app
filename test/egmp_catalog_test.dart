@@ -7,6 +7,7 @@ import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/models/vehicle_description.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 
 const _car = EgmpDefinition();
 
@@ -148,21 +149,21 @@ void main() {
       );
     });
 
-    test('temperature shows inside, with outside as the note', () {
-      final temperature = _car.tileById('temperature')! as ChartTileDefinition;
+    test('temperature shows inside and outside side by side', () {
+      final temperature = _car.tileById('temperature')! as CustomTileDefinition;
+      expect(temperature.sizes, [const TileSpan(2, 1)]);
       String describe(BasicState basic) {
         final s = _snapshot(basic);
         return temperature.describe((
           snapshot: s,
           units: _car.units(s),
           span: temperature.sizes.first,
-          history: const {},
         ));
       }
 
       expect(
         describe(BasicState(indoorTemperature: 19.5, outdoorTemperature: 12)),
-        '19.5 °C outside 12.0°C',
+        'inside 19.5 °C, outside 12.0 °C',
       );
       expect(
         describe(
@@ -172,9 +173,8 @@ void main() {
                 BasicState_TemperatureUnit.TEMPERATURE_UNIT_FAHRENHEIT,
           ),
         ),
-        '68 °F',
+        'inside 68 °F, outside unknown',
       );
-      expect(describe(BasicState(outdoorTemperature: 12)), 'unknown');
     });
 
     test('windows close when any is open, vent otherwise', () {

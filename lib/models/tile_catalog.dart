@@ -34,6 +34,7 @@ enum TileKind {
   // It grows to 4×3 while climate is on, by itself (see [spanFor]).
   climate([TileSpan(4, 1)]),
   chart([TileSpan(2, 1), TileSpan(2, 2), TileSpan(4, 1), TileSpan(4, 2)]),
+  custom([TileSpan(1, 1), TileSpan(2, 1), TileSpan(2, 2), TileSpan(4, 1)]),
   carView([TileSpan(2, 2), TileSpan(4, 2)]);
 
   const TileKind(this.sizes);
@@ -285,6 +286,37 @@ final class ChartTileDefinition extends TileDefinition {
 
   /// The chart's content, drawn inside the shared tile surface.
   final Widget Function(BuildContext context, ChartTileData data) builder;
+}
+
+/// What a custom tile's builder gets.
+typedef CustomTileData = ({
+  VehicleSnapshot snapshot,
+  VehicleUnits units,
+  TileSpan span,
+});
+
+/// A tile that draws itself, for a layout no shared tile has (two values side
+/// by side). Unlike a chart it records no history.
+final class CustomTileDefinition extends TileDefinition {
+  const CustomTileDefinition({
+    required super.id,
+    required super.label,
+    required super.tier,
+    super.icon,
+    super.accessibleLabel,
+    super.sizes,
+    required this.describe,
+    required this.builder,
+  });
+
+  @override
+  TileKind get kind => TileKind.custom;
+
+  /// The current values in words for screen readers ("inside 19.5 °C").
+  final String Function(CustomTileData data) describe;
+
+  /// The tile's content, drawn inside the shared tile surface.
+  final Widget Function(BuildContext context, CustomTileData data) builder;
 }
 
 /// The vehicle's hero as a tile. A placeholder until the hero is built.

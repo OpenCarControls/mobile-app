@@ -5,7 +5,7 @@ import 'package:open_car_app/cars/egmp/state_access.dart';
 import 'package:open_car_app/cars/egmp/tiles/battery.dart';
 import 'package:open_car_app/cars/egmp/tiles/pack_temperature_chart.dart';
 import 'package:open_car_app/cars/egmp/tiles/power_chart.dart';
-import 'package:open_car_app/cars/egmp/tiles/temperature_chart.dart';
+import 'package:open_car_app/cars/egmp/tiles/temperature.dart';
 import 'package:open_car_app/cars/egmp/units.dart';
 import 'package:open_car_app/formatting/units.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
@@ -247,7 +247,7 @@ final egmpCommandTiles = <CommandTileDefinition>[
 final egmpTiles = <TileDefinition>[
   // Energy and temperatures.
   egmpBatteryTile,
-  egmpTemperatureChartTile,
+  egmpTemperatureTile,
 
   // Body state.
   StateTileDefinition(
@@ -387,20 +387,21 @@ final egmpTiles = <TileDefinition>[
 ];
 
 const egmpRemoteLayout = <TileLayoutEntry>[
-  (tileId: 'temperature', span: TileSpan(2, 2)),
+  (tileId: 'temperature', span: TileSpan(2, 1)),
+  (tileId: 'odometer', span: TileSpan(2, 1)),
   (tileId: 'door_status', span: TileSpan(2, 1)),
   (tileId: 'window_status', span: TileSpan(2, 1)),
 ];
 
 const egmpBluetoothLayout = <TileLayoutEntry>[
   (tileId: 'battery', span: TileSpan(4, 1)),
-  (tileId: 'temperature', span: TileSpan(2, 2)),
-  (tileId: 'battery_power', span: TileSpan(2, 2)),
+  (tileId: 'temperature', span: TileSpan(2, 1)),
+  (tileId: 'pack_temperature', span: TileSpan(2, 1)),
+  (tileId: 'battery_power', span: TileSpan(4, 2)),
   (tileId: 'pack_voltage', span: TileSpan(1, 1)),
   (tileId: 'gear', span: TileSpan(1, 1)),
   (tileId: 'power_state', span: TileSpan(1, 1)),
   (tileId: 'preconditioning', span: TileSpan(1, 1)),
-  (tileId: 'pack_temperature', span: TileSpan(2, 1)),
   (tileId: 'speed', span: TileSpan(1, 1)),
   (tileId: 'odometer', span: TileSpan(1, 1)),
 ];
