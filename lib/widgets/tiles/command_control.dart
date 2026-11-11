@@ -43,6 +43,7 @@ class CommandControl extends ConsumerStatefulWidget {
     required this.semanticLabel,
     required this.shape,
     required this.child,
+    this.unavailableReason,
   });
 
   /// What pulses while pending. Controls can share a [command], as the climate
@@ -67,6 +68,11 @@ class CommandControl extends ConsumerStatefulWidget {
   final OutlinedBorder shape;
 
   final Widget child;
+
+  /// Why the command is greyed out, when the tile knows it from the state.
+  /// Said instead of the generic reason only, so a missing approval or
+  /// validation still comes first.
+  final String? unavailableReason;
 
   @override
   ConsumerState<CommandControl> createState() => _CommandControlState();
@@ -103,10 +109,13 @@ class _CommandControlState extends ConsumerState<CommandControl>
             ? CommandOutcome.needsApproval
             : CommandOutcome.vehicleUnavailable,
       );
+      final reason = ref.read(commandUnavailableReasonProvider(widget.command));
       showVehicleCommandMessage(
         context,
         ref,
-        ref.read(commandUnavailableReasonProvider(widget.command)),
+        reason == kCommandNotAvailableNow
+            ? widget.unavailableReason ?? reason
+            : reason,
       );
       return;
     }

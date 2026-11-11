@@ -34,9 +34,11 @@ class CatalogCommandTile extends ConsumerWidget {
       overflow: TextOverflow.ellipsis,
       style: AppTextStyles.buttonTitle,
     );
+    final content = tile.content;
     return CommandTile(
       id: tile.id,
       command: tile.command.key,
+      unavailableReason: tile.command.unavailableReason?.call(snapshot),
       send: () => ref.read(tileCommandSenderProvider)(
         tile.command.key,
         tile.command.build(snapshot),
@@ -44,7 +46,14 @@ class CatalogCommandTile extends ConsumerWidget {
       activityName: tile.command.activityName(snapshot),
       on: state.on,
       semanticLabel: '${tile.accessibleLabel}, ${state.caption.toLowerCase()}',
-      child: data.iconOnly && !wide
+      child: content != null
+          ? content(context, (
+              snapshot: snapshot,
+              units: data.units,
+              span: span,
+              state: state,
+            ))
+          : data.iconOnly && !wide
           ? Center(child: TileIconView(tile.icon, on: state.on))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,

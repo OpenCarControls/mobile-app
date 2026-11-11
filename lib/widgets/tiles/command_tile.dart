@@ -17,6 +17,7 @@ class CommandTile extends StatelessWidget {
     required this.semanticLabel,
     required this.child,
     this.on = false,
+    this.unavailableReason,
   });
 
   /// The tile's id. See [CommandControl.id].
@@ -28,6 +29,9 @@ class CommandTile extends StatelessWidget {
   final Widget child;
   final bool on;
 
+  /// See [CommandControl.unavailableReason].
+  final String? unavailableReason;
+
   @override
   Widget build(BuildContext context) {
     return CommandControl(
@@ -36,6 +40,7 @@ class CommandTile extends StatelessWidget {
       send: send,
       activityName: activityName,
       semanticLabel: semanticLabel,
+      unavailableReason: unavailableReason,
       shape: context.tokens.radiusMedium.shape(),
       child: TileSurface(on: on, child: child),
     );

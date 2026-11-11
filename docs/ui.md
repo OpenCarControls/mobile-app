@@ -231,15 +231,16 @@ Rules from the repo that still apply: merge incoming state with `mergeFromMessag
 The tiles themselves are designed one by one for each platform; the mockups only show the system they live in.
 
 ## Not yet placed
-The old per-vehicle screens showed things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, the preconditioning state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power and pack temperature charts). Gaps left by the move from the old per-vehicle screens, to look at later:
+The old per-vehicle screens showed things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power chart). Gaps left by the move from the old per-vehicle screens, to look at later:
 
+*   The E-GMP Battery tile (`battery_preconditioning`, 1×1, Bluetooth only) shows the pack temperature range large, with the preconditioning state under it (Disabled, Starting, Enabled), whether the car or the device started it. A tap starts or stops the device's manual preconditioning; while the car preconditions on its own the tile is greyed out and a tap says so. It replaces the pack temperature chart and the preconditioning state tile.
 *   The E-GMP command tiles (doors, charge port, lights, windows) and the climate tile are left out of the catalog until the firmware implements their commands; a Temperature tile shows the cabin and outside temperatures side by side meanwhile. The definitions are kept, ready to add back.
 *   The E-GMP Windows tile closes the windows when any is open and vents them otherwise, where the old dashboard asked with a vent-or-close sheet. The windows are to be reworked.
 *   V2L shows as "Exporting power" in the status line and the Battery tile, which is not mocked (the old screen said "V2L Active").
 *   The fuel glyph has no fill yet, since no platform has a tank.
 *   Stale tiles are dimmed but screen readers aren't told; the pill says the state is offline.
 
-Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)), tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)) and the preconditioning toggle ([#36](https://github.com/OpenCarControls/mobile-app/issues/36)).
+Still to come as catalog entries: the further E-GMP values ([#35](https://github.com/OpenCarControls/mobile-app/issues/35)) and tire pressures and the 12 V battery ([#34](https://github.com/OpenCarControls/mobile-app/issues/34)).
 
 ## Accessibility
 *   Touch targets are at least 44 dp. The vehicle name and the edit tile need padding to reach this; the mockups draw them small.
