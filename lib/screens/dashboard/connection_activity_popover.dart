@@ -21,6 +21,7 @@ import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
     show dashboardTierFor;
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
+import 'package:open_car_app/widgets/popover_arrow.dart';
 import 'package:open_car_app/widgets/tiles/command_control.dart'
     show kMinTouchTarget;
 
@@ -145,7 +146,7 @@ class _Popover extends ConsumerWidget {
           child: ExcludeSemantics(
             child: CustomPaint(
               size: const Size(_arrowWidth, _arrowHeight),
-              painter: _ArrowPainter(
+              painter: PopoverArrowPainter(
                 fill: tokens.surface,
                 border: tokens.outline,
               ),
@@ -155,32 +156,6 @@ class _Popover extends ConsumerWidget {
       ],
     );
   }
-}
-
-class _ArrowPainter extends CustomPainter {
-  const _ArrowPainter({required this.fill, required this.border});
-
-  final Color fill;
-  final Color border;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final edges = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(size.width / 2, 0)
-      ..lineTo(size.width, size.height);
-    canvas.drawPath(edges, Paint()..color = fill);
-    canvas.drawPath(
-      edges,
-      Paint()
-        ..color = border
-        ..style = PaintingStyle.stroke,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ArrowPainter oldDelegate) =>
-      fill != oldDelegate.fill || border != oldDelegate.border;
 }
 
 class _Content extends ConsumerStatefulWidget {

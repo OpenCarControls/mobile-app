@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
+import 'package:open_car_app/widgets/dashed_outline.dart';
 import 'package:open_car_app/widgets/tiles/command_control.dart';
 import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 import 'package:open_car_app/widgets/tiles/tile_icon.dart';
@@ -11,9 +12,6 @@ import 'package:open_car_app/widgets/tiles/tile_icon.dart';
 /// The span of [EditActionsTile]: wide enough for its three buttons, and one
 /// tile so that they always share a row.
 const kEditActionsSpan = TileSpan(2, 1);
-
-const _dashLength = 5.0;
-const _dashGap = 4.0;
 
 /// A tile in edit mode: dimmed under a dashed outline, with a remove button
 /// and, if it has several sizes, a size badge. The tile underneath can't be
@@ -65,7 +63,7 @@ class EditingTile extends StatelessWidget {
           ExcludeSemantics(child: IgnorePointer(child: child)),
           IgnorePointer(
             child: CustomPaint(
-              painter: _DashedOutlinePainter(
+              painter: DashedOutlinePainter(
                 shape: tokens.radiusMedium.shape(),
                 color: tokens.textSecondary,
                 fill: tokens.editScrim,
@@ -170,7 +168,7 @@ class EditLayoutTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return CustomPaint(
-      painter: _DashedOutlinePainter(
+      painter: DashedOutlinePainter(
         shape: tokens.radiusMedium.shape(),
         color: tokens.textSecondary,
       ),
@@ -214,7 +212,7 @@ class EditActionsTile extends StatelessWidget {
           ),
         );
     return CustomPaint(
-      painter: _DashedOutlinePainter(
+      painter: DashedOutlinePainter(
         shape: tokens.radiusMedium.shape(),
         color: tokens.textSecondary,
       ),
@@ -257,35 +255,3 @@ Future<TileDefinition?> showAddTileSheet(
     ),
   ),
 );
-
-class _DashedOutlinePainter extends CustomPainter {
-  const _DashedOutlinePainter({
-    required this.shape,
-    required this.color,
-    this.fill,
-  });
-
-  final ShapeBorder shape;
-  final Color color;
-  final Color? fill;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = shape.getOuterPath(Offset.zero & size);
-    if (fill case final fill?) {
-      canvas.drawPath(path, Paint()..color = fill);
-    }
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke;
-    for (final metric in path.computeMetrics()) {
-      for (var at = 0.0; at < metric.length; at += _dashLength + _dashGap) {
-        canvas.drawPath(metric.extractPath(at, at + _dashLength), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedOutlinePainter old) =>
-      old.shape != shape || old.color != color || old.fill != fill;
-}

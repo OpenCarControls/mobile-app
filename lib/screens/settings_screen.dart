@@ -24,6 +24,7 @@ import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
 import 'package:open_car_app/screens/help_screen.dart';
 import 'package:open_car_app/screens/paired_phones_screen.dart';
 import 'package:open_car_app/screens/theme_gallery_screen.dart';
+import 'package:open_car_app/screens/vehicles_screen.dart';
 import 'package:open_car_app/theme/app_text_styles.dart';
 import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/transport/car_transport.dart';
@@ -177,6 +178,12 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => PairedPhonesScreen.open(context),
           ),
         SettingsRow(
+          title: 'Vehicles',
+          value: '${ref.watch(pairedVehiclesProvider).vehicles.length}',
+          opensScreen: true,
+          onTap: () => VehiclesScreen.open(context),
+        ),
+        SettingsRow(
           title: 'Unpair vehicle',
           subtitle: 'Forgets it in this app',
           danger: true,
@@ -278,15 +285,10 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     VehicleDefinition vehicle,
   ) async {
-    final confirmed = await confirmSettingsAction(
+    final confirmed = await confirmUnpair(
       context,
-      title:
-          'Unpair ${ref.read(currentVehicleNameProvider) ?? vehicle.displayName}?',
-      message:
-          'The vehicle is removed from this app. To use it again, put the '
-          'device in pairing mode and pair again (see Help).',
-      action: 'Unpair',
-      danger: true,
+      name: ref.read(currentVehicleNameProvider) ?? vehicle.displayName,
+      othersRemain: ref.read(pairedVehiclesProvider).vehicles.length > 1,
     );
     if (!confirmed || !context.mounted) return;
     Navigator.of(context).pop(false);

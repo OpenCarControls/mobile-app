@@ -81,7 +81,7 @@ Opened from the settings button in the dashboard header. A back button and the t
 | Section | Rows | Tier |
 |---|---|---|
 | Dashboard | Theme (System / Light / Dark); button style (icon and title, or icon only); Edit dashboard (closes settings and starts the [editor](ui.md#editing); off with the reason while the remote grid is locked); Reset dashboard layout (every grid of this vehicle back to its default, unlike the editor's Reset, which is for the grid being edited); Units ("Follow the car", read-only) | Both |
-| Vehicle | Paired phones (the count and how many are validated; opens [Paired phones](#paired-phones)); Unpair vehicle (danger colour; forgets the vehicle in this app) | Paired phones: Bluetooth only. Unpair: both |
+| Vehicle | Paired phones (the count and how many are validated; opens [Paired phones](#paired-phones)); Vehicles (the count; opens [Vehicles](#managing)); Unpair vehicle (danger colour; forgets the vehicle in this app, with the [unpair confirmation](#unpairing)) | Paired phones: Bluetooth only. Vehicles and Unpair: both |
 | Car access | Vehicle control: the CAN read-write approval and its state, opening the approval or the withdraw confirmation (today's `CanAccessSection`); This phone: validated or not, with **Validate this phone** when it isn't; the developer write lock switch, in development firmware only | Bluetooth only |
 | Device | Firmware version; hardware; running time; mobile signal; Update firmware ([#28](https://github.com/OpenCarControls/mobile-app/issues/28)); Restart device | Bluetooth only |
 | Advanced | CAN logger switch, with what it does and, when on, the address to enter in SavvyCAN ([#40](https://github.com/OpenCarControls/mobile-app/issues/40)) | Bluetooth only |
@@ -120,7 +120,7 @@ The app can be paired to several vehicles. One is *current*: it owns the dashboa
 ![Vehicle switcher](ui/images/vehicle-switcher.png)
 
 ### Managing
-A **Vehicles** screen, reached from "Manage vehicles" in the switcher (a Vehicles row in settings is a natural second entry, not mocked): one card per vehicle with its name, platform, last known state and a **Current** badge on the current one, and **Rename** and **Unpair** under each. A dashed **Add a vehicle** tile ends the list. A note explains that only the current vehicle connects over Bluetooth and the others show their last known state.
+A **Vehicles** screen, reached from "Manage vehicles" in the switcher and from the Vehicles row in settings: one card per vehicle with its name, platform, last known state and a **Current** badge on the current one, and **Rename** and **Unpair** under each. Tapping another vehicle's card makes it current. Rename asks for a name; leaving it empty goes back to the platform's name. A dashed **Add a vehicle** tile ends the list. A note explains that only the current vehicle connects over Bluetooth and the others show their last known state.
 
 ![Vehicles](ui/images/vehicles-list.png)
 
