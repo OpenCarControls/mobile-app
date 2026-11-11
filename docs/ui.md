@@ -233,8 +233,8 @@ The tiles themselves are designed one by one for each platform; the mockups only
 ## Not yet placed
 The old per-vehicle screens showed things the mockups do not place. The platform catalogs now offer them all as tiles, though not every one is in a default layout: odometer, per-door and per-window state, frunk and trunk state, the preconditioning state, and the advanced E-GMP values (gear, power state, pack voltage, the battery power and pack temperature charts). Gaps left by the move from the old per-vehicle screens, to look at later:
 
+*   The E-GMP command tiles (doors, charge port, lights, windows) and the climate tile are left out of the catalog until the firmware implements their commands; a Temperature tile shows the cabin and outside temperatures side by side meanwhile. The definitions are kept, ready to add back.
 *   The E-GMP Windows tile closes the windows when any is open and vents them otherwise, where the old dashboard asked with a vent-or-close sheet. The windows are to be reworked.
-*   The odometer was in the old E-GMP "About & Settings" page, reachable over MQTT; it is in the Bluetooth layout only.
 *   V2L shows as "Exporting power" in the status line and the Battery tile, which is not mocked (the old screen said "V2L Active").
 *   The fuel glyph has no fill yet, since no platform has a tank.
 *   Stale tiles are dimmed but screen readers aren't told; the pill says the state is offline.

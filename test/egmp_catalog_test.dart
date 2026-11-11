@@ -1,11 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/cars/egmp/egmp_definition.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/models/vehicle_description.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
+import 'package:open_car_app/widgets/tiles/tile_grid.dart';
 
 const _car = EgmpDefinition();
 
@@ -24,7 +26,7 @@ TileValue? _value(String id, VehicleSnapshot s) =>
     (_car.tileById(id)! as StateTileDefinition).value(s, _car.units(s));
 
 CommandTileDefinition _command(String id) =>
-    _car.tileById(id)! as CommandTileDefinition;
+    egmpCommandTiles.singleWhere((tile) => tile.id == id);
 
 void main() {
   group('status line', () {
@@ -138,6 +140,43 @@ void main() {
   });
 
   group('tiles', () {
+    test('no command is offered until the firmware implements it', () {
+      expect(
+        _car.tiles.where(
+          (tile) => tile.command != null || tile is ClimateTileDefinition,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('temperature shows inside and outside side by side', () {
+      final temperature = _car.tileById('temperature')! as CustomTileDefinition;
+      expect(temperature.sizes, [const TileSpan(2, 1)]);
+      String describe(BasicState basic) {
+        final s = _snapshot(basic);
+        return temperature.describe((
+          snapshot: s,
+          units: _car.units(s),
+          span: temperature.sizes.first,
+        ));
+      }
+
+      expect(
+        describe(BasicState(indoorTemperature: 19.5, outdoorTemperature: 12)),
+        'inside 19.5 °C, outside 12.0 °C',
+      );
+      expect(
+        describe(
+          BasicState(
+            indoorTemperature: 20,
+            temperatureUnit:
+                BasicState_TemperatureUnit.TEMPERATURE_UNIT_FAHRENHEIT,
+          ),
+        ),
+        'inside 68 °F, outside unknown',
+      );
+    });
+
     test('windows close when any is open, vent otherwise', () {
       final windows = _command('windows');
       final closed = _snapshot(

@@ -6,13 +6,11 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:open_car_app/cars/egmp/egmp_definition.dart';
+import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/config/paired_vehicle_config.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:open_car_app/models/connection_activity.dart';
-import 'package:open_car_app/models/tile_catalog.dart';
-import 'package:open_car_app/models/vehicle_definition.dart';
 import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/connection_activity_provider.dart';
@@ -267,10 +265,8 @@ void main() {
   });
 
   group('activity names follow what the tap does', () {
-    const car = EgmpDefinition();
-
     String name(String tile, BasicState basic) {
-      final definition = car.tileById(tile)! as CommandTileDefinition;
+      final definition = egmpCommandTiles.singleWhere((t) => t.id == tile);
       return definition.command.activityName(
         VehicleSnapshot(basicState: basic, advancedState: AdvancedState()),
       );

@@ -55,6 +55,11 @@ class CatalogTile extends StatelessWidget {
         span: span,
         data: data,
       ),
+      final CustomTileDefinition tile => _CustomTile(
+        tile: tile,
+        span: span,
+        data: data,
+      ),
       final CarViewTileDefinition tile => _CarViewTile(tile: tile, data: data),
     };
   }
@@ -108,6 +113,29 @@ class _ChartTile extends StatelessWidget {
       label: '${tile.accessibleLabel}, ${tile.describe(chart)}',
       excludeSemantics: true,
       child: TileSurface(child: tile.builder(context, chart)),
+    );
+  }
+}
+
+class _CustomTile extends StatelessWidget {
+  const _CustomTile({
+    required this.tile,
+    required this.span,
+    required this.data,
+  });
+
+  final CustomTileDefinition tile;
+  final TileSpan span;
+  final TileContext data;
+
+  @override
+  Widget build(BuildContext context) {
+    final custom = (snapshot: data.snapshot, units: data.units, span: span);
+    return Semantics(
+      container: true,
+      label: '${tile.accessibleLabel}, ${tile.describe(custom)}',
+      excludeSemantics: true,
+      child: TileSurface(child: tile.builder(context, custom)),
     );
   }
 }
