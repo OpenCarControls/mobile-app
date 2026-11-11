@@ -15,9 +15,14 @@ jobs:
         with:
           submodules: true
 
+      # The action reads flutter-version-file as a pubspec, so a plain version
+      # file gave no version and CI took the latest stable.
+      - name: Read the pinned Flutter version
+        run: echo "FLUTTER_VERSION=$(cat .flutter-version)" >> "$GITHUB_ENV"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: .flutter-version
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -69,9 +74,14 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # The action reads flutter-version-file as a pubspec, so a plain version
+      # file gave no version and CI took the latest stable.
+      - name: Read the pinned Flutter version
+        run: echo "FLUTTER_VERSION=$(cat .flutter-version)" >> "$GITHUB_ENV"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: .flutter-version
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
