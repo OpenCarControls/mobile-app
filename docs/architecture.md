@@ -48,6 +48,7 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `pairedVehicleProvider` | The current vehicle's `PairedVehicleConfig?` |
 | `initialPairedVehiclesProvider` | Pre-loaded state injected at startup |
 | `currentVehicleNameProvider` | The user's name for the current vehicle, or its platform's |
+| `vehicleListProvider` | Every paired vehicle with its name, platform, last known `VehicleSummary` and whether it is current, for the switcher and the Vehicles screen |
 | `vehicleSummariesProvider` | Each vehicle's last known level, range and update, by `storageKey`, for the vehicle lists |
 | `bleConnectionProvider` | BLE connection lifecycle (`BleConnecting`/`BleReady`/`BleDisconnected`) |
 | `bleSourceDeviceIdProvider` | Stable per-device BLE ID (overridden at startup) |
@@ -113,7 +114,8 @@ The device decides which commands it accepts right now and reports it (firmware 
 *   **Remote tier:** the hero (`VehicleDefinition.buildHero`) sits in a box between the header and the frosted tile layer. `MeasureSize` reports the header's and the layer's heights; the box takes what is left, down to `kHeroMinHeight`, after which the layer scrolls over the hero. It follows the layer's height frame by frame, so it moves with the grid's own resize animation. On wide screens (`kWideLayoutMinWidth`) the hero fills the left column and the tiles move to a side column.
 *   **Bluetooth tier:** a slim header over a full-screen grid, eight columns on wide screens.
 *   **Switching tier:** when the link or the phone's trust changes, the screen cross-fades straight to the other tier (instantly with reduced motion).
-*   **Header** (`DashboardHeader`): the vehicle name, the level rows (`VehicleDefinition.energy`), the connection pill and the settings button; on the remote tier also the speed while driving and the status line. The pill says Remote or Bluetooth while the state is live, otherwise "Offline · Updated …", and its dot spins while `pendingCommandControlsProvider` has a command in flight.
+*   **Header** (`DashboardHeader`): the vehicle name (`VehicleNameButton`, which opens the vehicle switcher), the level rows (`VehicleDefinition.energy`), the connection pill and the settings button; on the remote tier also the speed while driving and the status line. The pill says Remote or Bluetooth while the state is live, otherwise "Offline · Updated …", and its dot spins while `pendingCommandControlsProvider` has a command in flight.
+*   **Vehicle switcher** (`vehicle_switcher.dart`): a popover anchored to the name, listing `vehicleListProvider`. The current vehicle's line follows its live connection (`connectionLabel`, as the pill); the others show their `VehicleSummary`. Switching calls `pairedVehiclesProvider.notifier.switchTo()`, and the providers rebuild for the new vehicle (see "Several vehicles" under [UI architecture](#ui-architecture)). The Vehicles screen (`lib/screens/vehicles_screen.dart`) lists the same entries.
 *   **Stale values:** `StaleValues` marks values from a past snapshot (state not live, or for an advanced tile, advanced state not live); `TileSurface` and the header dim them. The hero dims itself from the snapshot.
 *   **Banners:** `DashboardBannerSlot` shows the most important of: platform mismatch, Bluetooth bond lost, control not approved.
 *   **Pull to refresh** (`pullToRefresh()`) works anywhere on the page: the whole page scrolls, even where the header and the hero stay put.

@@ -523,6 +523,7 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     return VehicleSummary(
       levelPercent: energy?.levelPercent(snapshot),
       rangeKm: energy?.rangeKm(snapshot),
+      distanceUnit: vehicle.units(snapshot).distance,
       lastUpdated: snapshot.lastUpdated,
     );
   }

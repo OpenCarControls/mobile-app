@@ -65,6 +65,11 @@ class PairingWizardScreen extends ConsumerStatefulWidget {
   /// there is nothing to go back to.
   final bool addVehicle;
 
+  /// The wizard pushed over the app to add another vehicle.
+  static Route<void> addVehicleRoute() => MaterialPageRoute<void>(
+    builder: (_) => const PairingWizardScreen(addVehicle: true),
+  );
+
   @override
   ConsumerState<PairingWizardScreen> createState() =>
       _PairingWizardScreenState();

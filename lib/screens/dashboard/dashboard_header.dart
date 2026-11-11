@@ -13,6 +13,7 @@ import 'package:open_car_app/providers/car_transport_provider.dart';
 import 'package:open_car_app/providers/pending_command_controls_provider.dart';
 import 'package:open_car_app/providers/vehicle_state_provider.dart';
 import 'package:open_car_app/screens/dashboard/connection_activity_popover.dart';
+import 'package:open_car_app/screens/dashboard/vehicle_switcher.dart';
 import 'package:open_car_app/screens/dashboard/dashboard_screen.dart'
     show dashboardTierFor;
 import 'package:open_car_app/theme/app_text_styles.dart';
@@ -256,9 +257,8 @@ class _PillSlot extends StatelessWidget {
   }
 }
 
-/// The vehicle name with its chevron. Switching vehicle comes with the
-/// vehicle switcher (#74); until then a tap does nothing.
-class VehicleNameButton extends StatelessWidget {
+/// The vehicle name with its chevron, which opens the vehicle switcher.
+class VehicleNameButton extends ConsumerWidget {
   const VehicleNameButton({
     super.key,
     required this.name,
@@ -275,35 +275,52 @@ class VehicleNameButton extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      header: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onLongPress: onLongPress,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: dense ? 24 : kMinTouchTarget),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  name,
-                  style: style,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Only the name and its chevron are the button, not the space after it.
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Builder(
+        builder: (button) {
+          // The switcher follows the name when the dashboard changes layout.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (button.mounted) reportVehicleNamePosition(button, ref);
+          });
+          return Semantics(
+            header: true,
+            button: true,
+            onTapHint: 'Switch vehicle',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showVehicleSwitcher(button, ref),
+              onLongPress: onLongPress,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: dense ? 24 : kMinTouchTarget,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: style,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    ExcludeSemantics(
+                      child: Icon(
+                        Symbols.expand_more,
+                        size: (style.fontSize ?? 14) * 1.2,
+                        color: style.color,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              ExcludeSemantics(
-                child: Icon(
-                  Symbols.expand_more,
-                  size: (style.fontSize ?? 14) * 1.2,
-                  color: style.color,
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -555,16 +572,7 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
       pendingCommandControlsProvider.select((ids) => ids.isNotEmpty),
     );
     final live = snapshot.isStateLive;
-    final label = live
-        ? switch (link) {
-            DashboardTier.remote => 'Remote',
-            DashboardTier.bluetooth => 'Bluetooth',
-          }
-        : [
-            'Offline',
-            if (snapshot.lastUpdated case final updated?)
-              'Updated ${formatUpdatedAgo(updated, DateTime.now())}',
-          ].join(' · ');
+    final label = connectionLabel(snapshot, link, DateTime.now());
     final dotColor = live ? tokens.accent : tokens.textSecondary;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
@@ -633,6 +641,22 @@ class _ConnectionPillState extends ConsumerState<ConnectionPill> {
     );
   }
 }
+
+/// The connection pill's text: the live link, or how old [snapshot] is.
+String connectionLabel(
+  VehicleSnapshot snapshot,
+  DashboardTier link,
+  DateTime now,
+) => snapshot.isStateLive
+    ? switch (link) {
+        DashboardTier.remote => 'Remote',
+        DashboardTier.bluetooth => 'Bluetooth',
+      }
+    : [
+        'Offline',
+        if (snapshot.lastUpdated case final updated?)
+          'Updated ${formatUpdatedAgo(updated, now)}',
+      ].join(' · ');
 
 /// How long ago [then] was, for the pill: "just now", "12 min ago",
 /// "3 h ago", "2 d ago".
