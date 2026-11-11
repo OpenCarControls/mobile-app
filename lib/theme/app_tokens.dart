@@ -25,6 +25,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.headerFill,
     required this.danger,
     required this.onDanger,
+    required this.heat,
     required this.editScrim,
     required this.modalScrim,
     required this.radiusSmall,
@@ -59,6 +60,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       headerFill: bg.withValues(alpha: isLight ? 0.85 : 0.80),
       danger: isLight ? const Color(0xFFB3261E) : const Color(0xFFFFB4AB),
       onDanger: isLight ? const Color(0xFFFFFFFF) : const Color(0xFF3B0A07),
+      heat: isLight ? const Color(0xFFC2410C) : const Color(0xFFFFA45C),
       editScrim: bg.withValues(alpha: 0.60),
       modalScrim: const Color(
         0xFF000000,
@@ -113,6 +115,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
   /// Text on a [danger] fill.
   final Color onDanger;
 
+  /// Something heating, like the battery heater while preconditioning. The same
+  /// for every skin.
+  final Color heat;
+
   /// Dims a tile in edit mode.
   final Color editScrim;
 
@@ -150,6 +156,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? headerFill,
     Color? danger,
     Color? onDanger,
+    Color? heat,
     Color? editScrim,
     Color? modalScrim,
     RadiusToken? radiusSmall,
@@ -172,6 +179,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     headerFill: headerFill ?? this.headerFill,
     danger: danger ?? this.danger,
     onDanger: onDanger ?? this.onDanger,
+    heat: heat ?? this.heat,
     editScrim: editScrim ?? this.editScrim,
     modalScrim: modalScrim ?? this.modalScrim,
     radiusSmall: radiusSmall ?? this.radiusSmall,
@@ -203,6 +211,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       headerFill: Color.lerp(headerFill, other.headerFill, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       onDanger: Color.lerp(onDanger, other.onDanger, t)!,
+      heat: Color.lerp(heat, other.heat, t)!,
       editScrim: Color.lerp(editScrim, other.editScrim, t)!,
       modalScrim: Color.lerp(modalScrim, other.modalScrim, t)!,
       radiusSmall: RadiusToken.lerp(radiusSmall, other.radiusSmall, t),

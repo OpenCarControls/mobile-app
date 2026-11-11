@@ -307,8 +307,9 @@ void main() {
       );
       expect(_value('odometer', s).toString(), '14239 mi');
       expect(
-        egmpPackTemperature(s, _car.units(s).temperature).toString(),
-        '75–81 °F',
+        egmpBatteryTemperature(s, _car.units(s).temperature).toString(),
+        '78 °F',
+        reason: 'the average of 24 and 27 °C',
       );
     });
 

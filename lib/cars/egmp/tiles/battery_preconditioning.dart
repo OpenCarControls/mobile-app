@@ -50,24 +50,24 @@ TileState egmpPreconditioningState(VehicleSnapshot s) {
   };
 }
 
-/// The pack's temperature range in the car's unit ("24–27 °C").
-TileValue? egmpPackTemperature(VehicleSnapshot s, TemperatureUnit unit) {
+/// The battery temperature in the car's unit: the average of the coldest and
+/// warmest modules, rounded ("26 °C").
+TileValue? egmpBatteryTemperature(VehicleSnapshot s, TemperatureUnit unit) {
   final a = egmpAdvanced(s);
   if (a == null ||
       !a.hasBatteryMinimumTemperature() ||
       !a.hasBatteryMaximumTemperature()) {
     return null;
   }
-  String degrees(double c) => switch (unit) {
-    TemperatureUnit.celsius => c.round().toString(),
-    TemperatureUnit.fahrenheit => celsiusToFahrenheit(c).round().toString(),
+  final celsius =
+      (a.batteryMinimumTemperature + a.batteryMaximumTemperature) / 2;
+  return switch (unit) {
+    TemperatureUnit.celsius => TileValue('${celsius.round()}', unit: '°C'),
+    TemperatureUnit.fahrenheit => TileValue(
+      '${celsiusToFahrenheit(celsius).round()}',
+      unit: '°F',
+    ),
   };
-  final low = degrees(a.batteryMinimumTemperature);
-  final high = degrees(a.batteryMaximumTemperature);
-  return TileValue(
-    low == high ? low : '$low–$high',
-    unit: unit == TemperatureUnit.celsius ? '°C' : '°F',
-  );
 }
 
 /// Why the command is greyed out, when the state tells.
@@ -106,8 +106,11 @@ final egmpBatteryPreconditioningTile = CommandTileDefinition(
   ),
   state: egmpPreconditioningState,
   content: (context, c) => _BatteryPreconditioningFace(
-    temperature: egmpPackTemperature(c.snapshot, c.units.temperature),
+    temperature: egmpBatteryTemperature(c.snapshot, c.units.temperature),
     state: c.state,
+    heating:
+        egmpAdvanced(c.snapshot)?.preconditioningState ==
+        _Precond.PRECONDITIONING_STATE_HEATING,
   ),
 );
 
@@ -116,10 +119,14 @@ class _BatteryPreconditioningFace extends StatelessWidget {
   const _BatteryPreconditioningFace({
     required this.temperature,
     required this.state,
+    required this.heating,
   });
 
   final TileValue? temperature;
   final TileState state;
+
+  /// Whether the battery heater is on.
+  final bool heating;
 
   @override
   Widget build(BuildContext context) {
@@ -149,10 +156,16 @@ class _BatteryPreconditioningFace extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TileIconView(
-                  const TileIcon.symbol(Symbols.heat),
-                  on: state.on,
-                  size: 16,
+                // Orange while the heater is on; "Starting" keeps the usual look.
+                IconTheme.merge(
+                  data: IconThemeData(
+                    color: heating ? context.tokens.heat : null,
+                  ),
+                  child: TileIconView(
+                    const TileIcon.symbol(Symbols.heat),
+                    on: state.on,
+                    size: 16,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
