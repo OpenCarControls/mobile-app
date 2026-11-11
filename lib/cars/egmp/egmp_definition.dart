@@ -7,6 +7,8 @@ import 'package:open_car_app/cars/egmp/widgets/debug_controls_drawer.dart';
 import 'package:open_car_app/cars/egmp/widgets/vehicle_3d_viewer.dart';
 import 'package:open_car_app/cars/egmp/samples.dart';
 import 'package:open_car_app/cars/egmp/stub_transport.dart';
+import 'package:open_car_app/cars/egmp/tiles/battery.dart';
+import 'package:open_car_app/cars/egmp/tiles/climate.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
