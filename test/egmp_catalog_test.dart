@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/cars/egmp/egmp_definition.dart';
+import 'package:open_car_app/cars/egmp/tiles/battery_preconditioning.dart';
 import 'package:open_car_app/generated/opencar/cars/egmp/v1/egmp.pb.dart';
 import 'package:open_car_app/models/tile_catalog.dart';
 import 'package:open_car_app/models/vehicle_definition.dart';
@@ -25,8 +26,10 @@ VehicleSnapshot _snapshot(BasicState basic, {AdvancedState? advanced}) =>
 TileValue? _value(String id, VehicleSnapshot s) =>
     (_car.tileById(id)! as StateTileDefinition).value(s, _car.units(s));
 
-CommandTileDefinition _command(String id) =>
-    egmpCommandTiles.singleWhere((tile) => tile.id == id);
+CommandTileDefinition _command(String id) => [
+  ..._car.tiles.whereType<CommandTileDefinition>(),
+  ...egmpCommandTiles,
+].singleWhere((tile) => tile.id == id);
 
 void main() {
   group('status line', () {
@@ -140,13 +143,76 @@ void main() {
   });
 
   group('tiles', () {
-    test('no command is offered until the firmware implements it', () {
+    test('only the commands the firmware implements are offered', () {
       expect(
-        _car.tiles.where(
-          (tile) => tile.command != null || tile is ClimateTileDefinition,
-        ),
-        isEmpty,
+        [
+          for (final tile in _car.tiles)
+            if (tile.command != null || tile is ClimateTileDefinition) tile.id,
+        ],
+        ['battery_preconditioning'],
       );
+    });
+
+    group('battery preconditioning', () {
+      final tile = _command('battery_preconditioning');
+      VehicleSnapshot advanced(
+        AdvancedState_PreconditioningState state, {
+        bool manual = false,
+        AdvancedState_PowerState power =
+            AdvancedState_PowerState.POWER_STATE_READY,
+      }) => _snapshot(
+        BasicState(),
+        advanced: AdvancedState(
+          preconditioningState: state,
+          isManualPreconditioningRequested: manual,
+          powerState: power,
+        ),
+      );
+      const off = AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF;
+      const preparing =
+          AdvancedState_PreconditioningState.PRECONDITIONING_STATE_PREPARING;
+      const heating =
+          AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING;
+
+      test('shows the state, whoever started it', () {
+        expect(tile.state(advanced(off)).caption, 'Disabled');
+        expect(tile.state(advanced(off, manual: true)).caption, 'Starting');
+        expect(tile.state(advanced(preparing)).caption, 'Starting');
+        expect(tile.state(advanced(heating)).caption, 'Enabled');
+        expect(tile.state(advanced(heating)).on, isTrue);
+        expect(
+          tile.state(_snapshot(BasicState())),
+          kUnknownTileState,
+          reason: 'advanced state not live',
+        );
+      });
+
+      test('a tap starts it, or stops our own session', () {
+        bool enable(VehicleSnapshot s) =>
+            (tile.command.build(s) as AdvancedCommand)
+                .batteryPreconditioningCommand
+                .enable;
+        expect(enable(advanced(off)), isTrue);
+        expect(enable(advanced(heating, manual: true)), isFalse);
+        expect(
+          tile.command.activityName(advanced(heating, manual: true)),
+          'Stop battery preconditioning',
+        );
+      });
+
+      test("says why it can't be used", () {
+        final reason = tile.command.unavailableReason!;
+        expect(
+          reason(advanced(heating)),
+          'The car is preconditioning the battery on its own.',
+        );
+        expect(reason(advanced(heating, manual: true)), isNull);
+        expect(
+          reason(advanced(off, power: AdvancedState_PowerState.POWER_STATE_ON)),
+          'The car needs to be in Ready.',
+        );
+        expect(reason(advanced(off)), isNull);
+      });
     });
 
     test('temperature shows inside and outside side by side', () {
@@ -240,15 +306,10 @@ void main() {
         ),
       );
       expect(_value('odometer', s).toString(), '14239 mi');
-      final pack = _car.tileById('pack_temperature')! as ChartTileDefinition;
       expect(
-        pack.describe((
-          snapshot: s,
-          units: _car.units(s),
-          span: pack.sizes.first,
-          history: const {},
-        )),
-        '75–81 °F',
+        egmpBatteryTemperature(s, _car.units(s).temperature).toString(),
+        '78 °F',
+        reason: 'the average of 24 and 27 °C',
       );
     });
 

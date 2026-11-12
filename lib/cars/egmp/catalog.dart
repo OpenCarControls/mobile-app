@@ -3,7 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:open_car_app/cars/egmp/command_ids.dart';
 import 'package:open_car_app/cars/egmp/state_access.dart';
 import 'package:open_car_app/cars/egmp/tiles/battery.dart';
-import 'package:open_car_app/cars/egmp/tiles/pack_temperature_chart.dart';
+import 'package:open_car_app/cars/egmp/tiles/battery_preconditioning.dart';
 import 'package:open_car_app/cars/egmp/tiles/power_chart.dart';
 import 'package:open_car_app/cars/egmp/tiles/temperature.dart';
 import 'package:open_car_app/cars/egmp/units.dart';
@@ -158,8 +158,9 @@ String _gearLetter(AdvancedState_Gear gear) => switch (gear) {
 
 // ── Buttons ─────────────────────────────────────────────────────────────────
 
-/// The command tiles, not in the catalog until the firmware implements their
-/// commands. To offer one, move it into [egmpTiles] and the default layouts.
+/// The command tiles not in the catalog until the firmware implements their
+/// commands. Battery preconditioning, which it does, is in [egmpTiles]
+/// (`tiles/battery_preconditioning.dart`). To offer one, move it into [egmpTiles] and the default layouts.
 /// The climate tile waits the same way (`egmpClimateTile`).
 final egmpCommandTiles = <CommandTileDefinition>[
   CommandTileDefinition(
@@ -324,8 +325,8 @@ final egmpTiles = <TileDefinition>[
   ),
 
   // Advanced values.
+  egmpBatteryPreconditioningTile,
   egmpPowerChartTile,
-  egmpPackTemperatureChartTile,
   StateTileDefinition(
     id: 'pack_voltage',
     label: 'Pack voltage',
@@ -336,23 +337,6 @@ final egmpTiles = <TileDefinition>[
         '${a.batteryVoltage}',
         unit: 'V',
       ),
-      _ => null,
-    },
-  ),
-  StateTileDefinition(
-    id: 'preconditioning',
-    label: 'Preheat',
-    accessibleLabel: 'Battery preconditioning',
-    tier: TileTier.advanced,
-    icon: const TileIcon.symbol(Symbols.mode_heat),
-    sizes: const [TileSpan(1, 1), TileSpan(2, 1)],
-    value: (s, _) => switch (egmpAdvanced(s)?.preconditioningState) {
-      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_OFF =>
-        const TileValue('Off'),
-      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_PREPARING =>
-        const TileValue('Preparing'),
-      AdvancedState_PreconditioningState.PRECONDITIONING_STATE_HEATING =>
-        const TileValue('Heating'),
       _ => null,
     },
   ),
@@ -396,12 +380,11 @@ const egmpRemoteLayout = <TileLayoutEntry>[
 const egmpBluetoothLayout = <TileLayoutEntry>[
   (tileId: 'battery', span: TileSpan(4, 1)),
   (tileId: 'temperature', span: TileSpan(2, 1)),
-  (tileId: 'pack_temperature', span: TileSpan(2, 1)),
-  (tileId: 'battery_power', span: TileSpan(4, 2)),
+  (tileId: 'battery_preconditioning', span: TileSpan(1, 1)),
   (tileId: 'pack_voltage', span: TileSpan(1, 1)),
+  (tileId: 'battery_power', span: TileSpan(4, 2)),
   (tileId: 'gear', span: TileSpan(1, 1)),
   (tileId: 'power_state', span: TileSpan(1, 1)),
-  (tileId: 'preconditioning', span: TileSpan(1, 1)),
   (tileId: 'speed', span: TileSpan(1, 1)),
   (tileId: 'odometer', span: TileSpan(1, 1)),
 ];

@@ -42,6 +42,22 @@ final _doors = CommandTileDefinition(
       : const TileState(on: false, caption: 'Unlocked'),
 );
 
+/// A command tile with its own face, and a reason it knows from the state.
+final _custom = CommandTileDefinition(
+  id: 'custom',
+  label: 'Custom',
+  tier: TileTier.basic,
+  icon: const TileIcon.symbol(Symbols.heat),
+  command: TileCommand(
+    key: _lock,
+    build: (_) => BasicCommand(),
+    activityName: (_) => 'Do it',
+    unavailableReason: (s) => _basic(s).isDriving ? 'Not while driving.' : null,
+  ),
+  state: (_) => const TileState(on: true, caption: 'On'),
+  content: (context, c) => Text('Custom face ${c.state.caption}'),
+);
+
 final _odometerSeries = HistorySeries(
   id: 'odometer',
   sample: (s) => _basic(s).odometer.toDouble(),
@@ -135,13 +151,14 @@ final _tiles = <TileDefinition>[
     builder: (context, data) => const Text('chart'),
   ),
   CustomTileDefinition(
-    id: 'custom',
-    label: 'Custom',
+    id: 'drawn',
+    label: 'Drawn',
     tier: TileTier.basic,
     sizes: const [TileSpan(2, 1)],
     describe: (data) => 'odometer ${_basic(data.snapshot).odometer}',
     builder: (context, data) => Text('Drawn ${data.span.columns} wide'),
   ),
+  _custom,
 ];
 
 class _TestCar extends EgmpDefinition {
@@ -171,6 +188,7 @@ void main() {
     required String tileId,
     TileSpan span = const TileSpan(1, 1),
     bool iconOnly = false,
+    CommandUiState availability = CommandUiState.enabled,
   }) async {
     final data = TileContext(
       vehicle: const _TestCar(),
@@ -182,9 +200,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          commandUiStateProvider.overrideWith(
-            (ref, key) => CommandUiState.enabled,
-          ),
+          commandUiStateProvider.overrideWith((ref, key) => availability),
           tileCommandSenderProvider.overrideWithValue((key, message) async {
             sent.add((key, message));
             return null;
@@ -232,6 +248,42 @@ void main() {
       expect(find.text('Unlocked'), findsOneWidget);
     });
 
+    testWidgets('a custom face replaces the icon and title', (tester) async {
+      await pump(tester, BasicState(), tileId: 'custom');
+      expect(find.text('Custom face On'), findsOneWidget);
+      expect(find.text('Custom'), findsNothing);
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+      expect(sent.single.$1, _lock);
+    });
+
+    testWidgets('says the reason the state gives when greyed out', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        BasicState(isDriving: true),
+        tileId: 'custom',
+        availability: CommandUiState.disabled,
+      );
+      await tester.tap(find.byType(InkWell));
+      await tester.pump();
+      expect(find.text('Not while driving.'), findsOneWidget);
+      expect(sent, isEmpty);
+    });
+
+    testWidgets('falls back to the generic reason', (tester) async {
+      await pump(
+        tester,
+        BasicState(),
+        tileId: 'custom',
+        availability: CommandUiState.disabled,
+      );
+      await tester.tap(find.byType(InkWell));
+      await tester.pump();
+      expect(find.text(kCommandNotAvailableNow), findsOneWidget);
+    });
+
     testWidgets('icon-only keeps its label for screen readers', (tester) async {
       await pump(tester, BasicState(), tileId: 'doors', iconOnly: true);
       expect(find.text('Doors'), findsNothing);
@@ -245,11 +297,11 @@ void main() {
     await pump(
       tester,
       BasicState(odometer: 12),
-      tileId: 'custom',
+      tileId: 'drawn',
       span: const TileSpan(2, 1),
     );
     expect(find.text('Drawn 2 wide'), findsOneWidget);
-    expect(find.bySemanticsLabel('Custom, odometer 12'), findsOneWidget);
+    expect(find.bySemanticsLabel('Drawn, odometer 12'), findsOneWidget);
   });
 
   group('state tile', () {

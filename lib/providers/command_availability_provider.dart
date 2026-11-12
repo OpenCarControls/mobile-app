@@ -228,8 +228,11 @@ String commandUnavailableReason({
   if (phoneAccess?.trust == PhoneTrustLevel.PHONE_TRUST_LEVEL_BONDED) {
     return "This phone isn't validated in this car yet.";
   }
-  return 'Not available right now.';
+  return kCommandNotAvailableNow;
 }
+
+/// The reason when the app knows no better one.
+const kCommandNotAvailableNow = 'Not available right now.';
 
 /// Validating this phone is what a greyed-out command is waiting for. The
 /// approval comes first, like in [commandUnavailableReason].

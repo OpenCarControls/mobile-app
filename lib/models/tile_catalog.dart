@@ -51,6 +51,7 @@ class TileCommand {
     required this.key,
     required this.build,
     required this.activityName,
+    this.unavailableReason,
   });
 
   final CommandKey key;
@@ -59,6 +60,12 @@ class TileCommand {
   /// What tapping does, for the connection activity, like "Unlock doors".
   /// Follows the same state as [build].
   final String Function(VehicleSnapshot snapshot) activityName;
+
+  /// Why the command is greyed out, when the state tells ("The car is
+  /// preconditioning the battery on its own."). Said instead of the generic
+  /// "Not available right now.", never instead of a missing approval or
+  /// validation.
+  final String? Function(VehicleSnapshot snapshot)? unavailableReason;
 }
 
 /// The state a tile shows, from the vehicle state.
@@ -157,7 +164,8 @@ sealed class TileDefinition {
 }
 
 /// A tile that sends a command when tapped and shows its state by fill and
-/// icon. Titled or icon-only; at 2×1 it adds a caption.
+/// icon. Titled or icon-only; at 2×1 it adds a caption. A custom [content]
+/// replaces that face and keeps the command's behaviour.
 final class CommandTileDefinition extends TileDefinition {
   const CommandTileDefinition({
     required super.id,
@@ -168,6 +176,7 @@ final class CommandTileDefinition extends TileDefinition {
     super.sizes,
     required this.command,
     required this.state,
+    this.content,
   }) : assert(icon != null);
 
   @override
@@ -180,7 +189,19 @@ final class CommandTileDefinition extends TileDefinition {
   final TileCommand command;
 
   final TileState Function(VehicleSnapshot snapshot) state;
+
+  /// What the tile shows, when it isn't the icon and title.
+  final Widget Function(BuildContext context, CommandTileContent content)?
+  content;
 }
+
+/// What a custom command tile's [CommandTileDefinition.content] gets.
+typedef CommandTileContent = ({
+  VehicleSnapshot snapshot,
+  VehicleUnits units,
+  TileSpan span,
+  TileState state,
+});
 
 /// A value with a label. 2×1 adds a sparkline of [series]; 2×2 a large value,
 /// a note and a chart.
