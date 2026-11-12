@@ -42,6 +42,10 @@ More detail is in [`docs/architecture.md`](docs/architecture.md) and [`docs/ble.
 
 Messages live in the shared `contracts/` submodule, which has append-only rules. Open the contracts PR first, then bump the submodule pin here in its own commit.
 
+## Dependency updates
+
+Dependabot (`.github/dependabot.yml`) opens grouped update PRs monthly, and weekly for the `contracts/` submodule. On each one, `.github/workflows/dependabot-reminders.yml` posts a checklist of the manual steps that update needs, such as files Dependabot can't change or checks CI can't run. When an update turns out to need a manual step, add a rule for it to `.github/scripts/dependabot-reminders.js`.
+
 ## Pull requests
 
 *   Keep them small and focused; one topic per PR.
