@@ -1,6 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A corner radius from a skin: a plain number in dp, or "full" (a stadium, or
 /// a circle on a square box).

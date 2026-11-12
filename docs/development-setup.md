@@ -42,10 +42,10 @@ While the dev container is recommended, you can set up a local Windows environme
     *   Android SDK Platform 36
     *   Android SDK Build-Tools 36.0.0
     *   Android SDK Command-line Tools (latest)
-3.  **Flutter SDK:** download the version pinned in `.flutter-version` (currently `3.41.6`) from [flutter.dev](https://docs.flutter.dev/release/archive) or clone it via git. Extract it (e.g. to `C:\flutter`) and add `C:\flutter\bin` to your system `PATH`.
+3.  **Flutter SDK:** download the version pinned in `.flutter-version` (currently `3.50.0`) from [flutter.dev](https://docs.flutter.dev/release/archive) or clone it via git. Extract it (e.g. to `C:\flutter`) and add `C:\flutter\bin` to your system `PATH`.
 4.  **Java JDK:** Java 21 is required. If Android Studio's bundled JDK is not Java 21, install OpenJDK 21 manually.
 5.  **Protoc plugin:** install the Dart protocol buffers plugin globally:
     ```powershell
-    dart pub global activate protoc_plugin 21.1.2
+    dart pub global activate protoc_plugin 25.1.0
     ```
     Add your pub-cache bin to your system `PATH` if it isn't already (e.g. `C:\Users\<user>\AppData\Local\Pub\Cache\bin`).

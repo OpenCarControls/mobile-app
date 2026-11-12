@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 // Transport constants are identical in every vehicle's constants.g.dart.
 import 'package:open_car_app/cars/virtual_car/constants.g.dart'
     show

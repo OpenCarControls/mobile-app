@@ -35,10 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   fixnum: ^1.1.1
-  protobuf: ^3.1.0
+  protobuf: ^6.1.0
   flutter_riverpod: ^3.0.0
   mqtt5_client: ^5.1.0
-  flutter_reactive_ble: ^5.4.1
+  flutter_reactive_ble: ^5.6.0
   typed_data: ^1.4.0
   permission_handler: ^12.0.1
   shared_preferences: ^2.5.6
@@ -49,6 +49,7 @@ dependencies:
   material_symbols_icons: ^4.2960.0
   package_info_plus: ^10.2.2
   share_plus: ^13.3.1
+  material_ui: ^1.11.0
 
 dev_dependencies:
   flutter_test:
@@ -61,7 +62,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
-  protoc_plugin: ^21.1.2
+  protoc_plugin: ^25.1.0
   open_car_builders:
     path: tool/builders
 

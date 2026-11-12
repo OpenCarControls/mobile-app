@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 ARG CMDLINE_TOOLS_VERSION="14742923"
-ARG ANDROID_COMPILE_SDK="36"
+ARG ANDROID_COMPILE_SDK="37.0"
 ARG ANDROID_BUILD_TOOLS="36.0.0"
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && \
@@ -31,6 +31,6 @@ RUN FLUTTER_VERSION=$(cat /tmp/.flutter-version) && \
     git clone https://github.com/flutter/flutter.git --depth 1 -b "$FLUTTER_VERSION" $FLUTTER_HOME && \
     flutter config --no-analytics && \
     flutter precache --android && \
-    dart pub global activate protoc_plugin 21.1.2
+    dart pub global activate protoc_plugin 25.1.0
 
 WORKDIR /workspace
