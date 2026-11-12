@@ -10,7 +10,7 @@
     "compress-model": "npx --yes @gltf-transform/cli@4.5.1 meshopt ../assets_src/egmp/kia_ev6/2022_kia_ev6.glb ../assets/cars/egmp/2022_kia_ev6.glb --quantization-volume scene --quantize-position 16"
   },
   "devDependencies": {
-    "vite": "^7.3.7"
+    "vite": "^8.3.6"
   },
   "dependencies": {
     "three": "^0.170.0"
