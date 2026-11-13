@@ -51,7 +51,7 @@ jobs:
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       - name: Install Flutter dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Generate code
         run: dart run build_runner build
