@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:open_car_app/models/vehicle_history.dart';
 import 'package:open_car_app/theme/app_tokens.dart';

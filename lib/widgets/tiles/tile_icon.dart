@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Draws a custom tile icon on a 24 × 24 grid, scaled to [size] by the caller.
 /// [stroke] is set up in the icon colour with the standard line weight; [on]

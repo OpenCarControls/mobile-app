@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_car_app/config/unsupported_commands_config.dart';
@@ -149,8 +149,8 @@ void main() {
 
   group('commandUiState', () {
     final reported = CommandAvailability(
-      basic: {1: _available, 2: _unavailable, 3: _unsupported},
-      advanced: {1: _unavailable},
+      basic: {1: _available, 2: _unavailable, 3: _unsupported}.entries,
+      advanced: {1: _unavailable}.entries,
     );
 
     CommandUiState state(
@@ -189,7 +189,7 @@ void main() {
       final r = CommandAvailability(
         basic: {
           1: CommandAvailabilityState.COMMAND_AVAILABILITY_STATE_UNSPECIFIED,
-        },
+        }.entries,
       );
       expect(
         state(r, TransportType.ble, CommandSet.basic, 1),
@@ -214,7 +214,9 @@ void main() {
     test('stay hidden without a report, across runs', () async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
+      transport.emit(
+        _update(CommandAvailability(basic: {id: _unsupported}.entries)),
+      );
       await pumpEventQueue();
       expect(uiState(container), CommandUiState.hidden);
 
@@ -239,8 +241,12 @@ void main() {
     test('unavailable says nothing about the car', () async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
-      transport.emit(_update(CommandAvailability(basic: {id: _unavailable})));
+      transport.emit(
+        _update(CommandAvailability(basic: {id: _unsupported}.entries)),
+      );
+      transport.emit(
+        _update(CommandAvailability(basic: {id: _unavailable}.entries)),
+      );
       await pumpEventQueue();
       expect(uiState(container), CommandUiState.hidden);
     });
@@ -248,8 +254,12 @@ void main() {
     test('available takes it back', () async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {id: _unsupported})));
-      transport.emit(_update(CommandAvailability(basic: {id: _available})));
+      transport.emit(
+        _update(CommandAvailability(basic: {id: _unsupported}.entries)),
+      );
+      transport.emit(
+        _update(CommandAvailability(basic: {id: _available}.entries)),
+      );
       await pumpEventQueue();
       expect(uiState(container), CommandUiState.enabled);
       expect((await loadUnsupportedCommands()).values.single, isEmpty);
@@ -266,7 +276,9 @@ void main() {
         CommandUiState.disabled,
       );
 
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _available}.entries)),
+      );
       await pumpEventQueue();
       expect(
         container.read(commandUiStateProvider(virtual_car.kDoorLockCommand)),
@@ -278,9 +290,13 @@ void main() {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
       transport.emit(
-        _update(CommandAvailability(basic: {1: _available, 2: _available})),
+        _update(
+          CommandAvailability(basic: {1: _available, 2: _available}.entries),
+        ),
       );
-      transport.emit(_update(CommandAvailability(basic: {2: _unavailable})));
+      transport.emit(
+        _update(CommandAvailability(basic: {2: _unavailable}.entries)),
+      );
       await pumpEventQueue();
       final state = container.read(commandAvailabilityProvider)!;
       expect(state.basic[1], _available);
@@ -290,9 +306,13 @@ void main() {
     test('a command that became unavailable is greyed out again', () async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _available}.entries)),
+      );
       await pumpEventQueue();
-      transport.emit(_update(CommandAvailability(basic: {1: _unavailable})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _unavailable}.entries)),
+      );
       await pumpEventQueue();
       expect(
         container.read(commandUiStateProvider(virtual_car.kDoorLockCommand)),
@@ -318,7 +338,7 @@ void main() {
       final container = _container(transport);
       transport.emit(
         _update(
-          CommandAvailability(basic: {1: _available}),
+          CommandAvailability(basic: {1: _available}.entries),
           platformId: virtual_car_constants.kPlatformId + 1,
         ),
       );
@@ -334,7 +354,9 @@ void main() {
         CommandUiState.disabled,
       );
       transport.emit(
-        _update(CommandAvailability(basic: {1: _available, 2: _unavailable})),
+        _update(
+          CommandAvailability(basic: {1: _available, 2: _unavailable}.entries),
+        ),
       );
       await pumpEventQueue();
       expect(
@@ -351,7 +373,9 @@ void main() {
       // Cached by an earlier session, when everything was available. The
       // buttons must wait for the device to say so on this connection.
       final cached = SystemState(
-        commandAvailability: CommandAvailability(basic: {1: _available}),
+        commandAvailability: CommandAvailability(
+          basic: {1: _available}.entries,
+        ),
       );
       SharedPreferences.setMockInitialValues({
         'vehicle_state_${virtual_car_constants.kPlatformName}': jsonEncode({
@@ -391,7 +415,9 @@ void main() {
       ) async {
         final transport = _FakeTransport(type);
         final container = _container(transport);
-        transport.emit(_update(CommandAvailability(basic: {1: _available})));
+        transport.emit(
+          _update(CommandAvailability(basic: {1: _available}.entries)),
+        );
         await tester.pump();
         expect(container.read(commandAvailabilityProvider), isNotNull);
 
@@ -417,7 +443,9 @@ void main() {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
       for (var i = 0; i < 4; i++) {
-        transport.emit(_update(CommandAvailability(basic: {1: _available})));
+        transport.emit(
+          _update(CommandAvailability(basic: {1: _available}.entries)),
+        );
         await tester.pump(const Duration(seconds: 10));
       }
       expect(container.read(commandAvailabilityProvider), isNotNull);
@@ -477,18 +505,24 @@ void main() {
       // Nothing reported yet over BLE.
       expect(doorButton(tester), isNull);
 
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _available}.entries)),
+      );
       await tester.pump();
       await tester.pump();
       expect(doorButton(tester), isNotNull);
 
-      transport.emit(_update(CommandAvailability(basic: {1: _unavailable})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _unavailable}.entries)),
+      );
       await tester.pump();
       await tester.pump();
       expect(doorButton(tester), isNull);
 
       // The device went quiet: back to greyed out, not the last value.
-      transport.emit(_update(CommandAvailability(basic: {1: _available})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _available}.entries)),
+      );
       await tester.pump();
       await tester.pump();
       expect(doorButton(tester), isNotNull);
@@ -503,7 +537,9 @@ void main() {
 
     testWidgets('hides a command the car does not have', (tester) async {
       final transport = await pump(tester);
-      transport.emit(_update(CommandAvailability(basic: {1: _unsupported})));
+      transport.emit(
+        _update(CommandAvailability(basic: {1: _unsupported}.entries)),
+      );
       await tester.pump();
       await tester.pump();
       expect(find.bySemanticsLabel(RegExp('^Doors, ')), findsNothing);

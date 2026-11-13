@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The arrow at the top of a popover, pointing up at what opened it.
 class PopoverArrowPainter extends CustomPainter {

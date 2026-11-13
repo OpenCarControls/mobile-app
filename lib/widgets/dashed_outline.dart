@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _dashLength = 5.0;
 const _dashGap = 4.0;

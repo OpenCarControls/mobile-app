@@ -47,7 +47,7 @@ jobs:
 
       - name: Install protoc_plugin
         run: |
-          dart pub global activate protoc_plugin 21.1.2
+          dart pub global activate protoc_plugin 25.1.0
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       - name: Install Flutter dependencies
