@@ -8,5 +8,5 @@ environment:
 
 dependencies:
   build: ^4.0.0
-  glob: ^2.1.2
-  toml: ^0.16.0
+  glob: ^2.2.0
+  toml: ^0.18.0
