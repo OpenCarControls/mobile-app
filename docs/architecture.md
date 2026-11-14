@@ -123,9 +123,16 @@ The device decides which commands it accepts right now and reports it (firmware 
 *   **System commands without an answer:** the device only answers a restart or a phone removal to refuse it, so these go through `sendUnansweredSystemCommand`, which completes once a refusal would have arrived rather than timing out.
 *   **Debug drawer:** in debug builds, a long press on the vehicle name opens `VehicleDefinition.buildDebugDrawer()` (E-GMP has one).
 
-## 3D viewer
-E-GMP's hero (`Vehicle3DViewer`, returned by `buildHero`) renders the car with a Three.js viewer (`web_3d/`, bundled with Vite into `assets/web/` and shown in a `flutter_inappwebview`). The page is served from the APK by Android's `WebViewAssetLoader` (`https://appassets.androidplatform.net/assets/flutter_assets/...`), not a local HTTP server.
+## 3D hero
+E-GMP's hero (`EgmpHero` in `lib/cars/egmp/hero/`, returned by `buildHero`) renders the car with [Thermion](https://pub.dev/packages/thermion_flutter) (Filament) into a Flutter texture, so Flutter UI draws over and under it like any widget. [3D hero](ui-hero.md) has the design and the reasons for the choice.
 
-The widget takes the snapshot from the dashboard and reads no providers, as the [hero interface](ui-hero.md#interface-proposal) asks. Flutter only sends target state (`window.setVehicleState(...)`), and only when it changes. Fades, the power-flow pulse and hazard blinking are animated by the render loop in `app.js`. When the scene settles, the viewer saves a PNG snapshot (one per theme) to the app support directory. The snapshot is shown while the WebView boots and grayed out when the state is stale.
+The widget takes the snapshot from the dashboard and reads no providers, as the [hero interface](ui-hero.md#interface-proposal) asks. The parts are split three ways:
+*   `EgmpScene` maps a snapshot to targets: camera view, part animation positions, lights, hazards, cable and charging glow.
+*   `EgmpMotion` moves towards them one step at a time: the camera glide, parts at their animation's own speed, the glow's fade and scroll, the hazard blink. It holds no engine objects, so it is unit tested.
+*   `EgmpHero` runs the loop from a `Ticker` and pushes only what changed to the engine. Once nothing moves it stops the ticker and pauses rendering. While only the glow or the hazards move, it renders at a lower rate. Thermion's rate is engine-wide, so heroes request one through `thermionFrameRate` and the engine runs at the highest request.
 
-The runtime model is meshopt-compressed from an uncompressed export in `assets_src/`. See [`web_3d/README.md`](../web_3d/README.md).
+The texture only grows: a smaller box crops it (centred) and only the camera's projection changes, because reallocating it while the box animates stretches the old frame and flashes black. Thermion has no material lookup by name, so `GlbIndex` reads the names from the GLB's JSON chunk. The workarounds this needs are listed in [Notes for the Thermion hero](ui-hero.md#notes-for-the-thermion-hero).
+
+The box stays empty while the engine starts (well under a second), and the car fades in once it has drawn the current state. Its texture is black until then, so it is mounted but hidden. If the engine fails, the hero shows the placeholder. When the state is stale, the whole hero is grayed out. With reduced motion on, the camera snaps between views and the charging glow shows without its fade and scroll.
+
+Thermion ships Android native libraries for arm64 only, so release APKs are built for `android-arm64`. `flutter test` runs its build hook too, which compiles the native library for the Linux host; that needs clang, libc++ and the GL, GLES, EGL, DRM and GBM headers (in the dev container and CI). The runtime model is meshopt-compressed from an uncompressed export in `assets_src/` (see its README).

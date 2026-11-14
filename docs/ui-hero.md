@@ -7,7 +7,7 @@ The vehicle picture on the [dashboard](ui.md). It is a separate widget with a sm
 *   **Bluetooth tier:** not shown by default, since you are in the car and the screen space is better used by tiles. It can come back as a **Car view** tile (2×2 or 4×2) from the "Add a tile" list. The tile gives the hero a box of the tile's size.
 *   It is the same widget in both places. It must work at any box size, not only the full-screen one, and should be cheap enough to run inside a scrolling grid.
 
-> **Status:** `VehicleDefinition.buildHero` is the interface. E-GMP's hero is the Three.js viewer in a WebView (see [Architecture](architecture.md#3d-viewer)), which takes the snapshot and the box from the dashboard; the virtual car uses the placeholder (`HeroPlaceholder`). The [spike](#spike) chose Thermion to replace the WebView; the switch is #76.
+> **Status:** `VehicleDefinition.buildHero` is the interface. E-GMP's hero renders with Thermion, as the [spike](#spike) decided (see [Architecture](architecture.md#3d-hero)); it takes the snapshot and the box from the dashboard, and the Car view tile uses the same widget. The virtual car uses the placeholder (`HeroPlaceholder`). Not built yet: the driving scene (road), and the skin accent on the charge glow and cable.
 
 ## What the hero does
 *   **Camera is never user-controlled.** No orbit, pan or zoom. State and animation move it.
@@ -17,7 +17,7 @@ The vehicle picture on the [dashboard](ui.md). It is a separate widget with a sm
 *   **Driving scene.** When driving, the car sits on a road that advances (the dashed lane line scrolls) at a rate tied to the speed. The speed itself is drawn by the header (remote tier) or a Speed tile (Bluetooth tier), not the hero.
 *   **Transparent background.** The hero draws over the page colour (or a tile's surface), with Flutter UI above it (the header and the frosted tile layer).
 *   **Fits its box.** The dashboard gives the hero a box. The car is centred and scaled to fit the box's width and height, never clipped.
-*   **Plain fallback.** While the viewer boots, and when it fails, a still image of the car is shown. The current viewer already caches a snapshot per theme; keep that idea.
+*   **Plain fallback.** When the renderer fails, the placeholder is shown. While it boots, the box stays empty and the car fades in once drawn. A cached still was tried with Thermion (#76) and dropped: the engine starts fast enough that the still added nothing, and the switch from the still to the live view showed blank or black frames.
 *   **Stale state.** A hero for stale data looks stale (dimmed), like the rest of the screen.
 
 ## Interface (proposal)
@@ -90,6 +90,8 @@ What the spike needed beyond the plain API, to carry into #76:
 *   **Unnamed mesh nodes.** In the meshopt model, mesh nodes are unnamed children of the named nodes, and Thermion names their entities after the mesh. Resolve parts through the named parent.
 *   **Camera.** `ThermionWidget` resets the camera to a perspective lens whenever it (re)creates its texture. Use `ThermionWidgetInternal` with your own `onTexturePreparing` that sets the orthographic projection.
 *   **Resizing.** The texture follows the box with a 100 ms debounce, stretching the old frame and then showing a black frame. Allocate the texture at the hero's largest size, let the box crop it (centred), and change only the projection as the box moves.
+*   **First texture.** While the first texture is being allocated, every rebuild of `ThermionWidgetInternal` schedules another allocation, which swaps in a new, black texture 100 ms later (0.7.0). Create the widget once and pass the same instance on every build, so its parent never rebuilds it.
+*   **Showing the view.** A texture is black until the engine has drawn into it, and Thermion has no "frame drawn" signal for app code. Keep the view mounted but hidden, and fade it in shortly after the first state is pushed. Fading the view (rather than something over it) keeps its first frames on screen nearly invisible.
 *   **Power-flow scroll.** The ubershader multiplies `vec3(uv, 1) * emissiveUvMatrix` (a row vector), so the U offset goes in the third row of the matrix.
 *   **Frame loop.** Animate from Flutter (a `Ticker`), setting animation times with `setGltfAnimationTime`, which is a job-thread round trip. Queue a frame's calls and await them together, and carry the time of skipped ticks into the next one.
 *   **Idle.** Pause rendering (`setRendering(false)`) once nothing moves. Waking costs a short ramp-up, which is acceptable. While only the power flow or the hazard blink is moving, drop the frame rate (`setTargetFramerate`, 30 fps tested). Thermion's scheduler keeps ticking at 60 fps even while rendering is paused, so throttle it when idle too.

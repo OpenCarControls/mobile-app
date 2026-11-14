@@ -56,16 +56,10 @@ jobs:
       - name: Generate code
         run: dart run build_runner build
 
+      # Node runs semantic-release.
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: web_3d/package-lock.json
-
-      # The 3D viewer bundle in assets/web/ is gitignored; pubspec.yaml needs it.
-      - name: Build 3D viewer
-        working-directory: web_3d
-        run: npm ci && npm run build
 
       # Majors are pinned: the conventionalcommits preset must match the
       # conventional-changelog-writer major bundled by release-notes-generator.

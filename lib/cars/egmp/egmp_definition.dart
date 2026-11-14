@@ -3,8 +3,8 @@ import 'package:protobuf/protobuf.dart';
 
 import 'package:open_car_app/cars/egmp/catalog.dart';
 import 'package:open_car_app/cars/egmp/constants.g.dart';
+import 'package:open_car_app/cars/egmp/hero/egmp_hero.dart';
 import 'package:open_car_app/cars/egmp/widgets/debug_controls_drawer.dart';
-import 'package:open_car_app/cars/egmp/widgets/vehicle_3d_viewer.dart';
 import 'package:open_car_app/cars/egmp/samples.dart';
 import 'package:open_car_app/cars/egmp/stub_transport.dart';
 import 'package:open_car_app/cars/egmp/tiles/battery.dart';
@@ -71,7 +71,7 @@ class EgmpDefinition implements VehicleDefinition {
 
   @override
   Widget buildHero(BuildContext context, VehicleSnapshot snapshot) =>
-      Vehicle3DViewer(snapshot: snapshot);
+      EgmpHero(snapshot: snapshot);
 
   @override
   VehicleUnits units(VehicleSnapshot snapshot) => egmpUnits(snapshot);

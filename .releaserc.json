@@ -13,7 +13,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "flutter build apk --release --build-name ${nextRelease.version} --build-number ${process.env.GITHUB_RUN_NUMBER} && mkdir -p build/releases && cp build/app/outputs/flutter-apk/app-release.apk build/releases/open-car-app-v${nextRelease.version}.apk"
+        "prepareCmd": "flutter build apk --release --target-platform android-arm64 --build-name ${nextRelease.version} --build-number ${process.env.GITHUB_RUN_NUMBER} && mkdir -p build/releases && cp build/app/outputs/flutter-apk/app-release.apk build/releases/open-car-app-v${nextRelease.version}.apk"
       }
     ],
     [
