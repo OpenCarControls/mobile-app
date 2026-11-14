@@ -7,6 +7,7 @@ Throwaway apps for choosing the hero renderer (see `docs/ui-hero.md`, "Spike"). 
 | `hero_harness/` | Shared screens, state and measurements. Every candidate app is `SpikeApp(builder: ...)` plus one renderer widget. |
 | `webview_spike/` | Baseline: the shipped Three.js bundle (`assets/web`) in the same WebView setup as the app, minus the snapshot cache. |
 | `thermion_spike/` | Thermion (Filament) candidate. |
+| `flutter_scene_spike/` | flutter_scene (Flutter GPU) candidate. Its build hook converts the models to `.fsceneb`; they are symlinked under its own `assets/models/` and named explicitly in `hook/build.dart` (discovery skips symlinks). |
 
 Both models come from the app through symlinks in `hero_harness/assets/models/`: `ev6_meshopt.glb` (shipped, meshopt-compressed) and `ev6_raw.glb` (`assets_src`, uncompressed).
 

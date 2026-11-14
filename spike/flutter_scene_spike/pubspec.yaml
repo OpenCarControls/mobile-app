@@ -1,0 +1,39 @@
+name: flutter_scene_spike
+description: flutter_scene (Flutter GPU) candidate for the 3D hero renderer spike (mobile-app#75).
+publish_to: 'none'
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_scene: ^0.24.3
+  hero_harness:
+    path: ../hero_harness
+  hooks: ^2.2.0
+  material_ui: ^1.11.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  assets:
+    - flutter_scene_generated/
+    - path: flutter_scene_generated/metal_ios/
+      platforms:
+        - ios
+    - path: flutter_scene_generated/metal_desktop/
+      platforms:
+        - macos
+    - path: flutter_scene_generated/opengl_es_vulkan/
+      platforms:
+        - android
+        - linux
+        - windows
+    - path: flutter_scene_generated/opengl_es/
+      platforms:
+        - web
+  uses-material-design: true
