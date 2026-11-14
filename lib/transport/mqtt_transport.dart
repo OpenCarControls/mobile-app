@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:io' show TlsException;
 import 'dart:math' as math;
 
 import 'package:fixnum/fixnum.dart';
@@ -12,6 +13,7 @@ import 'package:open_car_app/generated/opencar/core/v1/core.pb.dart';
 import 'package:typed_data/typed_data.dart' as typed;
 
 import 'car_transport.dart';
+import 'mqtt_tls.dart';
 
 /// A topic of the device with [deviceClientId], from a contract template. The
 /// templates name the device, not the app that connects to it.
@@ -28,6 +30,8 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
   int _reconnectAttempt = 0;
   bool _disposed = false;
   bool _heartbeatPaused = false;
+  // The compiled-in TLS settings didn't load: never fall back to plain TCP.
+  bool _tlsUnusable = false;
 
   static const _heartbeatInterval = Duration(seconds: 5);
   static const _backgroundPauseDelay = Duration(seconds: 30);
@@ -65,6 +69,25 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
       ..onSubscribed = _onSubscribed
       ..onSubscribeFail = _onSubscribeFail;
 
+    // A CA in the config means TLS ([broker] tls = true).
+    if (kMqttCaCertPem.isNotEmpty) {
+      try {
+        _client
+          ..secure = true
+          ..securityContext = mqttSecurityContext(
+            caPem: kMqttCaCertPem,
+            clientCertPem: kMqttClientCertPem,
+            clientKeyPem: kMqttClientKeyPem,
+          );
+      } on TlsException catch (e) {
+        _tlsUnusable = true;
+        dev.log(
+          'TLS settings rejected, MQTT stays off: $e',
+          name: 'MqttTransport',
+        );
+      }
+    }
+
     _client.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(connectionClientId)
         .startClean();
@@ -101,7 +124,7 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
   }
 
   Future<void> _connect() async {
-    if (_disposed) return;
+    if (_disposed || _tlsUnusable) return;
 
     final state = _client.connectionStatus?.state;
     if (state == MqttConnectionState.connected ||
@@ -110,7 +133,12 @@ class MqttCarTransport with WidgetsBindingObserver implements CarTransport {
     }
 
     try {
-      await _client.connect(kMqttUsername, kMqttPassword);
+      // mTLS has no username or password: the broker takes the phone's
+      // identity from its certificate.
+      await _client.connect(
+        kMqttUsername.isEmpty ? null : kMqttUsername,
+        kMqttPassword.isEmpty ? null : kMqttPassword,
+      );
       if (_client.connectionStatus?.state != MqttConnectionState.connected) {
         _scheduleReconnect('connect completed but not connected');
       }

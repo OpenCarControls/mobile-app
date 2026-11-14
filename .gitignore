@@ -61,3 +61,7 @@ config.toml
 # Blender backup and autosave files
 *.blend[0-9]
 
+
+# MQTT TLS certificates and keys (see docs/mqtt-tls.md)
+certs/*
+!certs/.gitkeep
