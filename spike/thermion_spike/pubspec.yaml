@@ -1,0 +1,25 @@
+name: thermion_spike
+description: Thermion (Filament) candidate for the 3D hero renderer spike (mobile-app#75).
+publish_to: 'none'
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  hero_harness:
+    path: ../hero_harness
+  logging: ^1.3.0
+  material_ui: ^1.11.0
+  thermion_flutter: ^0.7.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    # Filament's default environment, from the Thermion examples.
+    - assets/default_env_ibl.ktx

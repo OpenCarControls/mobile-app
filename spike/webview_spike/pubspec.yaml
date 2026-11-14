@@ -1,0 +1,24 @@
+name: webview_spike
+description: Baseline for the 3D hero renderer spike (mobile-app#75), the current Three.js WebView.
+publish_to: 'none'
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_inappwebview: 6.1.5
+  hero_harness:
+    path: ../hero_harness
+  material_ui: ^1.11.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    # The app's built Three.js bundle (symlink to ../../assets/web).
+    - assets/web/
