@@ -26,8 +26,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      # Clang, libc++ and the graphics headers: flutter test runs Thermion's build hook,
+      # which compiles its native library for the Linux host.
+      - name: Install protoc and the host C++ toolchain
+        run: >-
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          clang libc++-dev libc++abi-dev libgl-dev libegl-dev libgles-dev libdrm-dev libgbm-dev
 
       - name: Install protoc_plugin
         run: |
@@ -39,17 +43,6 @@ jobs:
 
       - name: Generate code
         run: dart run build_runner build
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: web_3d/package-lock.json
-
-      # The 3D viewer bundle in assets/web/ is gitignored; pubspec.yaml needs it.
-      - name: Build 3D viewer
-        working-directory: web_3d
-        run: npm ci && npm run build
 
       - name: Verify formatting
         run: find lib test -name "*.dart" ! -name "*.g.dart" ! -path "*/generated/*" | xargs dart format --output=none --set-exit-if-changed
@@ -99,19 +92,9 @@ jobs:
       - name: Generate code
         run: dart run build_runner build
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: web_3d/package-lock.json
-
-      # The 3D viewer bundle in assets/web/ is gitignored; pubspec.yaml needs it.
-      - name: Build 3D viewer
-        working-directory: web_3d
-        run: npm ci && npm run build
-
+      # Thermion ships arm64 native libraries only.
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --target-platform android-arm64
 
       - uses: actions/upload-artifact@v7
         with:

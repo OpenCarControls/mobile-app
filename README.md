@@ -53,7 +53,6 @@ The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToA
 *   [Code generation](docs/code-generation.md)
 *   [Development setup](docs/development-setup.md)
 *   [CI & releases](docs/releases.md)
-*   [3D viewer](web_3d/README.md)
 
 ## Project structure
 
@@ -69,8 +68,7 @@ The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToA
 │   ├── screens/      # pairing wizard
 │   └── transport/    # BLE, MQTT, HTTP (debug) transports
 ├── tool/builders/    # build_runner codegen package
-├── web_3d/           # Three.js 3D car viewer (bundled into assets/web/)
-├── assets_src/       # source 3D models
+├── assets_src/       # source 3D models (compressed into assets/ by tool/compress_model.sh)
 ├── docs/             # project documentation
 └── AGENTS.md         # rules for AI agents (CLAUDE.md imports it)
 ```

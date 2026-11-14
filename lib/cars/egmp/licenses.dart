@@ -18,5 +18,15 @@ void registerEgmpLicenses() {
       'recolored, emissive lights added, a plane added under the hood, and '
       'the mesh compressed.',
     );
+    // The hero's environment light, copied from Thermion's examples.
+    yield const LicenseEntryWithLineBreaks(
+      ['Filament default environment light'],
+      'default_env_ibl.ktx, from the Thermion examples '
+      '(https://github.com/nmfisher/thermion), based on Filament '
+      '(https://github.com/google/filament).\n'
+      '\n'
+      'Licensed under the Apache License, Version 2.0: '
+      'https://www.apache.org/licenses/LICENSE-2.0',
+    );
   });
 }
