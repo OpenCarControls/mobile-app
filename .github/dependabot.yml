@@ -16,18 +16,6 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
 
-  # web_3d (three.js viewer bundled into the app).
-  - package-ecosystem: npm
-    directory: /web_3d
-    schedule:
-      interval: monthly
-    commit-message:
-      prefix: chore
-      include: scope
-    groups:
-      minor-and-patch:
-        update-types: ["minor", "patch"]
-
   # Android Gradle plugin, Kotlin plugin and the Gradle wrapper. These must stay
   # compatible with the Flutter version in .flutter-version; CI's APK build
   # catches a mismatch.
@@ -42,7 +30,7 @@ updates:
       android-build:
         patterns: ["*"]
 
-  # Dev container features (Node).
+  # Dev container features (Node, for tool/compress_model.sh).
   - package-ecosystem: devcontainers
     directory: /
     schedule:
