@@ -18,7 +18,7 @@ Flutter mobile app for interacting with an ESP32-based car controller over BLE (
 
 1.  Open the repo in the provided dev container (Flutter, Android SDK, `protoc` and `protoc-gen-dart` are pre-installed). For a native Windows setup, see [Development setup](docs/development-setup.md).
 2.  Fetch the shared contracts submodule: `git submodule update --init`.
-3.  Create your local config: `cp config.toml.example config.toml` and fill in the MQTT credentials (gitignored).
+3.  Create your local config: `cp config.toml.example config.toml` and fill in the MQTT broker settings (gitignored). For a broker on the internet, use TLS with a certificate for this phone: see [MQTT over TLS](docs/mqtt-tls.md).
 4.  Connect a phone over wireless debugging (steps in [Development setup](docs/development-setup.md#running-on-android-wireless-debugging)) and run:
 
     ```sh
@@ -50,6 +50,7 @@ The app and the controller share a protobuf envelope (`AppToDevice` / `DeviceToA
 *   [Architecture](docs/architecture.md) — vehicles, transports, providers, UI
 *   [UI design](docs/ui.md) — the shared dashboard and tile system; [other screens](docs/ui-screens.md), [theming and skins](docs/ui-theming.md), [3D hero](docs/ui-hero.md), mockups
 *   [BLE & pairing](docs/ble.md)
+*   [MQTT over TLS](docs/mqtt-tls.md) — certificates for the phone and the broker
 *   [Code generation](docs/code-generation.md)
 *   [Development setup](docs/development-setup.md)
 *   [CI & releases](docs/releases.md)

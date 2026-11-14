@@ -3,9 +3,21 @@
 
 [broker]
 host     = "your-broker.example.com"
-port     = 1883
+port     = 1883   # 8883 for TLS
 username = "your_username"
 password = "your_password"
+
+# TLS: the broker's certificate must chain to ca_cert_file and name `host`.
+# Without it, state and the password travel unencrypted: a broker on the
+# internet should use tls = true with auth_mode = "mtls". See docs/mqtt-tls.md.
+tls       = false
+# "basic": username and password (inside TLS with tls = true).
+# "mtls": this phone's certificate and key below, no password; needs tls = true.
+auth_mode = "basic"
+# PEM files under certs/ (gitignored), compiled into the app.
+ca_cert_file     = "certs/ca.pem"
+client_cert_file = "certs/phone.pem"
+client_key_file  = "certs/phone.key"
 
 [debug_server]
 # HTTP server on the device used for debug/testing in place of BLE.
