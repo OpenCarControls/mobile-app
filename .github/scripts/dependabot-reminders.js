@@ -27,11 +27,6 @@ module.exports = [
     message: `**mqtt5_client**: test the MQTT transport against a broker (connect, state, a command); CI doesn't.`,
   },
   {
-    id: 'web-3d',
-    files: [/^web_3d\//],
-    message: `**web_3d**: CI only builds the bundle. Run \`npm run build\` in \`web_3d/\` and open the E-GMP dashboard to check the 3D car still renders.`,
-  },
-  {
     id: 'android-build',
     files: [/^android\//],
     message: `**Android build**: the Android Gradle plugin, Kotlin and Gradle versions must be supported by the Flutter version in \`.flutter-version\`. Check Flutter's compatibility notes, and that the release (minified) APK still works on a device.`,
@@ -39,7 +34,7 @@ module.exports = [
   {
     id: 'node',
     deps: [/^actions\/setup-node$/, /devcontainers\/features\/node/],
-    message: `**Node**: workflows use \`node-version: '22'\` and the dev container uses its own Node feature version; keep them compatible with \`web_3d/package-lock.json\`.`,
+    message: `**Node**: only two things use it. The release workflow runs semantic-release on \`node-version: '22'\`, and the dev container's Node feature runs \`tool/compress_model.sh\` (\`npx\`). Check both still work.`,
   },
   {
     id: 'major',
