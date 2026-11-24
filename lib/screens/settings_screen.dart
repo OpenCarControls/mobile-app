@@ -32,6 +32,7 @@ import 'package:open_car_app/theme/app_tokens.dart';
 import 'package:open_car_app/transport/car_transport.dart';
 import 'package:open_car_app/transport/http_transport.dart';
 import 'package:open_car_app/widgets/can_access_section.dart';
+import 'package:open_car_app/widgets/can_bus_health_section.dart';
 import 'package:open_car_app/widgets/settings_rows.dart';
 
 /// Shown for what the device hasn't reported.
@@ -81,6 +82,8 @@ class SettingsScreen extends ConsumerWidget {
           if (bluetooth) ...[
             const SettingsSectionTitle('Car access'),
             const CanAccessSection(),
+            const SettingsSectionTitle('CAN buses'),
+            const CanBusHealthSection(),
             const SettingsSectionTitle('Device'),
             _deviceCard(context, ref),
           ] else ...[
