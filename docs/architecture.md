@@ -59,7 +59,7 @@ If a paired device later reports a different non-zero `platform_id`, `vehicleSta
 | `currentSkinProvider` | The current vehicle's skin, or the default one when no vehicle is known |
 | `vehicleStateProvider` | `VehicleSnapshot` + `sendBasicCommand()` / `sendAdvancedCommand()` / `sendSystemCommand()` (BLE only) |
 | `canAccessStateProvider` | The device's CAN access state (`SystemState.can_access`), from the current connection only: null until reported on it, cleared on every transport or connection change, never cached |
-| `canBusHealthProvider` | Each CAN bus's health by bus id (`SystemState.can_bus_health`): the device's status for the last few seconds and its counters since boot. From the current connection only, like `canAccessStateProvider`; BLE only |
+| `canBusHealthProvider` | Each CAN bus's health by bus id (`SystemState.can_bus_health`): the device's status for the last few seconds and its counters since boot. From the current connection only, like `canAccessStateProvider`; BLE only. `AppEntryRouter` listens to it from the start, so the report sent when the app subscribes is kept for the settings |
 | `canAccessActionsProvider` | Approves or withdraws vehicle control and toggles the developer write lock |
 | `phoneAccessStateProvider` | What the device allows this phone (`SystemState.phone_access`): its trust level, whether the car has a validated phone, its validation session. From the current connection only, like `canAccessStateProvider` |
 | `phoneValidationActionsProvider` | Lists the validation methods and the paired phones, and starts, answers or cancels a validation |

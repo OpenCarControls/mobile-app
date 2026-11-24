@@ -12,6 +12,7 @@ import 'package:open_car_app/config/saved_layouts_config.dart';
 import 'package:open_car_app/config/theme_mode_config.dart';
 import 'package:open_car_app/config/unsupported_commands_config.dart';
 import 'package:open_car_app/providers/ble_source_device_id_provider.dart';
+import 'package:open_car_app/providers/can_bus_health_provider.dart';
 import 'package:open_car_app/providers/command_availability_provider.dart';
 import 'package:open_car_app/providers/connection_activity_provider.dart';
 import 'package:open_car_app/providers/dashboard_layout_provider.dart';
@@ -95,6 +96,9 @@ class AppEntryRouter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen(connectionActivityRecorderProvider, (_, _) {});
+    // Listen from the start of each connection, so the bus health sent when
+    // the app subscribes is already there when the settings first show it.
+    ref.listen(canBusHealthProvider, (_, _) {});
     final vehicle = ref.watch(selectedVehicleProvider);
     final setupPending = ref.watch(wizardSetupPendingProvider);
     if (vehicle == null || setupPending) return const PairingWizardScreen();
