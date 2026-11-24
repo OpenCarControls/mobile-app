@@ -97,8 +97,8 @@ class CommandRejectedException implements Exception {
       : 'Command failed';
 
   /// The sending phone must be validated in the car first: a vehicle command,
-  /// or once a phone is validated for this car, the approval or removing a
-  /// validated phone.
+  /// or once a phone is validated for this car, the approval, restarting the
+  /// device or removing a validated phone.
   bool get needsValidation =>
       response.statusCode ==
       CommandStatusCode.COMMAND_STATUS_CODE_REJECTED_NOT_VALIDATED;
@@ -475,9 +475,9 @@ class VehicleStateNotifier extends Notifier<VehicleSnapshot> {
     );
   }
 
-  /// Sends a system command the device only answers to refuse: restarting and
-  /// removing a phone. Throws if it is refused or can't be sent; completes once
-  /// a refusal would have arrived.
+  /// Sends a system command the device only answers to refuse: removing a
+  /// phone. Throws if it is refused or can't be sent; completes once a refusal
+  /// would have arrived.
   Future<void> sendUnansweredSystemCommand(SystemCommand command) =>
       sendSystemCommand(
         command,

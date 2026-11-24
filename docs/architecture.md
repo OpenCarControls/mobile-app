@@ -120,7 +120,7 @@ The device decides which commands it accepts right now and reports it (firmware 
 *   **Banners:** `DashboardBannerSlot` shows the most important of: platform mismatch, Bluetooth bond lost, control not approved.
 *   **Pull to refresh** (`pullToRefresh()`) works anywhere on the page: the whole page scrolls, even where the header and the hero stay put.
 *   **Settings button:** opens `SettingsScreen` (see [Settings](ui-screens.md#settings)). It completes with whether the user chose Edit dashboard, and the dashboard then enters edit mode. The sections the device has to answer for are gated by tier, so they are hidden over MQTT.
-*   **System commands without an answer:** the device only answers a restart or a phone removal to refuse it, so these go through `sendUnansweredSystemCommand`, which completes once a refusal would have arrived rather than timing out.
+*   **System commands without an answer:** the device only answers a phone removal to refuse it, so it goes through `sendUnansweredSystemCommand`, which completes once a refusal would have arrived rather than timing out. A restart is answered (before the device restarts), so it uses `sendSystemCommand`; firmware older than the restart command never answers it, and the app then says the firmware may be too old.
 *   **Debug drawer:** in debug builds, a long press on the vehicle name opens `VehicleDefinition.buildDebugDrawer()` (E-GMP has one).
 
 ## 3D hero

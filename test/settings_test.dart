@@ -50,6 +50,10 @@ class _FakeTransport implements CarTransport {
   /// What the device answers a phone removal with, if anything.
   CommandResponse? removalAnswer;
 
+  /// What the device answers a restart with; `null` for firmware that never
+  /// answers it.
+  CommandResponse? restartAnswer = CommandResponse(success: true);
+
   void emit(DeviceToApp msg) => _controller.add(msg);
 
   void reportAccess(PhoneAccessState access, {CanAccessState? canAccess}) =>
@@ -100,6 +104,8 @@ class _FakeTransport implements CarTransport {
       );
     } else if (message.systemCommand.hasRemovePairedPhone()) {
       if (removalAnswer case final answer?) _answer(message, answer);
+    } else if (message.systemCommand.hasRestartCommand()) {
+      if (restartAnswer case final answer?) _answer(message, answer.deepCopy());
     }
   }
 
@@ -324,18 +330,72 @@ void main() {
   });
 
   group('restart', () {
-    testWidgets('asks, then sends it without waiting for an answer', (
+    testWidgets('asks, then says the device is restarting once it answers', (
       tester,
     ) async {
       final (transport, _) = await _pump(tester);
       await _tapAndConfirm(tester, 'Restart device', 'Restart');
-      await tester.pump(const Duration(seconds: 3));
       await tester.pump();
       expect(
         transport.sent.where((m) => m.systemCommand.hasRestartCommand()),
         hasLength(1),
       );
-      expect(find.text('Restart requested.'), findsOneWidget);
+      expect(
+        find.text('The device is restarting. It reconnects in a few seconds.'),
+        findsOneWidget,
+      );
+      await _end(tester);
+    });
+
+    testWidgets('sends nothing when the confirmation is cancelled', (
+      tester,
+    ) async {
+      final (transport, _) = await _pump(tester);
+      await tester.tap(find.text('Restart device'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(
+        transport.sent.where((m) => m.systemCommand.hasRestartCommand()),
+        isEmpty,
+      );
+      await _end(tester);
+    });
+
+    testWidgets('a phone that is not validated is told why', (tester) async {
+      final (transport, _) = await _pump(tester);
+      transport.restartAnswer = CommandResponse(
+        success: false,
+        statusCode:
+            CommandStatusCode.COMMAND_STATUS_CODE_REJECTED_NOT_VALIDATED,
+        errorMessage:
+            'command rejected: only a phone validated in this car can '
+            'restart the device',
+      );
+      await _tapAndConfirm(tester, 'Restart device', 'Restart');
+      await tester.pump();
+      expect(
+        find.text('Only a phone validated in this car can restart the device.'),
+        findsOneWidget,
+      );
+      await _end(tester);
+    });
+
+    testWidgets('firmware that never answers is reported as too old', (
+      tester,
+    ) async {
+      final (transport, _) = await _pump(tester);
+      transport.restartAnswer = null;
+      await _tapAndConfirm(tester, 'Restart device', 'Restart');
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pump();
+      expect(
+        find.text(
+          "The device didn't answer. Its firmware may be too old to restart "
+          'from the app.',
+        ),
+        findsOneWidget,
+      );
       await _end(tester);
     });
   });

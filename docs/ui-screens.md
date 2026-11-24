@@ -92,6 +92,7 @@ Opened from the settings button in the dashboard header. A back button and the t
 *   **Switches and segmented controls** follow the skin (radii, accent).
 *   **The CAN logger** reflects the state the device reports, not the last tap, and warns that vehicle features pause while it runs.
 *   **Unpair** asks for confirmation (see [Vehicles](#vehicles)).
+*   **Restart device** asks for confirmation, then waits for the device's answer: "restarting" on success (the Bluetooth link drops and comes back by itself), the device's refusal otherwise. Once a phone is validated in this car, only a validated phone can restart it.
 *   **Debug-only entries** (the HTTP simulation toggle, the debug drawer) are not mocked and stay behind `kDebugMode`.
 *   The device rows could grow, for example CAN bus health ([#30](https://github.com/OpenCarControls/mobile-app/issues/30)).
 
