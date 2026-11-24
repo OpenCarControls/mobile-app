@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -305,16 +307,25 @@ class SettingsScreen extends ConsumerWidget {
       action: 'Restart',
     );
     if (!confirmed || !context.mounted) return;
+    String message;
     try {
       await ref
           .read(vehicleStateProvider.notifier)
-          .sendUnansweredSystemCommand(
-            SystemCommand(restartCommand: RestartCommand()),
-          );
-      if (context.mounted) _showMessage(context, 'Restart requested.');
+          .sendSystemCommand(SystemCommand(restartCommand: RestartCommand()));
+      message = 'The device is restarting. It reconnects in a few seconds.';
+    } on CommandRejectedException catch (e) {
+      message = e.needsValidation
+          ? 'Only a phone validated in this car can restart the device.'
+          : e.message;
+    } on TimeoutException {
+      // Firmware from before the restart was implemented never answers it.
+      message =
+          "The device didn't answer. Its firmware may be too old to restart "
+          'from the app.';
     } catch (e) {
-      if (context.mounted) _showMessage(context, '$e');
+      message = '$e';
     }
+    if (context.mounted) _showMessage(context, message);
   }
 
   Future<void> _toggleSimulation(BuildContext context, WidgetRef ref) async {
