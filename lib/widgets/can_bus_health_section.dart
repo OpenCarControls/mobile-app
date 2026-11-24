@@ -5,8 +5,8 @@ import 'package:open_car_app/providers/can_bus_health_provider.dart';
 import 'package:open_car_app/widgets/settings_rows.dart';
 
 /// The CAN buses card of the settings: each bus's status as the device judges
-/// it over the last few seconds, what it means, and its counters since the
-/// device started. Needs a Bluetooth connection; shows a hint until the device
+/// it over the last few seconds, what it means, its frame rate and its error
+/// counters since the device started. Needs a Bluetooth connection; shows a hint until the device
 /// reports.
 class CanBusHealthSection extends ConsumerWidget {
   const CanBusHealthSection({super.key});

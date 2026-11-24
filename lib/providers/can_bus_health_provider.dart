@@ -64,15 +64,16 @@ String canBusStatusHint(CanBusStatus status) => switch (status) {
   CanBusStatus.CAN_BUS_STATUS_DEGRADED =>
     'Receiving frames, but with errors or dropped frames.',
   CanBusStatus.CAN_BUS_STATUS_NO_VALID_FRAMES =>
-    'Only errors: usually a wrong bitrate, a CAN FD bus or a wiring fault.',
+    'Only errors: the device can\'t read this bus. Check its connection.',
   CanBusStatus.CAN_BUS_STATUS_BUS_OFF =>
     'The device went off the bus after too many errors and is restarting.',
   _ => 'Not reported yet.',
 };
 
-/// The bus's counters since the device started, in one line.
+/// The bus's frame rate over the last few seconds, then its error counters
+/// since the device started, in one line.
 String canBusCounters(CanBusHealth health) {
-  final frames = '${health.framesReceived} frames';
+  final frames = '${health.framesPerSecond} frames/s';
   final errors = '${health.rxErrors} errors';
   final overruns = '${health.overruns} overruns';
   final busOffs = '${health.busOffs} bus-offs';

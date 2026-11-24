@@ -83,7 +83,7 @@ The device only listens to the car until three things hold (firmware `docs/can.m
 *   `showCanReadWriteApprovalDialog` shows the risks and only sends the approval once the owner ticks "I understand the risks". The approval belongs to the car the device is plugged into; the device keeps it across restarts and phone changes.
 *   `CanAccessSection` shows the state and the reason in words (`canAccessSummary`), approving and withdrawing the approval, and the developer write lock switch when the firmware reports `dev_lock_available`. The settings screen shows it.
 
-`CanBusHealthSection` (settings, Bluetooth only) lists each bus the device reports with its status in words (`canBusStatusLabel`, `canBusStatusHint`, e.g. "No valid frames: usually a wrong bitrate, a CAN FD bus or a wiring fault") and its counters. A bus whose driver doesn't report is absent (firmware `docs/can.md`, "Bus health").
+`CanBusHealthSection` (settings, Bluetooth only) lists each bus the device reports with its status in words (`canBusStatusLabel`, `canBusStatusHint`, e.g. "No valid frames: the device can't read this bus") and its counters: the frame rate over the last few seconds (`frames_per_second`), then errors, overruns and bus-offs since the device started. A bus whose driver doesn't report is absent (firmware `docs/can.md`, "Bus health").
 
 `canAccessStateProvider` listens to the transport itself rather than reading `VehicleSnapshot.system`: the snapshot is restored across transport switches and cached across restarts, so its `can_access` could show "Control enabled" for a device that has since restarted read-only. The device repeats the access state every few seconds, so a new connection gets it quickly.
 

@@ -47,15 +47,14 @@ const _config = PairedVehicleConfig(
 
 CanBusHealth _bus(
   CanBusStatus status, {
-  int frames = 0,
+  int framesPerSecond = 0,
   int errors = 0,
   int overruns = 0,
 }) {
   return CanBusHealth(
     status: status,
     listenOnly: true,
-    framesReceived: frames,
-    framesMatched: frames,
+    framesPerSecond: framesPerSecond,
     rxErrors: errors,
     overruns: overruns,
     busOffs: 0,
@@ -92,19 +91,19 @@ void main() {
       final container = _container(transport);
       expect(container.read(canBusHealthProvider), isNull);
 
-      final ok = _bus(CanBusStatus.CAN_BUS_STATUS_OK, frames: 10);
+      final ok = _bus(CanBusStatus.CAN_BUS_STATUS_OK, framesPerSecond: 10);
       transport.emit(_healthUpdate({0: ok}));
       await pumpEventQueue();
       final buses = container.read(canBusHealthProvider)!;
       expect(buses[0]!.status, CanBusStatus.CAN_BUS_STATUS_OK);
-      expect(buses[0]!.framesReceived, 10);
+      expect(buses[0]!.framesPerSecond, 10);
     });
 
     test('replaces each reported bus and keeps the others', () async {
       final transport = _FakeTransport(TransportType.ble);
       final container = _container(transport);
       final first = {
-        0: _bus(CanBusStatus.CAN_BUS_STATUS_OK, frames: 10),
+        0: _bus(CanBusStatus.CAN_BUS_STATUS_OK, framesPerSecond: 10),
         1: _bus(CanBusStatus.CAN_BUS_STATUS_SILENT),
       };
       final second = {
@@ -163,16 +162,16 @@ void main() {
       expect(canBusStatusLabel(CanBusStatus.CAN_BUS_STATUS_BUS_OFF), 'Bus-off');
     });
 
-    test('counters read in one line', () {
+    test('counters read in one line, with the frame rate', () {
       final health = _bus(
         CanBusStatus.CAN_BUS_STATUS_DEGRADED,
-        frames: 120,
+        framesPerSecond: 2160,
         errors: 3,
         overruns: 1,
       );
       expect(
         canBusCounters(health),
-        '120 frames · 3 errors · 1 overruns · 0 bus-offs',
+        '2160 frames/s · 3 errors · 1 overruns · 0 bus-offs',
       );
     });
   });
@@ -193,7 +192,7 @@ void main() {
 
     final buses = {
       1: _bus(CanBusStatus.CAN_BUS_STATUS_SILENT),
-      0: _bus(CanBusStatus.CAN_BUS_STATUS_OK, frames: 42),
+      0: _bus(CanBusStatus.CAN_BUS_STATUS_OK, framesPerSecond: 42),
     };
     transport.emit(_healthUpdate(buses));
     await tester.pumpAndSettle();
@@ -201,7 +200,7 @@ void main() {
     expect(find.text('Bus 1 (listen-only)'), findsOneWidget);
     expect(find.text('OK'), findsOneWidget);
     expect(find.text('Silent'), findsOneWidget);
-    expect(find.textContaining('42 frames'), findsOneWidget);
+    expect(find.textContaining('42 frames/s'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Bus 0 (listen-only)')).dy,
       lessThan(tester.getTopLeft(find.text('Bus 1 (listen-only)')).dy),
