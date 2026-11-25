@@ -17,11 +17,11 @@ It does not need to run on every build, only when its inputs change. Unlike Rust
 |---|---|---|
 | `contracts/**/*.proto` | `lib/generated/**/*.pb.dart` | `ProtoBuilder` |
 | `contracts/opencar/cars/*/v1/meta.toml` + `transport.toml` | `lib/cars/<vehicle>/constants.g.dart` | `ConstantsBuilder` |
-| `config.toml.example` (+ optional `config.toml`) | `lib/config/mqtt_broker_config.g.dart` | `MqttConfigBuilder` |
+| `config.toml.example` (+ optional `config.toml`, and the `certs/` files it names) | `lib/config/mqtt_broker_config.g.dart` | `MqttConfigBuilder` |
 
 **`constants.g.dart`** exposes: `kPlatformId` (CRC32), `kPlatformName`, `kCanBusCount`, BLE UUIDs, MQTT topic templates, `kBlePairingWindowSeconds`, `kBleScanTimeoutSeconds`, and the BLE size and chunking constants (`kBleAttMtu`, `kBleMaxChunkBytes`, `kBleMaxMessageBytes`, `kBleChunk*`, `kBleCrcBytes`, `kBleMaxChunks`, `kBleMinAttMtu`, `kBleReassemblyTimeoutMs`). Never copy-paste TOML values — always import from the generated file.
 
-**`mqtt_broker_config.g.dart`** exposes: `kMqttBrokerHost/Port`, `kMqttUsername/Password`, `kMqttClientId`, `kDebugServerHost/Port`, `kDebugServerPollingIntervalMs`.
+**`mqtt_broker_config.g.dart`** exposes: `kMqttBrokerHost/Port`, `kMqttUsername/Password` (empty with mTLS), `kMqttCaCertPem`, `kMqttClientCertPem`, `kMqttClientKeyPem` (the PEM files of `[broker]`, empty when unused; see [MQTT over TLS](mqtt-tls.md)), `kMqttClientId`, `kDebugServerHost/Port`, `kDebugServerPollingIntervalMs`.
 
 ## Local config
 For local development: `cp config.toml.example config.toml`, then fill in credentials. `config.toml` is gitignored and must never be committed; `config.toml.example` holds the committed CI defaults.
